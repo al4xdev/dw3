@@ -79,3 +79,5 @@ __pycache__
 
 # Agent worktrees (the coding agent isolation: worktree)
 /.agent/worktrees
+# The stack, a symlink to the sibling clone until the submodule (phase 4; scripts/worktree_init.sh)
+psxstack
