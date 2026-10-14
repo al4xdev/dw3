@@ -1,0 +1,249 @@
+# The release (DECISIONS "Releases: tagged drafts, published by hand"; docs/RELEASE.md): one Linux x86_64 AppImage with the launcher, the game and the
+# mods' manifests (scripts/package_appimage.sh), and one Windows x86_64 zip with the same, cross-built from Linux
+# (scripts/package_windows.sh; DECISIONS "Windows: cross-built from Linux"). Players bring their own disc; they never
+# compile anything.
+#
+# On a pushed tag vX.Y.Z (e.g. v0.1.0; also v0.2.0-rc1, not the decomp's milestone tags such as v0.1-matching-closed):
+#   1. tests     the whole of ci.yml (workflow_call: every area, with the data checkout's disc)
+#   2. appimage  the game's Release build passes the port's M1 test; the AppImage is built with an SDL3 that has the
+#                desktop backends (setup.sh sdl3-desktop, its own cache), then smoke-tested: the launcher's --self-test
+#                inside the AppImage finds the bundled game and mods by itself and runs the game 300 frames on the
+#                disc; the AppImage, the game's .debug file and SHA256SUMS are kept as the run's artifact
+#      windows   (beside appimage) the Windows zip and its symbols zip (the PDBs), cross-built with llvm-mingw and
+#                tested unzipped under Wine: the launcher's --self-test with the bundled game and the disc, and a
+#                forced crash whose report symbolizes with the shipped PDB; kept as a second artifact
+#   3. release   a DRAFT GitHub Release for the tag with every file and generated notes. Nothing is published: the
+#                maintainer downloads it, tests it and presses Publish (publishing is their decision each time).
+# A manual run (`gh workflow run release.yml --ref <branch>`) does 1 and 2 only: the artifacts are how a branch's
+# packages are tried. Built on ubuntu-24.04: the Linux binaries need glibc 2.39 or newer; the Windows ones Windows 10.
+name: Release
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Tests (ci.yml)
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  appimage:
+    name: AppImage
+    needs: tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu   # as ci.yml: the runners' own mirror
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git describe: a manual run's version
+
+      # A release is built only after the tests with the disc, and its smoke test needs the disc too; the port and
+      # the launcher are built from the psxstack submodule (public, fetched at its pin).
+      - name: The data checkout is required
+        run: |
+          if [[ "${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" != true ]]; then
+            echo "::error::no GAMEDATA_DEPLOY_KEY: a release needs the data checkout (the disc for the tests)"; exit 1
+          fi
+
+      - name: Data checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/dw2003-gamedata
+          ssh-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+          path: dw2003-gamedata
+
+      - name: psxstack submodule (as .github/actions/setup)
+        run: |
+          git submodule update --init psxstack
+          echo "psxstack at $(git -C psxstack describe --tags --always)"
+
+      # The desktop SDL's -dev packages (X11, Wayland, PipeWire, PulseAudio, ALSA, ...): setup.sh lists them.
+      - name: System packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build cmake xz-utils $(scripts/setup.sh --sdl3-desktop-apt)
+
+      # Its own cache: CI's tools/sdl3 is headless (no desktop -dev packages there), tools/sdl3-desktop never is.
+      # Keyed as CI's (.github/actions/setup): the pins, not setup.sh's text.
+      - name: The pins (the tool cache's key)
+        id: pins
+        run: echo "hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; } | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Cached release tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/venv
+            tools/mkpsxiso
+            tools/imgui
+            tools/sdl3-desktop
+            tools/appimage
+            tools/dxc
+          key: tools-release-${{ runner.os }}-${{ steps.pins.outputs.hash }}
+
+      # mkpsxiso: worktree_init.sh extracts the disc (the port's sound check reads the EXE from extracted/).
+      - name: Release tools
+        run: scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage dxc
+
+      - name: Disc from the data checkout
+        run: |
+          scripts/worktree_init.sh
+          test -f iso/dw2003.cue
+
+      # The release's game is built with -O3 (CMAKE_BUILD_TYPE=Release), the tests' with the default flags: its
+      # headless build must replay the layer-2 scripts the same way (the emulator's checkpoints, two identical runs).
+      - name: The game's Release build passes the port's M1 test
+        run: |
+          cmake -S port -B build/port -G Ninja -DCMAKE_BUILD_TYPE=Release
+          tools/venv/bin/python tests/port/run.py
+
+      - name: Build the AppImage and smoke-test it
+        run: scripts/package_appimage.sh --test
+
+      - name: Keep the AppImage (the run's artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dw2003-appimage
+          path: |
+            build/release/*.AppImage
+            build/release/*.debug
+            build/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  # The Windows package, cross-built on the same runner (ci.yml's windows job has the toolchain's cache and the Wine
+  # setup; this job repeats them, since the AppImage job's SDL is the desktop one). Tested unzipped under Wine
+  # (package_windows.sh --test): the launcher's self-test with the bundled game, the mods and the disc, and a forced
+  # crash of the bundled game symbolized with the symbols zip's PDB.
+  windows:
+    name: Windows package
+    needs: tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu   # as ci.yml: the runners' own mirror
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git describe: a manual run's version
+
+      - name: The data checkout is required
+        run: |
+          if [[ "${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" != true ]]; then
+            echo "::error::no GAMEDATA_DEPLOY_KEY: a release needs the data checkout (the disc for the tests)"; exit 1
+          fi
+
+      - name: Data checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/dw2003-gamedata
+          ssh-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+          path: dw2003-gamedata
+
+      - name: psxstack submodule (as .github/actions/setup)
+        run: |
+          git submodule update --init psxstack
+          echo "psxstack at $(git -C psxstack describe --tags --always)"
+
+      # wine64 alone: no 32-bit multiarch (the binaries are x86_64; `wine` is the launcher script the tests call).
+      - name: System packages
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ninja-build cmake xz-utils wine wine64
+
+      - name: Cached Windows toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/venv
+            tools/mkpsxiso
+            tools/imgui
+            tools/llvm-mingw
+            tools/sdl3-windows
+            tools/dxc
+          key: tools-windows-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
+
+      - name: Windows toolchain
+        run: scripts/setup.sh venv mkpsxiso imgui llvm-mingw sdl3-windows dxc
+
+      - name: Wine prefix
+        run: |
+          mkdir -p build/wine-prefix
+          WINEPREFIX="$PWD/build/wine-prefix" wineboot --init
+          wine --version
+
+      - name: Disc from the data checkout
+        run: |
+          scripts/worktree_init.sh
+          test -f iso/dw2003.cue
+
+      - name: Build the Windows package and test it under Wine
+        timeout-minutes: 30
+        run: scripts/package_windows.sh --test
+
+      - name: Keep the Windows package (the run's artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dw2003-windows
+          path: |
+            build/release/*-windows-x86_64.zip
+            build/release/*-windows-x86_64-symbols.zip
+            build/release/SHA256SUMS-windows
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-windows-package
+          path: |
+            crash-*.txt
+            build/release/windows/test/**/crash-*.txt
+          if-no-files-found: ignore
+
+  release:
+    name: Draft release
+    needs: [appimage, windows]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write   # gh release create
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dw2003-appimage
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dw2003-windows
+          path: dist
+
+      # The notes: keep them in step with scripts/release_local.sh's.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          sha256sum -c SHA256SUMS
+          sha256sum -c SHA256SUMS-windows
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "dw2003recomp $TAG" \
+            --generate-notes --notes "The launcher, the PC port and its mods, for Linux and for Windows.
+          Bring your own disc image of Digimon World 2003 (PS1, Europe; the launcher checks its SHA-1).
+
+          **Linux x86_64**: \`dw2003-*-x86_64.AppImage\`: \`chmod +x\` it, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later).
+          **Windows x86_64**: \`dw2003-*-windows-x86_64.zip\`: unzip, run \`dw2003-launcher.exe\` (unsigned: SmartScreen's \"More info\", \"Run anyway\"). Windows 10 or newer. Tested on Linux under Wine and Proton only, not yet on real Windows: reports are welcome in the issues (#37).
+          The .debug file and the -symbols.zip are the programs' debug info for crash reports (not needed to play)." \
+            ./*.AppImage ./*.debug ./*-windows-x86_64.zip ./*-windows-x86_64-symbols.zip SHA256SUMS SHA256SUMS-windows

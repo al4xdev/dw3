@@ -1,0 +1,389 @@
+# CI (DECISIONS "Going public: the working repo is public", decision 8; "CI per area"). First green run 2026-10-05
+# (session 13), the data steps included; split into parallel jobs 2026-10-07 (from one 15-20 min job to ~6 min).
+#
+# With the maintainers' secret GAMEDATA_DEPLOY_KEY (a read-only deploy key of the private data checkout
+# <owner>/dw2003-gamedata) the jobs have the disc and the pinned emulator: they rebuild every game file byte-identical
+# (scripts/build.sh --check) and run the reference tests (scripts/test.sh), the PC port's M1 test (tests/port) among
+# them, also on the port's -m32 build. Fork pull requests get no secrets, so they only get the disc-free part: the
+# toolchain is built and smoke-tested, the scripts parse, the Python compiles, every game unit compiles for the host
+# at -m64 and for Windows (tools/port_inventory.py probe and link, the PC port's gate), the SDL game, the launcher and
+# the Windows cross-build with their self-tests.
+#
+# When it runs (DECISIONS "CI per area"): on pull requests (not while they are drafts: marking one ready for review
+# starts the run) and on pushes to main, not on changes that touch only documentation (paths-ignore: no step reads
+# those files), and a newer push to a pull request cancels the run of the older one. A branch without a pull request:
+# `gh workflow run CI --ref <branch>`. release.yml calls this workflow (workflow_call) before it builds a release.
+#
+# What runs: the `areas` job sorts the changed files (a pull request's against its base, a push to main's against the
+# commit before it; scripts/ci_areas.sh) into three areas, each implying the next, and the other jobs run in parallel,
+# each gated by its area (a job an area does not need is skipped, no runner starts for it):
+#   game      src/, include/, config/, configure.py, tools/ (but port_gen.py), tests/ (but the port's), scripts/
+#             (setup.sh pins every tool), any file no rule names
+#             -> `check`'s census (tools/hacks.py --check: the game code all C, the workarounds' markers and the
+#                counts docs/STATUS.md quotes), `game`: the toolchain smoke test, the byte-identical rebuild, layer 2
+#                (the emulator's replays and SPU trace); and everything below
+#   port      port/ (its runtime, Psy-Q shim, mods' manifests, CMake), tools/port_gen.py, tests/port, tests/spu,
+#             tests/xa, tests/saves, tests/host
+#             -> `check`'s probes (the host's gcc and llvm-mingw's clang), `port`: layer 1 (the goldens, their host
+#                replays, the SPU and XA units) and the port layer (the M1 test, on the -m32 build too, and the port's
+#                checks), `port-mods`: layer 3 (formats, save round trips) and the mods (the longest test: its own
+#                job), `windows`: the cross-build, the launcher's self-test, the crash report and the layer-2 replays
+#                under Wine (DECISIONS "Windows: cross-built from Linux"); and below
+#   launcher  launcher/ (the port's json.c/sha1.c it compiles are port/, which implies launcher)
+#             -> `launcher`: the SDL game's build and input self-tests, the launcher's build and self-test, the
+#                self-test with the disc and that game
+#   none      documentation, release.yml, scripts/package_appimage.sh, packaging/ (release.yml tests those)
+# ci.yml, .github/actions/ and scripts/ci_areas.sh themselves, manual runs, release tags (workflow_call) and a push
+# whose base commit is unknown run every area. `check` (the scripts parse, the Python compiles) always runs.
+#
+# Each job sets itself up with .github/actions/setup: its own tool cache (keyed on the pins, scripts/setup.sh --pins,
+# not on setup.sh's text), scripts/setup.sh for the tools it names (cmake and ninja from the venv, ccache's pinned
+# binary: apt only for gcc-multilib and Wine, the runners' mirror stalls), ccache for the host builds of the port and
+# the launcher (a comment-only change recompiles nothing; the Windows cross-build keeps its own compile launcher,
+# tools/port_gen.py rename, so no ccache there), and with the deploy key the data checkout and the disc. DW3_JOBS=4:
+# the runners' cores (the port's builds, the mods and the replays run that many at once).
+name: CI
+on:
+  push:
+    branches: [main]
+    paths-ignore:   # the same list as pull_request's
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".github/ISSUE_TEMPLATE/**"
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]   # a draft runs nothing (the areas job's `if`) until it is ready
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".github/ISSUE_TEMPLATE/**"
+  workflow_dispatch:
+  workflow_call:   # release.yml: the whole suite before a release is built (a tag's run: every area)
+
+permissions:
+  contents: read
+
+# One run per pull request (the newest push wins); pushes to main and manual runs are keyed by commit, so none of
+# them cancels another commit's run. The workflow's name keeps release.yml's call (named Release) apart from main's run
+# of the same commit.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  DW3_JOBS: "4"
+
+jobs:
+  # The areas of this change and whether the data checkout is available: every other job needs this one and reads
+  # its outputs in its `if` (a draft pull request skips it, and so every job).
+  areas:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      game: ${{ steps.areas.outputs.game }}
+      port: ${{ steps.areas.outputs.port }}
+      launcher: ${{ steps.areas.outputs.launcher }}
+      data: ${{ steps.data.outputs.present }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the areas need the base commit (the repository is a few MB)
+
+      - name: Which areas changed (scripts/ci_areas.sh)
+        id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A pull request's checkout is its merge commit: its first parent is the base it is tested against.
+          if [[ "$EVENT" == pull_request ]] && git rev-parse -q --verify HEAD^2 >/dev/null; then
+            scripts/ci_areas.sh --diff HEAD^1 HEAD >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == push && "$GITHUB_REF" == refs/heads/* && ! "$BEFORE" =~ ^0*$ ]] &&
+               git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            scripts/ci_areas.sh --diff "$BEFORE" HEAD >> "$GITHUB_OUTPUT"
+          else
+            scripts/ci_areas.sh --all >> "$GITHUB_OUTPUT"
+          fi
+          { echo "### Areas"; echo; sed -n 's/^\([a-z]*\)=\(.*\)/- \1: \2/p' "$GITHUB_OUTPUT"; } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Is the data checkout available?
+        id: data
+        run: echo "present=${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
+  # Disc-free, always: the scripts parse, the Python compiles; for the game area the workaround census
+  # (tools/hacks.py --check, stdlib only, <1 s: no INCLUDE_ASM beyond its HOLDOUTS, every FAKE: with its reason and
+  # LOOP_BLOCK with its evidence class, the counts docs/STATUS.md quotes); for the port area the host-compile probe:
+  # every game unit with the runner's gcc (Ubuntu 24.04: GCC 13) at -m64 with its own INCLUDE_ASM/gte override headers
+  # (include/asm_generated/ is not needed), nm's check for duplicate globals, and every unit with llvm-mingw's clang.
+  check:
+    needs: areas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          tools: venv llvm-mingw
+          cache: check
+
+      - name: Scripts parse, Python compiles
+        run: |
+          bash -n scripts/*.sh tools/*.sh tests/*/*.sh
+          tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/port/*.py
+
+      - name: Workaround census (the game code all C, the FAKE/LOOP_BLOCK markers, the counts in docs/STATUS.md)
+        if: needs.areas.outputs.game == 'true'
+        run: tools/venv/bin/python tools/hacks.py --check
+
+      - name: Host-compile probe (every unit clean at -m64, no duplicate globals; and for Windows with llvm-mingw)
+        if: needs.areas.outputs.port == 'true'
+        run: |
+          tools/venv/bin/python tools/port_inventory.py probe -j "$DW3_JOBS"
+          tools/venv/bin/python tools/port_inventory.py link -j "$DW3_JOBS"
+          tools/venv/bin/python tools/port_inventory.py probe --target windows -j "$DW3_JOBS"
+
+  # The PS1 side: the toolchain's smoke test (disc-free), then with the disc the byte-identical rebuild of every game
+  # file and layer 2 (the emulator replays the pad scripts and traces the SPU; nothing of port/).
+  game:
+    needs: areas
+    if: needs.areas.outputs.game == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          tools: binutils mkpsxiso venv cmake gcc objdiff ext redux
+          cache: game
+          disc: "true"
+          deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+
+      - name: Toolchain smoke test
+        run: scripts/check_toolchain.sh
+
+      - name: Byte-identical rebuild of every game file
+        if: needs.areas.outputs.data == 'true'
+        run: scripts/build.sh --check
+
+      - name: Reference tests, layer 2 (the emulator's replays and SPU trace)
+        if: needs.areas.outputs.data == 'true'
+        run: scripts/test.sh --no-probe --layer 2
+
+  # The PC port with the disc: layer 1 (the goldens regenerated in the emulator, their host replays, the SPU and XA
+  # units) and the port layer: the M1 test (tests/port/run.py: the layer-2 scripts replayed by the port, twice, against
+  # the emulator's record; --m32: the -m32 build must write the same log and record, the layout check) and the port's
+  # checks (settings, 60 Hz, the battle scripts, VRAM, the debug channel, save states, the crash report).
+  port:
+    needs: areas
+    if: needs.areas.outputs.port == 'true' && needs.areas.outputs.data == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the port's version stamp (psxstack/cmake/version.cmake: git describe over this repository's tags)
+      - uses: ./.github/actions/setup
+        with:
+          tools: venv cmake mkpsxiso redux ccache
+          apt: gcc-multilib   # the -m32 build
+          cache: port
+          ccache: "true"
+          disc: "true"
+          deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+
+      - name: Reference tests, layer 1 and the port layer (with the -m32 build)
+        run: scripts/test.sh --no-probe --m32 --layer 1 --layer port
+
+      - name: ccache statistics
+        if: always()
+        run: tools/ccache/ccache -s
+
+      # A crash of the port in any step above leaves its report (docs/PORT.md "Crash report") in the current
+      # directory or under build/: readable from the run's artifacts, with the stack as exe+offset addresses.
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-port
+          path: |
+            crash-*.txt
+            build/**/crash-*.txt
+          if-no-files-found: ignore
+
+  # The longest tests, their own job: layer 3 (the formats, the save round trips port <-> emulator) and the mods that
+  # change the game, each mod in its own process (tests/port/mods.py: DW3_JOBS at once).
+  port-mods:
+    needs: areas
+    if: needs.areas.outputs.port == 'true' && needs.areas.outputs.data == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          tools: venv cmake mkpsxiso redux ccache
+          cache: port-mods
+          ccache: "true"
+          disc: "true"
+          deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+
+      - name: Reference tests, layer 3 and the mods
+        run: scripts/test.sh --no-probe --layer 3 --layer mods
+
+      - name: ccache statistics
+        if: always()
+        run: tools/ccache/ccache -s
+
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-mods
+          path: |
+            crash-*.txt
+            build/**/crash-*.txt
+          if-no-files-found: ignore
+
+  # The PC port's window (-DPSXSTACK_SDL=ON, SDL3 from tools/sdl3) and the launcher (launcher/README.md; Dear ImGui on
+  # SDL3), disc-free, both on SDL's offscreen video driver (no display): the port's input self-test (injected key and
+  # virtual-gamepad events reach the pad, hotkeys never do, the pause stops and gives back the game; SDL's dummy audio
+  # driver takes the audio device's path), also with rebound keys and pads, chord hotkeys and a mod's bindings
+  # (docs/LAUNCHER.md "Input bindings"); the launcher's self-test (the settings directory's lookup, settings.json round
+  # trips, every screen walked with injected keys and a virtual gamepad). With the disc, the launcher end to end: the
+  # real disc's check, and the SDL game started from the launcher's command for 300 frames (launcher/README.md).
+  launcher:
+    needs: areas
+    if: needs.areas.outputs.launcher == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          tools: venv cmake mkpsxiso sdl3 imgui ccache dxc
+          cache: launcher
+          ccache: "true"
+          disc: "true"
+          deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+
+      - name: PC port with the window (SDL3)
+        run: |
+          cmake -S port -B build/port-sdl -G Ninja -DPSXSTACK_SDL=ON
+          cmake --build build/port-sdl -j "$DW3_JOBS"
+
+      - name: PC port, input self-test
+        if: needs.areas.outputs.port == 'true'
+        run: |
+          SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --input-test --fps 0
+          SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --config tests/port/settings/rebound.json --input-test --fps 0
+
+      # The hardware renderer (issue #31): CI compiles it (the build above) and checks the fallback (--renderer gpu
+      # without a GPU device falls back to SDL_Renderer and passes the input self-test); with the disc, SDL_Renderer's
+      # present against the reference that the hardware renderer's present must equal (tests/port/render_gpu.py; its
+      # pictures through a device run locally).
+      - name: PC port, the hardware renderer's fallback
+        if: needs.areas.outputs.port == 'true'
+        run: |
+          tools/venv/bin/python tests/port/render_gpu.py
+          tools/venv/bin/python tests/port/render_filters.py   # the filters' options; their pictures run locally
+          tools/venv/bin/python tests/host/gpu_hw_replay.py   # builds the exactness test's harness; no device: skipped
+          tools/venv/bin/python tests/port/textures.py        # the texture dump (issue #70): no device needed
+
+      - name: Launcher, self-test
+        run: |
+          cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON="$PWD/port/game/game.json" \
+                -DPSXSTACK_VERSION_ROOT="$PWD" -DPSXSTACK_TOOLS_DIR="$PWD/tools"
+          cmake --build build/launcher -j "$DW3_JOBS"
+          SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
+
+      - name: Launcher, self-test with the disc and the game
+        if: needs.areas.outputs.data == 'true'
+        run: |
+          DW3_SELFTEST_DISC="$PWD/iso/dw2003.cue" DW3_SELFTEST_GAME="$PWD/build/port-sdl/dw2003" \
+            SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
+
+      - name: ccache statistics
+        if: always()
+        run: tools/ccache/ccache -s
+
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-launcher
+          path: |
+            crash-*.txt
+            build/**/crash-*.txt
+          if-no-files-found: ignore
+
+  # The Windows build (DECISIONS "Windows: cross-built from Linux, tested under Wine and Proton"): cross-built on the
+  # same ubuntu-24.04 runner with llvm-mingw and SDL3 for Windows, then run under Ubuntu's Wine (9.0) headless. Fork
+  # pull requests get the disc-free part: the cross-build and the launcher's self-test under Wine.
+  windows:
+    needs: areas
+    if: needs.areas.outputs.port == 'true' || needs.areas.outputs.launcher == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      WINEDEBUG: "-all"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # wine64 alone: no 32-bit multiarch (the binaries are x86_64; `wine` is the launcher script the tests call).
+      # mkpsxiso: the disc's extraction (the replays' sound check reads the EXE's sound bank table from extracted/).
+      - uses: ./.github/actions/setup
+        with:
+          tools: venv cmake mkpsxiso imgui llvm-mingw sdl3-windows dxc
+          apt: wine wine64
+          cache: windows
+          disc: ${{ needs.areas.outputs.port }}
+          deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+
+      # Wine's prefix once, headless (no display on the runner: the console programs below need none).
+      - name: Wine prefix
+        run: |
+          mkdir -p build/wine-prefix
+          WINEPREFIX="$PWD/build/wine-prefix" wineboot --init
+          wine --version
+
+      # The game (Release, the SDL build) and the launcher cross-compiled: every object, then the links; then the
+      # launcher's self-test under Wine (SDL's offscreen video: no display, no disc).
+      - name: Windows cross-build and the launcher's self-test under Wine
+        timeout-minutes: 25
+        run: scripts/build_windows.sh --launcher --test --jobs "$DW3_JOBS"
+
+      # The crash report on Windows (docs/PORT.md "Crash report"): a forced access violation in a run on the disc
+      # writes the report and the minidump under Wine, with the exception's exit code.
+      - name: The Windows crash report under Wine
+        if: needs.areas.outputs.data == 'true' && needs.areas.outputs.port == 'true'
+        timeout-minutes: 10
+        run: tools/venv/bin/python tests/port/crash.py --wine --exe build/port-win/dw2003.exe
+
+      # The Windows game replays the layer-2 scripts under Wine: its frame log and record must equal the Linux build's
+      # (tests/port/run.py builds build/port for the sound replay, so the host gcc runs here too).
+      - name: The Windows game under Wine, the layer-2 replays
+        if: needs.areas.outputs.data == 'true' && needs.areas.outputs.port == 'true'
+        timeout-minutes: 30
+        run: tools/venv/bin/python tests/port/run.py new_game first_battle_save --exe build/port-win/dw2003.exe --wine
+
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-windows
+          # Not build/**: the Wine prefix's dosdevices/z: links to /, which the glob cannot walk.
+          path: |
+            crash-*.txt
+            build/port-test/**/crash-*.txt
+            build/launcher-win/selftest/**/crash-*.txt
+          if-no-files-found: ignore
