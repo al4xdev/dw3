@@ -10,7 +10,7 @@ Contributors: read [`CONTRIBUTING.md`](CONTRIBUTING.md) too.
 
 Linux with git, Python 3.10+, make, gcc/g++, cmake, ninja, curl, xz, unzip (and `dpkg-deb` on hosts with glibc older
 than 2.43, for the emulator's runtime sysroot). Everything else is built or unpacked into `tools/` by the setup script,
-with no root access needed. You need the same disc image as for playing ([`PLAYING.md`](PLAYING.md#provide-your-disc-image)).
+with no root access needed. You need the same disc image as for playing ([the README](../README.md#provide-your-disc-image)).
 
 ## Setup
 

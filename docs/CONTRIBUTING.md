@@ -115,7 +115,7 @@ a release change: `scripts/package_windows.sh --test` and `scripts/package_appim
 
 Use the [issue templates](https://github.com/gascarcella/dw2003recomp/issues/new/choose): a **bug report** for
 something that's wrong in the game, the port or the launcher, a **feature request** for an idea. Never attach game
-files or a disc image. See [Reporting an issue](PLAYING.md#reporting-an-issue).
+files or a disc image. See [Reporting an issue](REPORTING.md).
 
 ## AI-assisted contributions
 
