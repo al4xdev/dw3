@@ -4,6 +4,7 @@
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -412,4 +413,181 @@ void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, gs_opened_from);
     PORT_STATE_VAR(s, px_ko);
     PORT_STATE_VAR(s, xb_tenths);
+}
+
+/* ---- handheld features (R36S). Each is an if. A miss is logged once. ---- */
+
+int dw3_feat_icons = 1;
+int dw3_feat_travel = 1;
+int dw3_feat_objective = 1;
+int dw3_feat_xp = 1;
+
+extern u8 ststatus_map_areas[];
+
+static int feat_on(const char *name, int def) {
+    const char *v = getenv(name);
+    if (v == NULL || v[0] == '\0') {
+        return def;
+    }
+    return v[0] != '0';
+}
+
+void dw3_feats_arm(void) {
+    static int armed;
+    if (armed) {
+        return;
+    }
+    armed = 1;
+    dw3_feat_icons = feat_on("DW3_FEAT_ICONS", dw3_feat_icons);
+    dw3_feat_travel = feat_on("DW3_FEAT_TRAVEL", dw3_feat_travel);
+    dw3_feat_objective = feat_on("DW3_FEAT_OBJECTIVE", dw3_feat_objective);
+    dw3_feat_xp = feat_on("DW3_FEAT_XP", dw3_feat_xp);
+    if (dw3_feat_xp && !port_mod_xp_boost) {
+        port_mod_xp_boost = 1;
+        xb_tenths[0] = xb_tenths[1] = xb_tenths[2] = 50;
+    }
+    port_log("dw3 feats: icons %d travel %d objective %d xp %d (%dx)", dw3_feat_icons, dw3_feat_travel,
+             dw3_feat_objective, dw3_feat_xp, (int)(xb_tenths[1] / 10));
+}
+
+static char dw3_letter_for(const char *action) {
+    static int loaded;
+    static char cross = 'A', circle = 'B', square = 'X', triangle = 'Y';
+    FILE *f;
+    char name[16], letter;
+    if (!loaded) {
+        loaded = 1;
+        f = fopen("pad.map", "r");
+        if (f != NULL) {
+            while (fscanf(f, "%15s %*s %c", name, &letter) == 2) {
+                if (letter >= 'a' && letter <= 'z') {
+                    letter = (char)(letter - 'a' + 'A');
+                }
+                if (strcmp(name, "cross") == 0) cross = letter;
+                else if (strcmp(name, "circle") == 0) circle = letter;
+                else if (strcmp(name, "square") == 0) square = letter;
+                else if (strcmp(name, "triangle") == 0) triangle = letter;
+            }
+            fclose(f);
+            port_log("button icons: cross %c circle %c square %c triangle %c", cross, circle, square, triangle);
+        }
+    }
+    if (strcmp(action, "cross") == 0) return cross;
+    if (strcmp(action, "circle") == 0) return circle;
+    if (strcmp(action, "square") == 0) return square;
+    return triangle;
+}
+
+s16 dw3_button_glyph(u8 code) {
+    s16 g = 0;
+    char letter = 0;
+    if (!dw3_feat_icons) {
+        return 0;
+    }
+    if (code == 0x1B) {
+        letter = dw3_letter_for("cross");
+    } else if (code == 0x2F) {
+        letter = dw3_letter_for("circle");
+    } else if (code == 0x32) {
+        letter = dw3_letter_for("square");
+    } else if (code == 0x34) {
+        letter = dw3_letter_for("triangle");
+    }
+    if (letter >= 'A' && letter <= 'Z') {
+        g = (s16)(0x0E + (letter - 'A'));
+    }
+    return g;
+}
+
+static s32 dw3_travel_map;
+static int dw3_travel_miss;
+
+int dw3_fast_travel_ask(s32 area, s32 region) {
+    s32 first;
+    s32 last;
+    s32 i;
+    if (!dw3_feat_travel) {
+        return 0;
+    }
+    if (area < 0 || area > 0x2E) {
+        if (!dw3_travel_miss) {
+            dw3_travel_miss = 1;
+            port_log("fast travel: bad area %d", (int)area);
+        }
+        return 0;
+    }
+    if (region) {
+        first = 0x270;
+        last = 0x2D6;
+    } else {
+        first = 0x200;
+        last = 0x26F;
+    }
+    for (i = first; i <= last; i++) {
+        if ((ststatus_map_areas[i & 0xFF] & 0x7F) != area) {
+            continue;
+        }
+        if (gamestate_flags.get_flag((u16)((i & 0xFF) | 0x2000), 1) != 1) {
+            continue;
+        }
+        dw3_travel_map = i;
+        port_log("fast travel: area %d -> map 0x%X", (int)area, (unsigned)i);
+        return 1;
+    }
+    if (!dw3_travel_miss) {
+        dw3_travel_miss = 1;
+        port_log("fast travel: no visited door for area %d", (int)area);
+    }
+    return 0;
+}
+
+void dw3_fast_travel_clear(void) {
+    dw3_travel_map = 0;
+}
+
+int dw3_fast_travel_take(s32 *map) {
+    if (!dw3_feat_travel || dw3_travel_map == 0) {
+        return 0;
+    }
+    *map = dw3_travel_map;
+    dw3_travel_map = 0;
+    return 1;
+}
+
+/* Feerdus's progress -> field table. Steps outside 0x200-0x2D6 have no map spot. */
+static const u16 dw3_objective_modes[] = {
+    0x2D8, 0x207, 0x204, 0x200, 0x22E, 0x22C, 0x232, 0x23A, 0x227, 0x239, 0x240, 0x204, 0x20B, 0x204, 0x236,
+    0x260, 0x25C, 0x252, 0x254, 0x255, 0x255, 0x21C, 0x218, 0x203, 0x260, 0x240, 0x246, 0x29C, 0x2AD, 0x2AE,
+    0x26E, 0x26D, 0x26D, 0x218, 0x2C7, 0x2D5, 0x272, 0x276, 0x219, 0x288, 0x2DD, 0x2DF, 0x2DF, 0x2D7, 0x2D7,
+};
+
+s32 dw3_objective_spot(s32 region) {
+    static int logged;
+    s32 progress;
+    s32 mode;
+    s32 area;
+    if (!dw3_feat_objective) {
+        return 0;
+    }
+    progress = gamestate_data.progress;
+    if (progress < 0 || progress >= (s32)(sizeof dw3_objective_modes / sizeof dw3_objective_modes[0])) {
+        if (!logged) {
+            logged = 1;
+            port_log("objective: progress %d has no map", (int)progress);
+        }
+        return 0;
+    }
+    mode = dw3_objective_modes[progress];
+    if (mode < 0x200 || mode > 0x2D6 || region != (mode >= 0x270)) {
+        return 0;
+    }
+    area = (ststatus_map_areas[mode & 0xFF] & 0x7F) + 1;
+    if (area < 1 || area >= 47) {
+        if (!logged) {
+            logged = 1;
+            port_log("objective: mode 0x%X has no spot", (unsigned)mode);
+        }
+        return 0;
+    }
+    return area;
 }

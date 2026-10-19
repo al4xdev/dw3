@@ -11,6 +11,14 @@
       "size": 692146560,
       "region": "PAL",
       "cue": "dw2003.cue"
+    },
+    {
+      "label": "Europe (SLES-03936), alternate dump",
+      "serial": "SLES-03936",
+      "sha1": "fbfd1044e4ae0c6128e2e1a679fb6d72dc954b39",
+      "size": 692146560,
+      "region": "PAL",
+      "cue": "dw2003.cue"
     }
   ],
   "video": {

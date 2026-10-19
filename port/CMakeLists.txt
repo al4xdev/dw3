@@ -19,6 +19,8 @@ if(NOT EXISTS "${PSXSTACK_DIR}/cmake/psxstack.cmake")
 endif()
 if(EXISTS "${DW3_ROOT}/tools/venv/bin/python" AND NOT PSXSTACK_PYTHON)
     set(PSXSTACK_PYTHON "${DW3_ROOT}/tools/venv/bin/python" CACHE FILEPATH "" FORCE)
+elseif(NOT PSXSTACK_PYTHON)
+    find_program(PSXSTACK_PYTHON NAMES python3 python REQUIRED)
 endif()
 # The built tools (SDL3, DXC) are this checkout's tools/ (the main checkout's in a worktree, linked there).
 if(NOT PSXSTACK_TOOLS_DIR)

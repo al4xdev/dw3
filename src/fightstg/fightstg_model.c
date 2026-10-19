@@ -1,4 +1,12 @@
 #include "common.h"
+#ifdef PC_PORT
+#include "phase.h"
+#define MODEL_PHASE_BEGIN() port_phase_begin(PORT_PHASE_MODEL)
+#define MODEL_PHASE_END() port_phase_end()
+#else
+#define MODEL_PHASE_BEGIN()
+#define MODEL_PHASE_END()
+#endif
 
 #include "cdload.h"
 #include "gfx.h"
@@ -382,6 +390,7 @@ void fightstg_model_update(FightstgModel *obj, FightstgModelData *data) {
     s32 i;
     s32 j;
 
+    MODEL_PHASE_BEGIN();
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
@@ -476,6 +485,7 @@ void fightstg_model_update(FightstgModel *obj, FightstgModelData *data) {
         }
         break;
     }
+    MODEL_PHASE_END();
 }
 
 /* Sets every mesh's colour override (use_color, and color = *color when given). */
@@ -888,10 +898,12 @@ void fightstg_model_mesh_draw(void *data, GfxLayer *layer, s32 arg) {
     s32 hi;
     s32 lo;
 
+    MODEL_PHASE_BEGIN();
     gte_CompMatrix(&GsWSMATRIX, &obj->matrix, &m);
     gte_SetRotMatrix(&m);
     gte_SetTransMatrix(&m);
     if (fightstg_model_mesh_is_visible(obj, layer) == 0) {
+        MODEL_PHASE_END();
         return;
     }
     fightstg_model_mesh_project(obj, layer);
@@ -959,6 +971,7 @@ void fightstg_model_mesh_draw(void *data, GfxLayer *layer, s32 arg) {
         }
     }
     gfx_module.funcs.set_packet(ctx.prim.ft3);
+    MODEL_PHASE_END();
 }
 
 /* Draws the mesh's edges (green lines) on `layer`: fightstg_model_mesh_draw's command stream, faces
@@ -972,10 +985,12 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
     s32 i0, i1, i2, i3;
     s32 n;
 
+    MODEL_PHASE_BEGIN();
     gte_CompMatrix(&GsWSMATRIX, &obj->matrix, &m);
     gte_SetRotMatrix(&m);
     gte_SetTransMatrix(&m);
     if (fightstg_model_mesh_is_visible(obj, layer) == 0) {
+        MODEL_PHASE_END();
         return;
     }
     fightstg_model_mesh_project(obj, layer);
@@ -1067,6 +1082,7 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
         }
     }
     gfx_module.funcs.set_packet(ctx.prim.ft3);
+    MODEL_PHASE_END();
 }
 
 /* Draws the mesh (fightstg_model_mesh_draw) on layer `id` with matrix `m`. */

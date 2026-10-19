@@ -186,6 +186,7 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         }
         obj->option_count = obj->extended + 5;
 #ifdef PC_PORT
+        dw3_fast_travel_clear();
         if (port_mod_global_save != 0 && gamestate_data.funcs.get_map() != 0x1000) {
             obj->option_count++; /* global_save: a SAVE entry last, in the field's menu only (docs/LAUNCHER.md) */
         }
@@ -415,6 +416,15 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 port_global_save_open(); /* global_save's SAVE: STGMCARD in save mode instead of STSTATUS */
                 obj->base.step++;
                 break;
+            }
+            {
+                s32 travel;
+                if (gamestate_data.funcs.get_map() == 0x1000 && dw3_fast_travel_take(&travel)) {
+                    gamestate_data.funcs.set_next_map(travel, 0);
+                    obj->base.step++;
+                    break;
+                }
+                dw3_fast_travel_clear();
             }
 #endif
             if (gamestate_data.funcs.get_map() == 0x1000) {

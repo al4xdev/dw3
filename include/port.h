@@ -176,6 +176,23 @@ extern int port_mod_xp_boost;
 enum { PORT_XP_BOOST_EXP, PORT_XP_BOOST_FORM_EXP, PORT_XP_BOOST_BITS };
 s32 port_xp_boost(s32 kind, s32 amount);
 
+/* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE / _XP, default on).
+ * A failure is logged once, never per frame. */
+extern int dw3_feat_icons;
+extern int dw3_feat_travel;
+extern int dw3_feat_objective;
+extern int dw3_feat_xp;
+void dw3_feats_arm(void);
+/* Face-button text code (1, then 0x1B/0x2F/0x32/0x34) as a main-font letter, or 0. */
+s16 dw3_button_glyph(u8 code);
+/* X on a visited map area: remember a field of that area. 1 if a door was found. */
+int dw3_fast_travel_ask(s32 area, s32 region);
+void dw3_fast_travel_clear(void);
+/* The remembered field, once, or 0. */
+int dw3_fast_travel_take(s32 *map);
+/* Layout index of the story step's area on this map half, or 0. */
+s32 dw3_objective_spot(s32 region);
+
 #endif /* PC_PORT */
 
 #endif /* PORT_H */

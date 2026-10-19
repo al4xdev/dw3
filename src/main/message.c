@@ -706,6 +706,17 @@ s32 message_handle_char(MessageWindow *obj, MessageLine *line, MessageDrawState 
     case 1:
         font = obj->font;
         n = (u8)state->code;
+#ifdef PC_PORT
+        /* Face buttons are 2 bytes. Swap the picture, keep the advance. */
+        if (dw3_feat_icons) {
+            s16 letter = dw3_button_glyph((u8)n);
+            if (letter >= 4) {
+                state->glyph = &obj->font->glyphs[letter - 4];
+                *pos += 2;
+                break;
+            }
+        }
+#endif
         if (n <= font->ext_count && n > 0) {
             state->glyph = &font->glyphs_ext[n - 1];
         } else {

@@ -727,6 +727,17 @@ void ststatus_map_handle_pad(StstatusMapPage *obj, StstatusMapPageData *data) {
         sound_module.play(0x800450BD);
         obj->base.state = OBJECT_STATE_END;
     }
+#ifdef PC_PORT
+    /* Cross on a visited area: travel when the menu closes. No door: the ask logs once and stays. */
+    if (dw3_feat_travel && obj->on_area != 0 && PAD_PRESSED(13)) {
+        if (dw3_fast_travel_ask(obj->area - 1, obj->region)) {
+            sound_module.play(0x8004503C);
+            obj->base.state = OBJECT_STATE_END;
+        } else {
+            sound_module.play(0x800450BD);
+        }
+    }
+#endif
 }
 
 /* Draws the name's frame, the cursor, the current area's marker, the areas visited, the marks and the map. */
@@ -792,6 +803,17 @@ void ststatus_map_draw(StstatusMapPage *obj) {
                            ststatus_module.area_layout[i].y + obj->scroll_y + obj->map_y);
             }
         }
+#ifdef PC_PORT
+        /* Blink the story step. marker_frame already ticks; this path does not log. */
+        if (dw3_feat_objective && ((gfx_module.funcs.get_time() / 16) & 1) == 0) {
+            s32 spot = dw3_objective_spot(obj->region);
+            if (spot > 0 && spot < 47) {
+                spr.draw(cdload_module.get_subfile_by_id(obj->cursor_sprites), ststatus_module.area_layout[spot].text,
+                           ststatus_module.area_layout[spot].x + obj->scroll,
+                           ststatus_module.area_layout[spot].y + obj->scroll_y + obj->map_y);
+            }
+        }
+#endif
     }
     spr.set_layer_id(obj->layer_id, obj->ot_depth + 1);
     marks = ststatus_module.get_kind_list(obj->region, obj->marks_shown);

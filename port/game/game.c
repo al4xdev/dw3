@@ -5,6 +5,8 @@
 
 #include "records.h"
 
+extern void dw3_feats_arm(void);
+
 /* The game's own 60 Hz mode (the NTSC patch's records_60hz; docs/LAUNCHER.md "50/60 Hz"): set before the runtime
  * snapshots the game's data, so that the reset restores it and the reset check holds; main_screen_pos stays 1 (the PAL
  * screen offset, which the port's video ignores, and the card game's PAL layout). */
@@ -12,4 +14,5 @@ void game_apply_rate(long rate) {
     if (rate == 60) {
         records_60hz = 1;
     }
+    dw3_feats_arm();
 }
