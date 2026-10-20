@@ -47,10 +47,10 @@ image stays the oracle.
 1. `render_gles.c`: EGL/GBM offscreen context, the VRAM RGBA8 target, the read copy, and the listener for the three
    transfers (**LOAD, FILL, COPY**) - no polygons yet.
 2. `gpu_set_listener_replaces` in the shim, default off so nothing changes for the existing renderer.
-3. Validation on the existing harness: `tests/host/gpu_harness.c` grows a `-DGPU_GLES` build and the `H` command
-   compares the GLES target against the software VRAM, over the same golden corpus the SDL3 renderer uses. The cases
-   that only transfer (`move_*`, and the fixtures' LoadImages) must match exactly; the polygon families are expected to
-   differ until M2 and M3, and the harness has to say so instead of failing.
+3. Validation: `psxstack/tests/gles_selftest.c` drives the listener with the transfers a frame issues and compares the
+   whole target against the shim's VRAM. (The `-DGPU_GLES` build of `tests/host/gpu_harness.c` over the golden corpus
+   was the plan; the test that exists does the same job for M1's scope and runs on the handheld, where the EGL headers
+   are, instead of requiring them on a desktop. The harness is still the right home for the polygon milestones.)
 4. Only then the present: the display pass into an RGB565 target, read back (1.83 ms measured), memcpy into `/dev/fb0`.
 
 ## What spike #8 settled (measured on the console, ES running)
@@ -68,3 +68,27 @@ An EGL context on a GBM device with a pbuffer needs no window, no DRM master and
 rendered offscreen and handed to the existing `/dev/fb0` present, which is the only way to avoid the 17 ms
 `SwapWindow`. The 320x240 readback is even slightly cheaper here (1.71 ms) than through SDL (1.95 ms), and a whole-VRAM
 readback (10.8 ms) is only paid on a checkpoint.
+
+## M1c result (measured on the console, frontend running)
+
+```
+GLES renderer self-test (M1: the transfer path against the shim's VRAM)
+context: EGL 1.4, Mali-G31, OpenGL ES 3.2 v1.r13p0-01rel0...
+listener installed, replaces=1
+
+   LoadImage 1024x512           : exact (1024 x 512 texels)
+   Fill 64x32                   : exact (1024 x 512 texels)
+   Fill wrapping the edge       : exact (1024 x 512 texels)
+   Copy overlapping             : exact (1024 x 512 texels)
+   Copy with check-mask         : exact (1024 x 512 texels)
+   LoadImage with set-mask      : exact (1024 x 512 texels)
+
+undrawn so far: 1 triangle(s), 0 rect(s), 0 segment(s)
+PASS: every transfer reproduced the shim's VRAM exactly
+```
+
+Two bugs came out of it, neither visible by reading the code: a transfer rectangle that runs past an edge lands
+wrapped in the shim and the upload wrote outside the texture (the target lost the wrapped part), and the test itself
+was setting a marked pixel straight into the oracle's array, which put the two sides in different states. The
+renderer now splits a wrapped rectangle into at most four pieces, the way `gpu.c` masks every pixel, and uploads each
+transfer as it happens so it interleaves correctly with the drawing to come.
