@@ -192,7 +192,7 @@ int main(void) {
             sscanf(line + 2, "%d %d %d %d", &x, &y, &w, &h);
             for (j = 0; j < h; j++) {
                 for (i = 0; i < w; i++) {
-                    u16 p = v[((y + j) & 511) * 1024 + ((x + i) & 1023)];
+                    u16 p = v[((y + j) & 511) * psyq_gpu_vram_stride() + ((x + i) & 1023)];
 
                     buf[n++] = (u8)p;
                     buf[n++] = (u8)(p >> 8);
