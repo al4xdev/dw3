@@ -1,0 +1,164 @@
+# Raw measurements from the device
+
+XF35H (RK3326, Mali-G31, 640x480, GPU at 520 MHz with governor `performance`, dmc at 528 MHz), 2026-10-20.
+Every binary ran 100 frames per test with a `glFinish` per sync, four operations per sync, and the first line of every
+run is a baseline that measures the `glFinish` itself (0.002 ms, i.e. negligible).
+
+Binaries measured, by md5 (build products, not tracked):
+
+```
+0d7901dde2a540f73fcb5367660f20c1  gl_probe
+ad33caf2ec39ed34a0cb33a2eed65874  gpu_spike2
+ed3bdd5e89487e749366aa1b331ddb24  gpu_spike3
+a627aa81cb35cff175305db320e66a73  gpu_spike4
+4f022fdd00e81bc251df40eb4e973bdc  gpu_spike5
+5784c300e296f35a69af97c5ed4d79fa  gpu_spike6
+a5ff576325941322eeb2118b04294f54  gpu_spike7
+```
+
+## 1. Version and extensions (`gl_probe`, context requested as ES 2.0)
+
+```
+GL_VERSION  : OpenGL ES 3.2 v1.r13p0-01rel0.8747d14aec16ec21ac2b2da252c4ec5f
+GL_VENDOR   : ARM
+GL_RENDERER : Mali-G31
+GL_SL_VER   : OpenGL ES GLSL ES 3.20
+94 extensions
+GL_ARM_shader_framebuffer_fetch        : YES
+GL_EXT_shader_framebuffer_fetch        : no
+GL_EXT_shader_framebuffer_fetch_non_coherent : no
+GL_EXT_blend_func_extended             : no
+GL_EXT_discard_framebuffer             : YES
+GL_EXT_multisampled_render_to_texture  : YES
+GL_OES_rgb8_rgba8                      : YES
+GL_OES_depth24                         : YES
+GL_EXT_texture_format_BGRA8888         : YES
+GL_EXT_unpack_subimage                 : no
+GL_OES_mapbuffer                       : YES
+GL_OES_vertex_array_object             : YES
+GL_EXT_instanced_arrays                : no
+GL_EXT_color_buffer_half_float         : YES
+GL_ARM_mali_program_binary             : YES
+precision frag HIGH_FLOAT  : 23 bits, range 2^127..2^127
+precision frag MEDIUM_FLOAT: 10 bits, range 2^15..2^15
+GL_MAX_TEXTURE_SIZE        : 8192
+MAX_RENDERBUFFER_SIZE      : 8192
+MAX_VARYING_VECTORS        : 15
+ES 3.0 context requested   : returned 3.2 (the blob ignores the version request)
+```
+
+## 2. Correctness (`gpu_spike2`, EmulationStation stopped)
+
+```
+A. CLUT indirection through the same texture: program linked
+   texel (5,10): index 5 -> palette (80,175,128); read back (80,175,128) : PASS
+B. GL_ARM_shader_framebuffer_fetch: compiled and linked
+   blue bg + 50% red fg = expect (128,0,128); got (128,0,128) : PASS
+   marked pixel survives the fbfetch draw (expect still green 0,255,0): got (0,255,0) : PASS
+```
+
+## 3. Cost (`gpu_spike2`, frontend stopped)
+
+```
+baseline: empty loop + glFinish                       : 0.002 ms
+1 draw x 4800 textured triangles, 2 CLUT fetches/px   : 1.215 ms per draw
+4800 individual draw calls (no batching)              : 53.602 ms per frame  (11.2 us per draw)
+glBlitFramebuffer full 1024x512 VRAM copy             : 0.421 ms each
+glCopyTexSubImage2D full 1024x512 (ES2 fallback)      : 1.770 ms each
+glTexSubImage2D 256x256 (256 KB) upload               : 1.424 ms each
+same batch + fbfetch blend + mask discard             : 2.839 ms per draw
+present: 640x480 quad + SDL_GL_SwapWindow (vsync off) : 17.076 ms each
+```
+
+## 4. Present (`gpu_spike3`, frontend stopped)
+
+```
+[swap] vsync off: 118 swaps in 2002 ms = 59.0 swaps/s (16.96 ms per swap)
+[swap] vsync on : 117 swaps in 2001 ms = 58.5 swaps/s (17.10 ms per swap)
+[readback] glReadPixels 320x240 RGBA (3 per sync, /3): 1.953 ms each
+[fb0] memcpy 640x480x2 into mmap (3 per sync, /3)    : 0.765 ms each
+```
+
+## 5. The same, **with** EmulationStation running (for the record)
+
+```
+[swap] vsync off: 258 swaps in 2006 ms = 128.6 swaps/s (7.77 ms per swap)
+[swap] vsync on : 255 swaps in 2024 ms = 126.0 swaps/s (7.94 ms per swap)
+[readback] glReadPixels 320x240 RGBA: 2.262 ms each
+[fb0] memcpy 640x480x2: 0.963 ms each
+```
+
+A 2x difference in the swap and 15% in the readback and the fb0 write just from the frontend being alive. **A
+measurement with the frontend running does not apply to the game** - the game runs with it stopped (that is what
+`emustation.service` does when it launches a port). Every conclusion above uses sections 3 and 4.
+
+## 6. What went wrong on the way (so it is not repeated)
+
+1. **First `gpu_spike2` run**: the shader used `packed`, a **reserved keyword** in GLSL - `L0003: Keyword 'packed' is
+   reserved`. Renamed to `tdata`. Do not trust a "descriptive" name.
+2. **First version of the measurements**: blit (1.625 ms), `glCopyTexSubImage2D` (1.615 ms) and a 256 KB upload
+   (1.581 ms) all returned *the same number*. That was not the cost of the operations but the fixed cost of one
+   `glFinish` per iteration. Fixed with (a) a baseline measuring an empty `glFinish` and (b) four operations per sync.
+   Without it I would have concluded "a blit costs 1.6 ms", which is false (0.42 ms).
+3. **Spike #1 (`SDL_RenderGeometry`) measured 10.77 ms of "present"** and I nearly recorded it as the cost of
+   presenting. It is flip waiting, and it moves from 17.0 ms (frontend stopped) to 7.8 ms (frontend running). It is not
+   a drawing cost.
+4. **`-lGLESv3` does not exist** in the sysroot; `libmali` exports everything from `libGLESv2`, and the `GLES3/gl3.h`
+   headers compile against it.
+
+## 7. VRAM format: native 5-5-5-1 against RGBA8 (`gpu_spike4`, frontend stopped)
+
+```
+A. VRAM as GL_RGB5_A1, uploaded as GL_UNSIGNED_SHORT_5_5_5_1
+   FBO status 0x8cd5 : COMPLETE (RGB5_A1 is colour-renderable)
+B. round trip upload -> FBO -> glReadPixels, all 524288 texels
+   0 mismatches out of 524288 (BIT-EXACT)
+C. framebuffer fetch on a 5551 target: linked
+   identity pass, blue pixel: 0x003e (want 0x7c00: b=31)  : DIFFERS
+   identity pass, green pixel with mask: 0x07c1 (want 0x83e0) : DIFFERS
+   blue bg + 50% red fg : r=30/31 g=0/31 b=30/31 mask=0 : FAIL
+   masked (green) pixel : r=1 g=30/31 b=1 mask=0 : FAIL
+D. cost
+   1 draw x 4800 textured tris, 2 CLUT fetches, 5551  : 1.071 ms (RGBA8 was 1.215)
+   upload 256x256 from uint16 (128 KB, no repack)      : 0.657 ms (RGBA8 was 1.424)
+   upload full VRAM 1024x512 from uint16 (1 MB)        : 6.166 ms
+   glReadPixels 320x240 as 5551 (153 KB)               : 0.726 ms (RGBA8 was 1.953)
+```
+
+Reading: the native 16-bit format is **bit-exact** and **2-3x cheaper** to upload and read back, but it **breaks
+framebuffer fetch** on this driver (the identity pass returns the channels rotated and the mask bit does not
+survive). Since per-pixel semi-transparency depends on fragment fetch, VRAM stays RGBA8.
+
+## 8. RGBA8 fed with 16-bit type (`gpu_spike5`) - failed, my error
+
+```
+[gl error] texImage2D RGBA8 from 5551: 0x502   (GL_INVALID_OPERATION)
+FBO status 0x8cd6 (INCOMPLETE)
+```
+
+`GL_RGBA8` with type `GL_UNSIGNED_SHORT_5_5_5_1` is not a legal combination (the ES3 table maps `RGBA + 5_5_5_1` to
+the internal format *RGB5_A1*, not RGBA8). Every following test therefore ran against an incomplete FBO (0x506) and
+reported 0.001 ms. Not a property of the device: the spike was wrong. Recorded because "RGBA8 inside, 16 bits at the
+door" **does not exist** in this API: either RGBA8 with 8-8-8-8 (the CPU expands) or native RGB5_A1.
+
+## 9. Display target (`gpu_spike6`, `gpu_spike7`, frontend stopped)
+
+```
+(gpu_spike6)
+RGB565 display FBO 640x480: COMPLETE
+[a] GPU scale to RGB565 + readback 640x480x2        : 4.376 ms
+[a] memcpy RGB565 -> /dev/fb0                       : 0.553 ms
+[b] readback 320x240 RGBA (from the RGB565 target)  : 28.088 ms   <- trap
+
+(gpu_spike7, 320x240 target, 100 frames)
+RGBA8   / UNSIGNED_BYTE         : draw+readback 2.523 ms | draw 0.835 | readback ~1.688
+RGB5_A1 / UNSIGNED_SHORT_5_5_5_1: draw+readback 1.867 ms | draw 0.751 | readback ~1.116
+RGB565  / UNSIGNED_SHORT_5_6_5  : draw+readback 1.831 ms | draw 0.820 | readback ~1.011
+```
+
+Notes:
+
+- The 28.1 ms of `[b]` in spike #6 is reading 320x240 **RGBA from an RGB565 target**: the driver falls into a slow
+  conversion path. Readback cost is not the size, it is whether the requested format matches the stored one.
+- For the same reason, reading 640x480 as RGB565 (4.38 ms) is worse than reading 320x240 in the same format
+  (1.01 ms) and scaling on the CPU: the cheap route is to read the display area at native resolution.

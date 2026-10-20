@@ -5,7 +5,8 @@ How this game runs as a native program on [psxstack](https://github.com/gascarce
 runtime, the memory arena, the overlays, the pump, the debug channel, the Psy-Q shim, rendering, sound and the crash
 report are psxstack's `docs/PORT.md`; building and running the binary, its options, the per-frame log and the record
 formats are psxstack's `docs/RUNTIME.md`; the shim's per-function behaviour is psxstack's `psyq/README.md`; sound is
-in `docs/SOUND.md`. The choices behind this design are in `docs/DECISIONS.md` (its PC port entries).
+in `docs/SOUND.md`. The choices behind this design are in `docs/DECISIONS.md` (its PC port entries). The measured
+case for a GPU backend - and what the device answered - is in `docs/gpu/`.
 
 ## Overview
 - The game's C (`src/`, all 388 units) is compiled for the host with `-DPC_PORT -DNON_MATCHING` and linked with

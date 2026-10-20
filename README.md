@@ -4,6 +4,7 @@ This is a fork of the [Digimon World 2003 decompilation](https://github.com/gasc
 tuned to run on the **RK3326 handhelds** — R36S, XF35H and their clones: 4x Cortex-A35 (ARMv8-A in AArch32, 1.3 GHz),
 1 GB of DDR3L/LPDDR3, a 640x480 panel and a 32-bit Linux userspace. Everything is rendered in software on the CPU and
 written straight to `/dev/fb0`; there is no GPU rendering path, so the picture is byte-identical to the PS1's.
+`docs/gpu/` records what the GPU would cost and what the device answered, with the probes that produced the numbers.
 
 > [!IMPORTANT]
 > **This repository contains no game data.** You need your own copy of *Digimon World 2003 (Europe) (En,Fr,De,Es,It)*,

@@ -49,6 +49,16 @@ _Decided: 2026-10-06_
 The current state is a short `docs/STATUS.md`; planned work lives in the GitHub Project and problems in issues. There
 is no session log, no plan or idea document: history is in git and the pull requests.
 
+## Device measurements are kept, not remembered
+_Decided: 2026-10-20_
+
+`docs/gpu/` holds the study of a GPU backend: the reports, the probes' sources and their raw output, failures
+included. This is the one deliberate exception to "docs are lean", because three separate numbers in it were already
+lost once to being "remembered" (the swap cost, the blit cost, the effect of the frontend being alive), and because a
+number that cannot be re-derived is worse than no number. The rule it establishes: a claim about this hardware's
+performance is written down with the command that produced it and the binary's md5, and a claim that fails stays in
+the file with the reason.
+
 # Toolchain and build
 
 ## Project-local, pinned toolchain
