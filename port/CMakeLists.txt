@@ -41,12 +41,12 @@ message(STATUS "${out}")
 file(GLOB DW3_CONFIG_DEPS "${DW3_ROOT}/config/*.symbols.txt" "${DW3_ROOT}/config/wstag/*.symbols.txt")
 file(GLOB DW3_ADAPTER_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/game/*.c")
 
-# The handheld builds the port with no -O flag at all, so the game's own C runs unoptimised. On a Cortex-A35 that is
-# a large share of a battle frame (the GTE and the model code). The matching build is a different target and keeps its
-# own flags; this only affects the PC port's game objects.
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch")
-    set(PSXSTACK_GAME_OPT -O2)
-endif()
+# -O2 for the game's own C crashes at boot here: sound_init -> sound_update_loading -> cdload_get_subfile, SIGSEGV,
+# reproducible (three runs out of three, and a core dump with that stack). Under -O0 it does not, so the decompilation
+# has undefined behaviour the optimiser is entitled to exploit. The game's objects stay at -O0 until it is found.
+# if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch")
+#     set(PSXSTACK_GAME_OPT -O2)
+# endif()
 
 psxstack_add_game(dw2003
     GAME_JSON "${CMAKE_CURRENT_SOURCE_DIR}/game/game.json"
