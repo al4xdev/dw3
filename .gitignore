@@ -78,3 +78,6 @@ __pycache__
 /tools/prebuilt
 
 # The stack, a symlink to the sibling clone until the submodule (phase 4; scripts/worktree_init.sh)
+
+# Ephemeral scratch (benchmarks, replays, dumps)
+.dumps/
