@@ -190,6 +190,10 @@ int dw3_fast_travel_ask(s32 area, s32 region);
 void dw3_fast_travel_clear(void);
 /* The remembered field, once, or 0. */
 int dw3_fast_travel_take(s32 *map);
+/* The destination's entry point, remembered when its map first loaded: 1, with x/y/dir, or 0. */
+int dw3_fast_travel_landing(s32 *x, s32 *y, s32 *dir);
+/* FIELDSTG, once the map's script has set start_pos: where a fast travel to this map lands. */
+void dw3_fast_travel_remember(s32 map, s32 x, s32 y, s32 dir);
 /* Layout index of the story step's area on this map half, or 0. */
 s32 dw3_objective_spot(s32 region);
 

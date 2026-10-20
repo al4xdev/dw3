@@ -186,7 +186,8 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         }
         obj->option_count = obj->extended + 5;
 #ifdef PC_PORT
-        dw3_fast_travel_clear();
+        /* The destination survives this: the map page closes, STSTATUS rebuilds this menu, and the choice at case 6
+         * is what consumes it. A stale one from a cancelled menu is cleared by the next START (fieldstg). */
         if (port_mod_global_save != 0 && gamestate_data.funcs.get_map() != 0x1000) {
             obj->option_count++; /* global_save: a SAVE entry last, in the field's menu only (docs/LAUNCHER.md) */
         }
@@ -418,8 +419,15 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 break;
             }
             {
-                s32 travel;
+                s32 travel, x, y, dir;
                 if (gamestate_data.funcs.get_map() == 0x1000 && dw3_fast_travel_take(&travel)) {
+                    /* Land on the destination's own entry point: FIELDSTG copies player_pos to return_pos when
+                     * the previous map is not a field. Without one remembered, its position is left alone. */
+                    if (dw3_fast_travel_landing(&x, &y, &dir)) {
+                        gamestate_data.player_pos.x = x;
+                        gamestate_data.player_pos.y = y;
+                        gamestate_data.player_dir = dir;
+                    }
                     gamestate_data.funcs.set_next_map(travel, 0);
                     obj->base.step++;
                     break;

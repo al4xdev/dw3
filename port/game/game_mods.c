@@ -502,6 +502,35 @@ s16 dw3_button_glyph(u8 code) {
 static s32 dw3_travel_map;
 static int dw3_travel_miss;
 
+/* Each map's entry point (fieldstg_stage.start_pos), remembered the first time the map is loaded: that is the
+ * "beginning" a fast travel lands on. Indexed by the map's low byte. */
+typedef struct Dw3TravelStart {
+    s32 x, y, dir;
+    int known;
+} Dw3TravelStart;
+static Dw3TravelStart dw3_travel_start[0x100];
+static Dw3TravelStart dw3_travel_landing;
+
+void dw3_fast_travel_remember(s32 map, s32 x, s32 y, s32 dir) {
+    if (map < 0x200 || map > 0x2D6) {
+        return;
+    }
+    dw3_travel_start[map & 0xFF].x = x;
+    dw3_travel_start[map & 0xFF].y = y;
+    dw3_travel_start[map & 0xFF].dir = dir;
+    dw3_travel_start[map & 0xFF].known = 1;
+}
+
+int dw3_fast_travel_landing(s32 *x, s32 *y, s32 *dir) {
+    if (!dw3_travel_landing.known) {
+        return 0;
+    }
+    *x = dw3_travel_landing.x;
+    *y = dw3_travel_landing.y;
+    *dir = dw3_travel_landing.dir;
+    return 1;
+}
+
 int dw3_fast_travel_ask(s32 area, s32 region) {
     s32 first;
     s32 last;
@@ -531,7 +560,9 @@ int dw3_fast_travel_ask(s32 area, s32 region) {
             continue;
         }
         dw3_travel_map = i;
-        port_log("fast travel: area %d -> map 0x%X", (int)area, (unsigned)i);
+        dw3_travel_landing = dw3_travel_start[i & 0xFF];
+        port_log("fast travel: area %d -> map 0x%X%s", (int)area, (unsigned)i,
+                 dw3_travel_landing.known ? "" : " (no entry point remembered)");
         return 1;
     }
     if (!dw3_travel_miss) {

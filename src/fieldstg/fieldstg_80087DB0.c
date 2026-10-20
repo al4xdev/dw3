@@ -1638,6 +1638,9 @@ static inline void fieldstg_manager_open_menu(FieldstgManager *obj, FieldstgMana
             }
             fieldstg_stage.menu_open = 1;
             fieldstg_stage.event_running = 1;
+#ifdef PC_PORT
+            dw3_fast_travel_clear(); /* a new menu session: a destination left over by a cancelled one is dropped */
+#endif
             data->menu = fieldmenu_create(0x1002, 0);
             gamestate_data.field_map = gamestate_data.funcs.get_map();
             gamestate_data.player_pos = data->party[0]->pos;
@@ -1676,6 +1679,11 @@ static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerD
     }
     gamestate_flags.update_map_flags();
     gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
+#ifdef PC_PORT
+    /* The map's script set start_pos: that is the "beginning" a fast travel to this map lands on. */
+    dw3_fast_travel_remember(gamestate_data.funcs.get_map(), fieldstg_stage.start_pos.x,
+                             fieldstg_stage.start_pos.y, fieldstg_stage.start_dir);
+#endif
     map = gamestate_data.funcs.get_prev_map();
     if ((map & 0xFF00) != 0x200 && (map & 0xFF00) != 0x300 && (map & 0xFF00) != 0xE00 && map != 0x1500
         && map != 0x500) {
