@@ -18,15 +18,28 @@ it is "keep every frame inside the budget".
 
 | Scene | Budget | Measured frame | Verdict |
 |---|---|---|---|
-| Menus, map, field (2D) | 20 ms | ~8–11 ms | fits with room; fast-forward up to 8x works |
+| Menus, map, field (2D) | 20 ms | ~8 ms | fits with room (a town frame: gpu 1.2 + audio 4.7 + present 1.0) |
 | Opening movie (24-bit) | 20 ms | ~15 ms | fits; plays at full speed |
-| Scripted first battle | 20 ms | ~11–13 ms | fits |
-| **Heaviest battle** (large enemy, ~150k textured px) | 20 ms | **~19.7 ms** | **fits, with ~0.3 ms of margin** |
+| Scripted first battle | 20 ms | ~13 ms of drawing | fits |
+| **Heaviest battle** (large enemy, ~150k textured px) | 20 ms | **~30 ms** | **over budget: plays at ~33 fps** |
 
-The last row is the process's own CPU time, sampled from `/proc/<pid>/stat` during the fight: with the meters off it
-keeps 98.6% of one core, which at 50 Hz is 19.7 ms per frame. It is playable — but that margin is thin, so the work
-left is margin, not a fix (see [What is left](#what-is-left)). The other rows come from the GPU log's `walk` plus the
-present log and the audio's share.
+The battle row is the process's own CPU time (`/proc/<pid>/stat`) divided by its frame counter, both read from the
+running process; the drawing part of it matches the GPU log's `walk`. For a battle of that kind the split is:
+
+| Part | ms |
+|---|---|
+| rasteriser (`walk`) | ~18–19 |
+| **audio (SPU mix)** | **4.9** |
+| present | 1.0 |
+| the game's own logic (GTE, models), compiled at `-O0` | ~6–8 |
+
+Two of those were measured directly and are not estimates: the audio with `DW3_NO_AUDIO=1` (4.9 ms → 0.0 ms) and the
+drawing with the GPU log. The game's logic is what is left after subtracting them.
+
+**There is no regression to chase.** The same binary measured in the same battle gives the same ~30 ms; an earlier
+measurement of 19.7 ms was a lighter fight. What made a session feel slow at 19 fps was the diagnostic `DW3_PHASE`,
+which wraps every GTE call (~111k a frame) and costs 23 ms of the 20 ms budget — see
+[Measuring performance](#measuring-performance).
 
 ## Problem → solution
 
@@ -218,7 +231,9 @@ On the map, Cross on a visited area starts a fast travel.
 | `DW3_NO_NEON_GOURAUD=1` | scalar Gouraud span (escape hatch) |
 | `DW3_PRESENT_LOG=path` | one line a second with the present cost |
 | `DW3_GPU_LOG=path` | one line a second with the whole frame's split (expensive: 1–2 ms in a battle) |
-| `DW3_PHASE=path` | per-phase CPU split, in a windowed run |
+| `DW3_PHASE=path` | per-phase CPU split, windowed runs only. **Do not leave it on to play**: it wraps every GTE call (~111k in a battle) and costs 23 ms of the 20 ms budget |
+| `DW3_NO_AUDIO=1` | measurement: play silence and skip the SPU mix (4.9 ms a frame). The voices' state stops advancing, so nothing else can be judged with it |
+| `DW3_SKIP_BIG=N` | measurement: draw no triangle (by bounding box) or rectangle over N pixels, to weigh a scene's background |
 
 ## Measuring performance
 
@@ -245,7 +260,7 @@ spans 9891 neon 5734 scal 4157 fopq 5872 gok 0 alias 138 maskpx 0 load 0 | aud N
 | `spans` / `neon` / `scal` | rows drawn, and which loop drew them |
 | `fopq` / `gok` / `alias` | spans the vector path could take, and how many the self-aliasing check sent back |
 | `load` | pixels of CPU-to-VRAM transfers (texture uploads) |
-| `aud` | the SPU's per-frame mix (the field is new; the number it gives is what decides the audio work) |
+| `aud` | the SPU's per-frame mix: **4.9 ms** in a battle (0.0 with `DW3_NO_AUDIO=1`) |
 
 Two measurements worth knowing by heart:
 
@@ -254,27 +269,77 @@ Two measurements worth knowing by heart:
 - **Are the pixels right?** Run twice with `--save-state N:/tmp/a.state` and `--save-state-exit`, once with NEON and
   once with `DW3_NO_NEON_FLAT=1`, and compare the files: they must be byte-identical except the stack block at the tail.
 
+## Experiment log, including what failed
+
+Every experiment of the handheld work, with its verdict, so none of it has to be rediscovered and any of it can be
+undone. "Reverted" means the commit that tried it is in the history and the tree is back.
+
+| # | Experiment | Result | State |
+|---|---|---|---|
+| 1 | Expand the VRAM straight into the framebuffer (`Fbdev_PresentVram`) instead of converting then blitting | 10 → 1.0 ms (15-bit), 23 → 1.5 ms (24-bit) | **kept** |
+| 2 | NEON span for `GPU_COPY` and the semi-transparent modes (it only took `GPU_OPAQUE`, and 98% of the battle's spans are the other two) | 152 of 8212 spans took the vector path before; 4439 after. Time gain small (~4%): the cost was already the fetch, not the arithmetic. Pixels proven identical (below) | **kept** |
+| 3 | `-mcpu=cortex-a35` instead of `-march=armv7-a` | 17 `__aeabi_idiv` call sites → 0, 15 `sdiv`; the scheduling becomes the A35's. No isolated timing (it went in with the rest) | **kept** |
+| 4 | Every meter on by default in `dw3.sh` | The GPU log costs 1–2 ms a battle frame (`mrrc` is 6–15 cycles and it was read ~10× per span); `DW3_PHASE` costs **23 ms** a frame in a battle, because it wraps every GTE call (111k of them). A battle ran at 19 fps with it on | **reverted** (meters commented out) |
+| 5 | Pad the VRAM rows (1032, then 1056 with 64-byte alignment) | Synthetic benchmark: 119 → 31 ns/px for a fetch that walks `v` one row per pixel. **In the real battle: no measurable gain.** Kept anyway because it is neutral there and removes a known aliasing; the in-game A/B never separated it from the `DW3_PHASE` mistake | **kept, unproven in-game** |
+| 6 | `-O2` for the game's own C (it is built at `-O0`) | **Crashes at boot**: `sound_init → sound_update_loading → cdload_get_subfile`, SIGSEGV, 3 runs of 3, core dump with that stack. The decompilation has UB the optimiser exploits (one is documented in `fieldmenu.c`: `fieldmenu_name_pos[6 + i]` reads past a one-element array on purpose) | **reverted**; `PSXSTACK_GAME_OPT` exists for a narrower retry |
+| 7 | `DW3_NO_AUDIO=1`: play silence and skip the SPU mix | **The audio costs 4.9 ms per frame** (0.0 with the switch). 24% of the budget | **kept as a switch**, the SPU itself untouched |
+| 8 | `DW3_SKIP_BIG=N`: draw no triangle or rectangle over N pixels | **Inconclusive**: nothing in the battle is over 20k pixels, pixel counts identical with and without it. A battle's background is many ordinary polygons, not one big quad | **kept as a switch**; needs a per-texture-page filter to weigh the arena |
+| 9 | Microbenchmarks of the span loop (`span_bench*.c`, in `.dumps/`) | Gave the 14.6 ns/px (L1-sized working set) vs 54.8 (the whole VRAM) figure that explains the memory limit, but also **misled experiment 5**: the synthetic walk was not the game's pattern | **reference only** |
+| 10 | "The game got slower after a build" | **Not true**: the session log and the restored build show the same ~30 ms in the same battle. The slowdown felt was experiment 4 | **settled** |
+
+## Rolling back
+
+The tree is always left at a commit that produced the binary on the card, and both sides are checked by md5 after every
+deploy. The states worth knowing:
+
+| State | `psxstack` | `dw2003recomp` |
+|---|---|---|
+| the build that was called "the good one" (padding 32, meters off) | `4e17fca` (tag `r36s-good-50fps` is the one before the padding: `26fb162`) | `39128e1` |
+| current: that build plus the two measurement switches and no `-O2` | `9201ed8` | `2feb311` |
+
+```sh
+# back to a commit, rebuild, deploy, and prove the card has it
+git -C dw2003recomp/psxstack checkout <psxstack-commit>
+git -C dw2003recomp checkout <dw2003recomp-commit>
+./build_arm.sh                      # never pipe it through `head`: SIGPIPE kills the packaging step
+md5sum dw2003recomp/build/armhf-sdl2/dw2003 portmaster/dw3/dw2003    # must be equal
+rsync -rt portmaster/dw3/dw2003 root@<console>:/storage/roms/ports/dw3/
+ssh root@<console> md5sum /storage/roms/ports/dw3/dw2003             # must match the two above
+```
+
+Two traps, both hit during this work: `build_arm.sh` runs with `set -euo pipefail`, so `./build_arm.sh | head` aborts
+the script before it copies the binary (you then deploy the previous one); and the symbol addresses move between builds,
+so reading a state variable out of `/proc/<pid>/mem` needs the address from the binary that is actually running
+(`port_frames` was `0x01863750` in one build and `0x017c3750` in the next).
+
 ## What is left
 
-The battle fits, so what remains is margin for the heaviest bosses, in order of return per effort:
+The owner's decision is **not to touch the audio**, so the 4.9 ms it costs stays as it is. What is left is the
+rasteriser and the game's own code:
 
-1. **The SPU mix in NEON** (the `aud` field says how much; an earlier phase log said ~4 ms, unverified since): 24
-   voices × 882 samples per frame, a small working set that does fit the L1 — the opposite of the rasteriser, so SIMD
-   should pay here. Validated by `--wav` being bit-identical.
-2. **A decoded texture cache** (~4 ms of the `flat` time if it works): keep texture rows decoded in compact, tiled
-   blocks that fit the L1 and stay inside a few pages, so the vertical walk stops paying for the micro-TLB. The
-   benchmark puts that at 14.6 ns/px against 56 today. This is the one change that attacks the memory limit itself.
-
-Both are optional: without them the game runs at full speed in the battles measured so far.
+1. **The scene's background** (unmeasured): a battle draws ~74k flat pixels — about one full screen — which is where
+   the `flat` 5.0 ms goes, and the arena is most of it. To weigh it, filter by texture page (`(tex_y >> 8) << 4 |
+   (tex_x >> 6)`), not by polygon size.
+2. **A decoded texture cache** (~4 ms of the `flat` time if it works): texture rows decoded into compact blocks that
+   fit the L1, so the vertical walk stops paying for the micro-TLB (10 entries, 2 KB rows cross a 4 KB page every two
+   rows). The benchmark puts that at 14.6 ns/px against 56 today. The one change that attacks the memory limit itself,
+   and the riskiest.
+3. **The game's own C at `-O0`** (~6–8 ms): `-O2` for everything crashes (experiment 6), so a retry would have to be
+   per module, and only after the UB is found.
 
 ## Known limitations
 
-- The heaviest battles fit with ~0.3 ms of margin. A boss with more overdraw than measured would still slow down.
+- **The heaviest battles are over budget**: ~30 ms of work against 20, so they play at ~33 fps (measured on the process's
+  own CPU time). Light battles fit.
+- **The audio costs 4.9 ms a frame**, audible or not. It is the second largest item after the rasteriser, and by the
+  owner's decision it is left alone.
+- The game's own C is built at `-O0` (`-O2` crashes at boot: undefined behaviour in the decompilation, see the
+  experiment log), so its share — roughly 6–8 ms of a battle frame — stays.
 - Fast travel lands on the map's entry point (or the remembered position), not on a specific door.
 - Widescreen is off on the software renderer: it needs the hardware renderer.
 - With fast-forward on, the audio is muted. That is deliberate: at 8x the sound would be eight times faster and
   choppy.
-- The audio costs a few ms per frame whether or not anything is audible (`aud` in the GPU log has the number).
+- The boot/title screen is 320x576 and falls back to the converting present (~16 ms a frame there, for under a second).
 
 ## Credits and license
 
