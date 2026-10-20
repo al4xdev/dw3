@@ -99,6 +99,11 @@ void port_unimplemented(const char *fn) {
     exit(3);
 }
 
+/* gpu.c's per-frame primitive counters (runtime/framecsv.c, DW3_FRAME_CSV): a diagnostic with nothing to count here. */
+void port_framecsv_note(int kind) {
+    (void)kind;
+}
+
 static u8 *arena = port_arena;
 
 static int unhex(const char *s, u8 *out, int max) {

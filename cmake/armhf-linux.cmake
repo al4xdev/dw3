@@ -13,7 +13,11 @@ set(CMAKE_MAKE_PROGRAM /usr/bin/ninja CACHE FILEPATH "" FORCE)
 set(PSXSTACK_OBJCOPY "${CMAKE_OBJCOPY}" CACHE FILEPATH "" FORCE)
 set(PSXSTACK_OBJDUMP "${CMAKE_OBJDUMP}" CACHE FILEPATH "" FORCE)
 
-set(CMAKE_C_FLAGS_INIT "-marm -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard")
+# The handhelds these builds run on are Cortex-A35 (RK3326 and its siblings): an ARMv8-A core in AArch32 mode,
+# which has SDIV/UDIV in hardware and the dual-issue scheduling of that core. Targeting armv7-a instead left every
+# integer division a call to __aeabi_idiv (30-50 cycles), and the GPU's per-span setup divides: gpu.c had 17 such
+# call sites. -marm stays explicit (Thumb-2 would be a different codegen to re-validate).
+set(CMAKE_C_FLAGS_INIT "-marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
