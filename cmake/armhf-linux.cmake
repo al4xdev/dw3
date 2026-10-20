@@ -17,7 +17,13 @@ set(PSXSTACK_OBJDUMP "${CMAKE_OBJDUMP}" CACHE FILEPATH "" FORCE)
 # which has SDIV/UDIV in hardware and the dual-issue scheduling of that core. Targeting armv7-a instead left every
 # integer division a call to __aeabi_idiv (30-50 cycles), and the GPU's per-span setup divides: gpu.c had 17 such
 # call sites. -marm stays explicit (Thumb-2 would be a different codegen to re-validate).
-set(CMAKE_C_FLAGS_INIT "-marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard")
+#
+# -O2 for the whole binary. The stack optimises the parts it knows run every frame (gpu.c -O3, spu*.c and the GTE
+# -O2), but the build itself has no -O, so the game's own C — the GTE callers, the model animation, the field and
+# battle setup, which a battle frame runs a hundred thousand times — was compiled at -O0. A battle there spends more
+# time in that code than in the rasteriser. The decompiled C compiles with -fwrapv -fsigned-char -fno-strict-aliasing
+# (set by the port), which is what makes optimisation safe for it.
+set(CMAKE_C_FLAGS_INIT "-O2 -marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
