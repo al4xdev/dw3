@@ -63,7 +63,7 @@ primitives, for the line segments' points.)
 
 | battle, 600 frames from the state | draws/frame | flush | fps |
 |---|---|---|---|
-| a batch per state change | 78 | 2.5 ms | 31.5 (this state) |
+| a batch per state change | 78 | 2.5 ms | 31.5 |
 | one batch | 1 | 0.7 ms | see 5 |
 
 A real bug fell out of the same reading: for an untextured primitive without dither the shader took its foreground
@@ -90,16 +90,55 @@ ordered after the drawing in the command stream and does not stall. Both ends wr
 pieces, the same split the upload uses; a copy with the mask rules still goes through the CPU's answer, because those
 need a per-pixel pass and are rare.
 
+That removed the copy's stall but the frame did not get faster - the time reappeared in the present, which reads the
+target with `glReadPixels` and therefore waits for everything queued before it, the new blits included:
+
+```
+gles: present readback 11.47 ms (glReadPixels 10.91, 5-bit conversion 0.56)
+```
+
+## 6. The readback off the critical path (31.3 → 41.9 fps)
+
+The present's wait is for the *current* frame's drawing, and the CPU has nothing to do until it returns. But it does
+not need this frame's pixels: it needs a picture, and a frame is 20 ms. So the readback is issued into a pixel buffer
+object and read one vsync later - the wait then lands on work that finished 20 ms ago - with the two buffers
+alternating so the frame being read is never the one being filled.
+
+Mapped pixel memory is uncached, so converting 320x240 out of it byte by byte cost 7.1 ms where the old
+`glReadPixels` into ordinary memory cost 0.06: one `memcpy` out of the map first, then the same conversion, and the
+whole readback is 2.4 ms. The first frame still takes the blocking path, so the picture is never late at startup.
+
+`glReadPixels` at 0.04 ms is the same transfer it always was, now without the wait.
+
+## The battle, in four steps
+
+Each row is 600 frames from one saved battle state, `--renderer gles` against the software renderer on the same state
+and the same binary:
+
+| battle | fps |
+|---|---|
+| a read copy per batch | 18.75 |
+| a read copy per vsync | 31.50 |
+| one draw a frame (copies still uploads) | 29.98 |
+| + GP0 80h as a blit | 31.27 |
+| + the buffered readback | **41.85** |
+| the software renderer, same state | 37.70 |
+
+And the VRAM check on the same battle: 0.2% differing before the models appear, 0.7% once they do - it was 4.5%
+before the untextured-colour fix and the copy change - with no undrawn primitive of any kind.
+
 ## What is left
 
-| battle frame, 600 frames from one state | ms |
+| battle frame | ms |
 |---|---|
-| the listener (packing ~1,100 primitives) | ~1.4 |
-| the flush (one draw) | ~0.7 |
-| the read copy (one blit) | ~0.4 |
-| the present (glReadPixels 320x240 + the fb0 memcpy) | ~3.5 |
-| the game's own CPU (dynarec, GTE, SPU) | the rest |
+| the listener (packing ~1,100 primitives) | 1.0 |
+| the flush (one draw) | 0.6 |
+| the read copy (one blit) | 0.6 |
+| the copies (two blits) | 0.0-0.1 |
+| the present (the PBO's memcpy and 5-bit conversion, then the fb0 present) | 3.2 |
+| the game's own CPU (dynarec, GTE, SPU) | the rest, ~14 |
 
-The present is the largest remaining cost of the renderer's own, and it is a readback whose `glReadPixels` waits for
-the frame to finish. A double-buffered PBO would overlap it with the next frame's CPU work at the price of one frame
-of display latency - the next measurement.
+The present is now the renderer's largest cost and it is all CPU work on the picture - a 320x240 RGBA transfer and its
+conversion - not waiting. The next thing to try there is doing the picture in the GPU's own format (the fb0 present
+already knows 15-bit), or handing the display to KMS instead of reading it back at all; the second is the 17 ms swap
+this design was built to avoid, so it would need the plane the frontend already owns.
