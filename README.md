@@ -151,7 +151,7 @@ This is as important as what was done — each of these looked like a win and is
 | 2 MB huge pages for the micro-TLB | this kernel has THP disabled (`/sys/kernel/mm/transparent_hugepage` does not exist) |
 | CPU/DMC governors | already `performance` on both; the DMC's 528 MHz is the DTS ceiling (194/328/450/528 available) |
 | Pinning the game away from the interrupts | every IRQ goes to `cpu0`, but the scheduler already ran the game on `cpu1`; the option exists anyway (`DW3_CPU_AFFINITY`) |
-| Rendering with the Mali-G31 | would break the byte-identical picture, which is the point of this port |
+| Rendering with the Mali-G31 | would break the byte-identical picture, which is the point of this port. **Done since**: `--renderer gles` (`docs/gpu/`) draws the VRAM on the GPU and in a battle is faster than the software rasteriser (41.9 fps against 37.7 on the same state); the picture differs from the software renderer's in 0.2-0.7% of the VRAM, in a handful of pixels along edges |
 
 ## Features of this fork
 
@@ -176,7 +176,7 @@ EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, whic
   dw2003          the port binary (ARM 32-bit)
   dw3.sh          menu + game
   dw3-menu.py     the framebuffer menu
-  settings.json   settings and mods
+  settings.json   settings and mods (video.renderer: "gles" on this machine; "software" reverts)
   pad.map         button letters shown in text
   game/dw2003.bin the disc image (yours)
   card1.mcd       memory card 1
