@@ -138,6 +138,12 @@ before the untextured-colour fix and the copy change - with no undrawn primitive
 | the present (the PBO's memcpy and 5-bit conversion, then the fb0 present) | 3.2 |
 | the game's own CPU (dynarec, GTE, SPU) | the rest, ~14 |
 
+M5's other half came with it: a save state saved on this renderer used to carry only the transfers, because the shim's
+array stops being the truth once the listener draws. The save reads the target back first now (row by row into the
+shim's padded stride) and a load restores it through the listener's power-on upload; the `gpu_vram` block of a GLES
+state is byte-identical to the software renderer's at the same frame, and the VRAM check is exact from the first check
+after a load.
+
 The present is now the renderer's largest cost and it is all CPU work on the picture - a 320x240 RGBA transfer and its
 conversion - not waiting. The next thing to try there is doing the picture in the GPU's own format (the fb0 present
 already knows 15-bit), or handing the display to KMS instead of reading it back at all; the second is the 17 ms swap
