@@ -48,3 +48,21 @@ transfer and not a primitive the listener is counting. The instruments that will
 The next step is mechanical rather than inspired: trace the frames around a check, replay the same events in a script
 against the shim's rules, and diff. The hypothesis to beat is that the shim draws that area with something my listener
 receives but classifies as undrawn while the counter is zero — which the replay would show immediately.
+
+## Closed: the open one was three bugs, not one
+
+The mechanical path worked, faster than the hypothesis it was meant to test. Three fixes took the title screen from
+29.3% of the VRAM differing to **1.0%, with the first check exact**:
+
+1. **The flat path skipped the 5-bit quantisation** (`c >> 3` in the shim, so 31 of 255 is 3 of 31, not 4).
+2. **A transfer landed before the batch queued ahead of it**, so a clear painted over the frame just uploaded.
+3. **`glBlitFramebuffer` obeys the scissor**, and the scissor is the PS1 drawing area (0,0..319,239 on a title screen).
+   The read copy therefore received the display area and *none* of the texture pages - the title's are at x = 640 - so
+   every sprite sampled zeros, hit the "texel 0x0000" rule, discarded itself and drew nothing. No error, no counter,
+   no warning: the picture was simply the background colour.
+
+The third one is the one worth remembering: a state that belongs to drawing (the scissor) silently constrained a
+different operation (the copy), and the observed symptom was as far from the cause as a picture can be.
+
+What is left of the 1.0% is the 344-and-counting semi-transparent or dithered rectangles the listener still counts
+instead of drawing, which is M4's scope and is what the counters report.
