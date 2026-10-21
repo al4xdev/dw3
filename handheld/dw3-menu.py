@@ -935,18 +935,21 @@ def remap(screen, pad):
 
 
 def confirm_reset(screen, pad):
-    """Ask, because there is no undo: A puts everything back and writes the file, B leaves it alone. The pad map is not
-    part of it - it has its own screen, and a player who remapped the buttons does not want that thrown away by a
-    settings reset."""
+    """Ask, because there is no undo: A puts everything back - the settings, the pad map and the LED mod - and writes the
+    files, B leaves it alone. The memory cards are not part of it: a reset is for a broken configuration, not for
+    starting the game over."""
     screen.fill(0x001018)
     screen.text(24, 40, "RESET SETTINGS?", C_TITLE)
     y = 110
     for line, color in (
         ("PUT EVERY SETTING BACK TO THE", C_TEXT),
-        ("TUNED DEFAULTS AND WRITE THE FILE.", C_TEXT),
+        ("TUNED DEFAULTS AND WRITE THE FILE:", C_TEXT),
+        ("BUTTONS TO THE XBOX LAYOUT AND THE", C_TEXT),
+        ("LED BAR SWITCHED BACK ON.", C_TEXT),
         ("", 0),
-        ("BUTTONS AND THE LED BAR ARE NOT", C_NOTE),
-        ("TOUCHED; THE MEMORY CARDS ARE YOURS.", C_NOTE),
+        ("A NINTENDO PAD NEEDS ITS LAYOUT PUT", C_NOTE),
+        ("BACK IN BUTTONS AFTERWARDS.", C_NOTE),
+        ("THE MEMORY CARDS ARE NEVER TOUCHED.", C_NOTE),
         ("", 0),
         ("%s YES" % pad["cross"][1], C_WARN),
         ("%s NO" % pad["circle"][1], C_NOTE),
@@ -1030,8 +1033,15 @@ def main():
                         s.clear()
                         s.update(defaults())
                         save_state(s)
+                        # The pad goes back too: a reset exists to undo a bad state, and a remap that made the menu or
+                        # the game unplayable is exactly the kind of thing someone resets to get out of. The layout is
+                        # the Xbox one (default_pad), so a Nintendo-style pad needs its layout row put back by hand.
+                        pad.clear()
+                        pad.update(default_pad())
+                        save_pad(pad)
                         if disc:
                             write_settings(s, disc)
+                        led_mod_set(True)
                 elif sel == buttons:
                     if remap(screen, pad) == "quit":
                         screen.fill(0x000000)

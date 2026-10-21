@@ -41,7 +41,7 @@ defaults are the configuration this port was tuned with, so a player who never o
 | `DEBUG` | `LOGS` (off / soft / heavy, off by default, set by the launcher as `DW3_LOG`) and `SAVE LOGS`, which writes `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map |
 | `LED BAR` | the console's LED bar follows the weakest party member's HP in battle (installs a small daemon) |
 | `BUTTONS` | remap the pad: a `LAYOUT` row (Xbox, Switch, PlayStation) for the letters, then one row per action (`CONFIRM`, `BACK`, ...) holding only the button |
-| `RESET SETTINGS` | puts every setting back to the tuned defaults, after asking; the pad map, the LED bar and the memory cards are untouched |
+| `RESET SETTINGS` | after asking, puts everything back: the tuned settings, the pad map (Xbox layout) and the LED bar switched on. The memory cards are never touched |
 | `PLAY` | start the game |
 
 **The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
