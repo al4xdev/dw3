@@ -37,6 +37,7 @@ echo "=== $NAME: assembling $OUT"
 rm -rf "$OUT"
 mkdir -p "$OUT/$NAME/licenses"
 cp "$HERE/port.json" "$HERE/README.md" "$HERE/gameinfo.xml" "$HERE/screenshot.png" "$OUT/"
+[ -f "$HERE/cover.png" ] && cp "$HERE/cover.png" "$OUT/"   # optional: the catalogue shows the screenshot without it
 cp "$REPO/handheld/$SCRIPT" "$OUT/$SCRIPT"
 chmod +x "$OUT/$SCRIPT"
 # Everything in handheld/ that belongs on the card, by rule rather than by list: a list here drops the next file
@@ -54,20 +55,10 @@ chmod +x "$OUT/$NAME/dw3.sh" "$OUT/$NAME/dw3-tui.sh" "$OUT/$NAME/dw3-menu.py"
 cp "$BINARY" "$OUT/$NAME/dw2003"
 chmod +x "$OUT/$NAME/dw2003"
 
-# The licences of what the port contains or links against. The game's own data is not here; its decompilation is the
-# repository's, under its own licence, and is not redistributed in this zip either.
-cat > "$OUT/$NAME/licenses/README.txt" <<'EOF'
-What this port ships and what it borrows:
-
-  dw2003             the port binary, built from github.com/gascarcella/dw2003recomp (see that repository's LICENSE).
-                     It contains no game data: it reads the user's own disc image.
-  dw3.sh, dw3-menu.py, dw3-tui.sh
-                     the launcher and the gamepad menu, part of the same repository.
-  SDL2               linked from the device's own (or PortMaster's) copy; zlib licence.
-  EGL, GLESv2, gbm   the device's vendor libraries, linked at run time.
-
-Psy-Q is not included: the port declares the API it needs and implements it itself.
-EOF
+# The licences of what the port contains or links against, kept as files in portmaster/licenses/ (a text to maintain,
+# not a heredoc to keep in step): the project's own MIT, SDL2's zlib, and what the package borrows. The game's data is
+# not here, and its decompilation is not redistributed in this zip either.
+cp "$HERE"/licenses/* "$OUT/$NAME/licenses/"
 
 cd "$DIST"
 rm -f "$NAME.zip"

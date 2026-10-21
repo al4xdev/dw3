@@ -33,14 +33,16 @@ A **decompilation** of a commercial game is not accepted by the main catalogue: 
 
 ## Still to do — owner only
 
-- [ ] **Licences with real text** in `dw3/licenses/`: today it holds one `README.txt` that says what the port ships and
-      borrows. Add the **SDL2** zlib licence text and the project's own `LICENSE` (the decompilation's licence).
-- [ ] **`cover.jpg`** (optional): the catalogue will use `screenshot.png` if there is none.
+- [x] **Licences with real text** in `dw3/licenses/`: the project's `LICENSE` (MIT), `SDL2.txt` (zlib) and a
+      `README.txt` saying what the package ships, borrows and does not include. They live in `portmaster/licenses/` and
+      `make_release.sh` copies them in (the zip went from 12 to 14 files).
+- [x] **`cover.png`** — the game's box art from the libretro thumbnail set (`Sony - PlayStation/Named_Boxarts`,
+      512x512); that set has no PAL cover, so it is the USA one, and `port.json` declares it under `image.covers`.
 - [ ] **Open a Discord testing thread** in the PortMaster server — *required* before a pull request; the report wants the
       device(s) and CFW(s) tested, the resolution, and the known issues below.
-- [ ] **Test on other CFWs**: `AmberELEC`, `dARKOS`, `muOS`, `ROCKNIX` (Libmali and Panfrost), `Knulli` optional. On this
-      machine only one handheld and one CFW exist, so this is the port's largest untested surface — the binary is armhf
-      only and uses EGL on GBM plus `/dev/fb0`.
+- [x] **The "not tested" matrix is declared** in `portmaster/README.md` ("Tested on"), with the one device/CFW that was
+      tested and every other row marked *not tested*, plus what to report (the `frames presented` line and whether the
+      films show the artefact). Testing those CFWs is still the owner's — one handheld exists here.
 - [ ] **Fork `PortMaster-MV-New`**, sparse checkout, put the contents of `dist/dw3.zip` under `ports/dw3/`, run
       `python3 tools/build_release.py --do-check`, and open the pull request citing the thread.
 - [ ] **Update the published release**: the GitHub release `dw3-port-1` still carries an older zip. After any change:

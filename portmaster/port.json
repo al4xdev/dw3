@@ -20,7 +20,9 @@
         ],
         "image": {
             "screenshot": "screenshot.png",
-            "covers": [],
+            "covers": [
+                "cover.png"
+            ],
             "thumbnail": null,
             "video": null
         },

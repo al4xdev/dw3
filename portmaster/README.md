@@ -42,6 +42,28 @@ draws the PlayStation's VRAM on the Mali. `ports/dw3/settings.json` picks one (`
 All of it can be rebound in the gamepad menu that runs before the game (`BUTTONS` → `REMAP`); the menu writes the mapping
 into `settings.json` and `pad.map`. `Select + Start` quits from anywhere.
 
+## Tested on
+
+| device / CFW | state |
+|---|---|
+| XF35H (RK3326, Mali-G31, 640x480) — EmuELEC 4.7-Nexus | **tested**: everything in this port was measured here |
+| R36S and its clones (same SoC) | **not tested**, but the port was built against exactly that hardware (Cortex-A35, Mali-G31, 640x480, armhf) |
+| AmberELEC | **not tested** |
+| dArkOS / ArkOS | **not tested** |
+| muOS | **not tested** |
+| ROCKNIX (Libmali and Panfrost) | **not tested** |
+| Knulli | **not tested** |
+| Other resolutions (480x320, 720x720, 1024x768) | **not tested**: the present is written for a 640x480 panel and letterboxes what does not fit |
+
+**If you run it on another device, please report what you see** — in the port's thread on the PortMaster Discord, with
+the device, the CFW and its version, and the resolution. Two facts make a report useful:
+
+- the frame rate line the game writes at exit: `port: window: N frames presented in X s (Y per second)` in
+  `ports/dw3/logs/game.log`;
+- whether the **films** show a rectangle of wrong pixels in the top-right corner. That is the one known rendering defect
+  (see `docs/gpu/17-movie-artefact.md` upstream); knowing which devices and drivers show it is worth more than a fix
+  nobody can test.
+
 ## Compile
 
 The port is built with the game repository's ARM cross build (Docker with an armhf toolchain):
@@ -57,3 +79,16 @@ tools/build_arm.sh      # configures with -DPSXSTACK_SDL2=ON -DPSXSTACK_EGL=ON a
 Thanks to the dw2003recomp project for the decompilation and the port, and to the PortMaster crew for the packaging
 conventions this folder follows. Thanks also to the DuckStation project, whose VRAM-as-a-texture renderer is the design
 the GLES backend here was measured against (`docs/gpu/01`).
+
+## What this port stands on
+
+| project | what it gave this port |
+|---|---|
+| [gascarcella/dw2003recomp](https://github.com/gascarcella/dw2003recomp) | the decompilation of the game's own C and the PC port — **the base this fork starts from** |
+| [gascarcella/psxstack](https://github.com/gascarcella/psxstack) (this fork: [al4xdev/psxstack](https://github.com/al4xdev/psxstack)) | the host runtime: arena, overlays, the pump, video, SPU, audio, input, memory cards, settings, the mods engine, the GPU backend, the crash report and the measurement switches |
+| [stenzek/duckstation](https://github.com/stenzek/duckstation) | **studied, not linked**: the VRAM-as-a-texture design, the batch key that became per-vertex state here, and the framebuffer-fetch strategy for the mask bit and semi-transparency. `docs/gpu/01`-`05` in the game repository record what was kept and what was rejected, each claim with a `file:line`; the implementation here is our own |
+| [psx-spx](https://psx-spx.consoledev.net/) | the hardware reference everything was written from: the SPU's voices, envelopes and reverb, the GPU's commands, the GTE's arithmetic |
+| PCSX-Redux | the **oracle** for the tests (SPU traces, replay runners) — never a source of code |
+| [SDL2](https://github.com/libsdl-org/SDL) | the window, the gamepad, the audio device and the threads on the host |
+| [libretro-thumbnails](https://github.com/libretro-thumbnails/libretro-thumbnails) | the box art in `cover.png` |
+| [PortMaster](https://github.com/PortsMaster) | the packaging rules this folder follows, and the multiverse catalogue a decompilation goes to |
