@@ -264,7 +264,10 @@ class Pulse:
             return None
         period, duty, mode = LEVELS[self.level]
         if period is None:  # a factory mode: one byte, the MCU does the rest
-            self.bar.set(MODES[mode][0], keep_power=True)
+            # Not keep_power: the rail is down when the daemon starts and the byte alone lights nothing. This is the
+            # same trap set() warns about for OFF - a byte written behind a down regulator is a dark bar that looks
+            # like a working one.
+            self.bar.set(MODES[mode][0])
             return None
         now = time.monotonic()
         if now >= self.next_edge:
