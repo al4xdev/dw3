@@ -14,7 +14,8 @@ A **decompilation** of a commercial game is not accepted by the main catalogue: 
 
 - [x] **The package builds itself and validates itself**: `portmaster/make_release.sh` assembles `dist/dw3.zip` in the
       layout the publishing page asks for and refuses to build when a required file is missing, when `port.json` does not
-      describe the layout, or when a disc image is inside. Last run: 12 files, `b3555e67…`.
+      describe the layout, or when a disc image is inside. Last run: **14 files, 2.0 MB, `0ce73b51…`**, published as the
+      `dw3-port-1` release asset (`sha256:10ba4313…`).
 - [x] **`port.json`** — version 4, `name: dw3.zip`, `items: ["Digimon World 3.sh", "dw3"]`, `arch: ["armhf"]`, `rtr:
       false`, `exp: false`, `availability: full`, `porter: ["al4xdev"]`, and an `inst` field that names the disc (Europe /
       PAL, `SLES-03975`), says the `.cue` and the `.bin` go in together, gives the folder as `ports/dw3/game/` and as the
@@ -45,9 +46,9 @@ A **decompilation** of a commercial game is not accepted by the main catalogue: 
       films show the artefact). Testing those CFWs is still the owner's — one handheld exists here.
 - [ ] **Fork `PortMaster-MV-New`**, sparse checkout, put the contents of `dist/dw3.zip` under `ports/dw3/`, run
       `python3 tools/build_release.py --do-check`, and open the pull request citing the thread.
-- [ ] **Update the published release**: the GitHub release `dw3-port-1` still carries an older zip. After any change:
-      `tools/build_arm.sh`, `cd portmaster && ./make_release.sh`, then
-      `gh release upload dw3-port-1 dist/dw3.zip --clobber -R al4xdev/dw3`.
+- [ ] **Update the published release** after any further change: `tools/build_arm.sh`, then
+      `cd portmaster && ./make_release.sh`, then
+      `gh release upload dw3-port-1 dist/dw3.zip --clobber -R al4xdev/dw3`. Done once already with the 14-file zip.
 - [ ] **The card's `dw3-menu.py`** must be the committed one: `ssh root@<ip> 'cat > /storage/roms/ports/dw3/dw3-menu.py' < handheld/dw3-menu.py`.
 
 ## What to declare as known issues
