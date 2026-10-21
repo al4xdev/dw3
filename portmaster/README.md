@@ -26,6 +26,33 @@ Two renderers ship in the binary: the software rasteriser (byte-identical to the
 draws the PlayStation's VRAM on the Mali. `ports/dw3/settings.json` picks one (`"video": { "renderer": "gles" }` or
 `"software"`); on this device GLES is the default and is faster in 3D, the software one is faster in menus.
 
+## What the menu offers (all optional, all off by default)
+
+The menu that runs before the game is driven by the pad alone and writes `ports/dw3/settings.json` as you change it.
+`PLAY` is the last row.
+
+| row | what it does |
+|---|---|
+| `HZ` | 50 or 60 Hz |
+| `FAST-FORWARD` | speed and off/on (up to 8x where the game has headroom; audio muted while it runs) |
+| `SKIP DIALOGUES` | presses through dialogue boxes for you |
+| `SKIP BATTLE ANIMS` / `HIT REACTION` | shorter battles |
+| `SAVE ANYWHERE` | the save menu outside a save point |
+| `PARTY XP` | the whole party shares the experience (percentage) |
+| `XP / BITS BOOST` | up to 20x experience, form experience and money (**with `ALL FORMS' XP`, the two game brakes below come off - see the notes**) |
+| `  ALL FORMS' XP` | every digivolution the Digimon owns earns what the one that fought earned |
+| `RENDERER` | `GLES` (3D) or `SOFTWARE` (2D-heavy scenes, and what the byte-exact reference uses) |
+| `LED BAR` | the console's LED bar follows the weakest party member's HP in battle (installs a small daemon) |
+| `SAVE LOGS` | writes `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map |
+| `BUTTONS` | remap the pad, with Xbox/Switch/modern presets |
+
+**The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
+points a battle before the fifth form-level threshold and 50 after it - that ceiling is what makes a digivolution gain one
+level per battle, and it is applied before the multiplier, so at 6x a battle still crept one level. With the mod on the
+ceiling is skipped, so a won battle can raise several form levels. `ALL FORMS' XP` goes further: only the forms that
+fought earn experience in the original, which leaves the other digivolutions at the lab for ever. Each form keeps its own
+requirement table, so nothing is free - a basic form taken to 99 in the late game is a farm the player built.
+
 ## Controls
 
 | Button | Action |
