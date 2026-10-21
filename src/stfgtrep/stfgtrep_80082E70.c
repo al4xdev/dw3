@@ -1422,6 +1422,12 @@ s32 stfgtrep_mark_skill(s32 digimon, s32 tech) {
 
 /* The experience technique `tech` gets from `exp` (shared by `n` users), 1..10 below its level threshold,
  * 1..50 above. */
+/* The experience a chosen FORM (a digivolution - the decompilation calls these records "techniques", which is why the
+ * name says technique; it is not the technique points, and not the Digimon's own experience) earns from a won battle.
+ * `a` is the battle's share, `n` the forms that took part. The clamps are the game's own ceiling per battle: 10 points
+ * before the fifth level threshold and 50 after it - the reason a form creeps one level a battle in the original.
+ * port_mod_xp_boost's `form_exp` multiplies this number; with the mod on the clamp is skipped so that the ceiling,
+ * which exists to pace a 99-battle evolution, does not eat the multiplier. */
 s32 stfgtrep_get_technique_exp(s32 digimon, s32 tech, s32 exp, s32 n) {
     GamestateForm rec;
     RecordsDigimon *t;
