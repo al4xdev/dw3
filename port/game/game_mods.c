@@ -339,7 +339,7 @@ static const PortModOption xb_options[] = {
     { .id = "bits", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
       .input_toggle = "manual", .applies = "live" },
     { .id = "manual", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
-    { .id = "all_forms", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
+    { .id = "all_forms", .type = PORT_MOD_BOOL, .def = "true", .applies = "live" },
 };
 static const char *const xb_names[] = { "experience", "form experience", "bits" };
 int port_mod_xp_boost;

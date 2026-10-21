@@ -209,7 +209,7 @@ This is as important as what was done — each of these looked like a win and is
   - **the 10/50 per-battle ceiling on form experience** - the rule that paces a digivolution to one level a battle (99
     battles to 99), applied before the multiplier so a 6x setting still crept one level. Off while the mod is on, so a
     won battle can raise several form levels (`tests` measured form 4 → 11 on the XF35H).
-  - **"only the forms that fought earn experience"** (`all_forms`, off by default): every form the Digimon owns earns
+  - **"only the forms that fought earn experience"** (`all_forms`, on by default): every form the Digimon owns earns
     what the fighting one earned - the same number, not a share, because dividing would punish carrying more forms.
     Each form keeps its own requirement table, so taking a basic form to 99 in the late game is a farm the player built,
     not a shortcut the port hands out. No cap on levels per battle either.

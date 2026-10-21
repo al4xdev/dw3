@@ -149,7 +149,7 @@ def load_state():
     # boost at 6x - with the menu one press away for anyone who disagrees. Fast-forward and skip start ON/OFF as he keeps
     # them; nothing here is hidden from the player.
     s = dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-             party=1, share=100, xp=1, xp_mul=2, all_forms=0, logs=0, lang=0, lang_on=0)
+             party=1, share=100, xp=1, xp_mul=2, all_forms=1, logs=0, lang=0, lang_on=0)
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:
