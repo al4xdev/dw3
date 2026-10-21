@@ -234,7 +234,7 @@ EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, whic
   dw2003          the port binary (ARM 32-bit)
   dw3.sh          menu + game            (from handheld/)
   dw3-menu.py     the framebuffer menu    (from handheld/)
-  dw3-tui.sh      the same menu for a terminal (over ssh)
+  ledd.py         the LED bar's daemon      (from handheld/)
   README.txt      what each file is, on the device
   settings.json   settings and mods (video.renderer: "gles" on this machine; "software" reverts)
   pad.map         button letters shown in text

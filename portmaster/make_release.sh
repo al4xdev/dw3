@@ -50,7 +50,7 @@ for f in "$REPO"/handheld/*; do
     cp "$f" "$OUT/$NAME/"
 done
 chmod -x "$OUT/$NAME/README.txt" 2>/dev/null || true
-chmod +x "$OUT/$NAME/dw3.sh" "$OUT/$NAME/dw3-tui.sh" "$OUT/$NAME/dw3-menu.py"
+chmod +x "$OUT/$NAME/dw3.sh" "$OUT/$NAME/dw3-menu.py"
 [ -f "$OUT/$NAME/ledd.py" ] && chmod +x "$OUT/$NAME/ledd.py"
 cp "$BINARY" "$OUT/$NAME/dw2003"
 chmod +x "$OUT/$NAME/dw2003"
