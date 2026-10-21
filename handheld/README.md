@@ -10,7 +10,10 @@ below into it and adds the binary.
 | `dw3.sh` | the game's own script: draws the gamepad menu, then `exec`s `dw2003` with `settings.json`, logging to `logs/game.log`. |
 | `dw3-menu.py` | the framebuffer menu: no keyboard, pad only, 640x480, its own 5x7 glyphs. Writes `settings.json` (which is how the mods and the pad mapping reach the game) and `pad.map`. |
 | `dw3-tui.sh` | the same settings from a terminal, for a desktop or a serial console. |
-| `dw3.json` | PortMaster's metadata for the port. |
+
+PortMaster's metadata is **not** here: it is `../portmaster/port.json` (version 4, with the screenshot and
+`gameinfo.xml` beside it), and `portmaster/make_release.sh` is what assembles the zip. An earlier `dw3.json` lived in this
+directory and was a version-2 draft; it was deleted so nobody publishes the wrong one.
 
 Not here, because they are the player's: `settings.json`, `pad.map`, `card1.mcd`/`card2.mcd`, `game/` (the disc) and
 `logs/`.
