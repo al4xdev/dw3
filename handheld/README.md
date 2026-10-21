@@ -29,9 +29,13 @@ goes to **PortMaster-MV-New** (the multiverse repository), not PortMaster-New.
 ## What the menu owns
 
 - `settings.json`: the mods and `input.gamepad`. `video.renderer` is `gles` on this machine (`"software"` reverts).
-- `pad.map`: one line per PS1 button, `<button> <gamepad input> <letter>`. The gamepad input is SDL's button name
-  (`south`, `east`, `west`, `north`, `leftshoulder`, `back`, `start`, ...), which is what `runtime/input.c` reads; the
-  letter is only what the text shows. **A button belongs to one action**: binding one that another action holds swaps
-  the two, and a file that has two actions on one button is healed when it is read (a `select` sharing `circle` would
-  otherwise make CIRCLE+START the exit chord).
+  The handheld build is the `PSXSTACK_SDL2` one, whose input (`psxstack/runtime/input.c`) has a fixed button map and
+  does not read `input.gamepad`; this file still carries the same mapping for the SDL3 builds.
+- `pad.map`: one line per PS1 button, `<button> <gamepad input> <letter>`. The name is what the *game* calls the action
+  after it rotates the pad for the non-Japanese languages, so the four face rows read `circle` = confirm, `cross` = back,
+  `triangle` and `square`; the gamepad input is SDL's button name (`south`, `east`, `west`, `north`, ...). It is the file
+  the game applies (`dw3_pad_permute`, `DW3_PAD_REMAP` in `dw3.sh`), because the SDL2 runtime cannot; the letter is only
+  what the text shows, and the menu derives it from the layout instead of asking for it. **A button belongs to one
+  action**: binding one that another action holds swaps the two, and a file that has two actions on one button is healed
+  when it is read (a `select` sharing `circle` would otherwise make CIRCLE+START the exit chord).
 - The loading screen runs six frames of two dot lines before the game starts; the game's own boot follows.

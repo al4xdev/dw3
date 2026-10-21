@@ -197,8 +197,11 @@ This is as important as what was done — each of these looked like a win and is
   check compares against.
 - **Fast travel**: press Cross on a visited area of the map to travel there.
 - **Map objective**: the story's next area blinks on the map.
-- **Button glyphs and remapping**: text shows the pad letter instead of the PS1 symbol; presets for Xbox, Switch and
-  "modern" layouts.
+- **Button glyphs and remapping**: text shows the pad letter instead of the PS1 symbol, and the gamepad's own buttons can
+  be reassigned; the `LAYOUT` row (Xbox, Switch, PlayStation) says what is printed on the pad and the four face rows are
+  what the buttons do in the game (confirm, back, ...), so the letter comes from the position and nothing is typed in.
+  The remap the menu writes into `pad.map` is applied by the game itself (`dw3_pad_permute`, `DW3_PAD_REMAP`): the
+  handheld's SDL2 runtime has a fixed button map of its own and never read `input.gamepad`.
 - **XP boost, off by default**: battle experience, **form (digivolution) experience** and bits can be multiplied, 2x by
   default and up to 20x with `manual`. The default is off and the binary says so (`dw3_feat_xp = 0`); it is turned on
   from the handheld menu and written to `mods.xp_boost` (or `DW3_FEAT_XP=1` for a run). With it on, two of the game's
@@ -268,18 +271,19 @@ The card's filesystem refuses Unix sockets, so debug sockets must live in `/tmp`
 
 ## Controls
 
-Default layout (the menu can remap it):
+Default layout (the menu's `BUTTONS` screen can remap it; the rows there are the actions, not the PS1 symbols, because
+the game rotates the face buttons for every language but Japanese):
 
-| Button | Action |
-|---|---|
-| D-pad | move |
-| Cross (south) | confirm / talk |
-| Circle (east) | cancel |
-| Square / Triangle | menu |
-| Start | field menu |
-| Select + Start | quit |
+| Row in `BUTTONS` | What it does in the game | Default button |
+|---|---|---|
+| `CONFIRM` (the game's circle) | confirm / talk | A on an Xbox pad, the bottom button on a PlayStation one |
+| `BACK` (the game's cross) | cancel / close | B, the right-hand button |
+| `TRIANGLE`, `SQUARE` | the card game's other two | the remaining face buttons |
+| `START` | field menu | start |
+| `SELECT` | with `START`: quit | select |
+| the D-pad and the sticks | move | - |
 
-On the map, Cross on a visited area starts a fast travel.
+On the map, the `CONFIRM` button on a visited area starts a fast travel.
 
 ## Environment variables
 

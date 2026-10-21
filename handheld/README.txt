@@ -10,17 +10,18 @@ INSTALLING
 
 CONTROLS
 - D-pad or left stick: movement and menus
-- A (south): confirm / talk (Cross)
-- B (east): cancel / menu (Circle)
-- X (west): secondary action (Square)
-- Y (north): status (Triangle)
+- CONFIRM: confirm / talk (the game calls it circle)
+- BACK: cancel / menu (the game calls it cross)
+- TRIANGLE and SQUARE: the card game's other two
 - L1 / R1: switch menu tabs
 - L2 / R2: the game's own functions
 - Select: map / selection
 - Start: pause / start
 
-All of it can be rebound in the gamepad menu that runs before the game (BUTTONS -> REMAP); that menu
-writes pad.map and settings.json, which is how the mapping reaches the game.
+Which button plays each of those is set in the gamepad menu that runs before the game
+(BUTTONS -> REMAP): a row per action holding only the button, and a LAYOUT row for the letters
+printed on your pad (Xbox, Switch, PlayStation). That screen writes pad.map, and the game itself
+applies it - the SDL2 build's runtime has a fixed button map of its own.
 
 HOTKEYS
 - Select + Start: quit cleanly (the log, the WAV and the memory card are closed)

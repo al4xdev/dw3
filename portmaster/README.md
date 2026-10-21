@@ -40,7 +40,7 @@ defaults are the configuration this port was tuned with, so a player who never o
 | `VIDEO` | `HZ` (50 or 60), `RENDERER` (`GLES` for 3D, `SOFTWARE` for 2D-heavy scenes and the byte-exact reference) |
 | `LED BAR` | the console's LED bar follows the weakest party member's HP in battle (installs a small daemon) |
 | `SAVE LOGS` | writes `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map |
-| `BUTTONS` | remap the pad, with Xbox/Switch/modern presets |
+| `BUTTONS` | remap the pad: a `LAYOUT` row (Xbox, Switch, PlayStation) for the letters, then one row per action (`CONFIRM`, `BACK`, ...) holding only the button |
 | `PLAY` | start the game |
 
 **The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
