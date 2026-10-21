@@ -12,10 +12,15 @@ FB = os.environ.get("DW3_FB", "/dev/fb0")
 PAD = os.environ.get("DW3_PAD", "/dev/input/event0")
 
 # The LED bar's daemon (handheld/ledd.py): it owns the tty and the regulator, and every port on the card asks it for the
-# bar instead of writing the line itself. `.led.installed` is this port's record that somebody said yes to the risk;
-# without it the menu only reports whether a daemon is already running.
+# bar instead of writing the line itself. Because it is shared, the installed copy and the record that somebody accepted
+# the risk live in ONE place for the whole card, not inside a port: a second port would otherwise ship a second copy that
+# drifts from this one, and its "installed" flag would say nothing about the others.
+#   /storage/.config/ledd/ledd.py    the one daemon the card runs (this port's copy put there on install)
+#   /storage/.config/ledd/installed  who installed it, when, and the hash of the copy that was installed
 LED_SOCK = "/tmp/ledd.sock"
-LED_FLAG = os.path.join(GAME, "led.installed")
+LED_DIR = os.environ.get("DW3_LED_DIR", "/storage/.config/ledd")
+LED_FLAG = os.path.join(LED_DIR, "installed")
+LED_COPY = os.path.join(LED_DIR, "ledd.py")
 
 # The palette, and what each colour means. One rule: a button you can press is amber, a value that is on is green, an
 # explanation is grey, and anything that is a warning or a failure is never the same colour as a normal value.
@@ -365,14 +370,18 @@ def led_mod_set(on):
 
 
 def led_state():
-    """The row: "not installed" until the daemon answers, then the mod's own switch as ON/off. Kept for a second: the
-    menu redraws on every key and a socket that is not there costs the connect timeout each time."""
+    """The row: "not installed" until a daemon answers, then the mod's own switch as ON/off. A daemon that answers IS
+    the install - the marker only says who accepted the risk, and a card where another port installed it shows as
+    installed here too. Kept for a second: the menu redraws on every key and a socket that is not there costs the
+    connect timeout each time."""
     import time
 
     now = time.time()
     if now - _led_seen[0] > 1.0:
         if led_ask("status"):
             text = "ON" if led_mod_on() else "off"
+        elif os.path.isfile(LED_COPY):
+            text = "installed, off"
         else:
             text = "not installed"
         _led_seen[0], _led_seen[1] = now, text
@@ -380,13 +389,15 @@ def led_state():
 
 
 def led_start_daemon():
-    """Ask the daemon to come up from this directory. ledd.py double-forks and takes a lock, so a second copy exits by
-    itself instead of opening the line twice."""
+    """Start the card's daemon: the shared copy when it is there, this port's own file otherwise (a port that was never
+    installed with the menu still gives the bar a chance). ledd.py double-forks and takes a lock, so a second copy
+    exits by itself instead of opening the line twice."""
     import subprocess
     import time
 
+    path = LED_COPY if os.path.isfile(LED_COPY) else os.path.join(GAME, "ledd.py")
     try:
-        subprocess.Popen([sys.executable or "python3", "./ledd.py", "--detach"], cwd=GAME,
+        subprocess.Popen([sys.executable or "python3", path, "--detach"], cwd=GAME,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         return False
@@ -397,8 +408,39 @@ def led_start_daemon():
     return False
 
 
-def draw_led(screen, pad, step, ok):
-    """The warning before anything is installed (step 0), then what happened (step 1)."""
+def led_install():
+    """Put this port's copy of the daemon where the whole card finds it, start it, and record who accepted the risk.
+    No second daemon and no second copy: if the shared file is already there with other bytes, this port's version
+    replaces it (the port that installs last wins, which is the same rule any package has)."""
+    import hashlib
+    import time
+
+    try:
+        os.makedirs(LED_DIR, exist_ok=True)
+        with open(os.path.join(GAME, "ledd.py"), "rb") as f:
+            body = f.read()
+        old = None
+        if os.path.isfile(LED_COPY):
+            with open(LED_COPY, "rb") as f:
+                old = f.read()
+        if old != body:
+            tmp = LED_COPY + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(body)
+            os.replace(tmp, LED_COPY)
+    except OSError as e:
+        return False, "CANNOT WRITE %s" % LED_DIR
+    if not led_start_daemon():
+        return False, "THE DAEMON DID NOT COME UP"
+    with open(LED_FLAG, "w") as f:
+        f.write("%s %s %s\n" % (os.path.basename(GAME), hashlib.sha1(body).hexdigest()[:12],
+                                time.strftime("%Y-%m-%d %H:%M")))
+    return True, "/tmp/ledd.sock ANSWERS status"
+
+
+def draw_led(screen, pad, step, ok, detail=None):
+    """The warning before anything is installed (step 0), then what happened (step 1), and the reason when it failed
+    (step 2)."""
     screen.fill(0x001018)
     screen.text(24, 16, "LED BAR", C_TITLE)
     y = 60
@@ -418,12 +460,14 @@ def draw_led(screen, pad, step, ok):
             ("%s CANCEL" % pad["circle"][1], C_NOTE),
         )
     else:
+        head = "THE DAEMON IS RUNNING" if ok else (detail or "THE DAEMON DID NOT COME UP")
         lines = (
-            ("THE DAEMON IS RUNNING" if ok else "THE DAEMON DID NOT COME UP", C_ON if ok else C_BAD),
+            (head, C_ON if ok else C_BAD),
             ("", 0),
             ("/tmp/ledd.sock ANSWERS status" if ok else "SEE /tmp/led-test/ledd.log", C_NOTE),
-            ("PORTS ASK, THE DAEMON DECIDES," if ok else "", C_NOTE),
-            ("AND LETS GO WHEN THE GAME DOES." if ok else "", C_NOTE),
+            ("THE COPY AND THE RECORD LIVE IN" if ok else "", C_NOTE),
+            ("/storage/.config/ledd, SO THE NEXT" if ok else "", C_NOTE),
+            ("PORT REUSES THEM INSTEAD OF ITS OWN." if ok else "", C_NOTE),
             ("", 0),
             ("%s BACK" % pad["cross"][1], C_NOTE),
         )
@@ -434,7 +478,7 @@ def draw_led(screen, pad, step, ok):
 
 
 def led_setup(screen, pad):
-    """The row's action: warn, ask, and only then start the daemon and write this port's record of it."""
+    """The row's action: warn, ask, and only then install (one copy on the card, one daemon) and record who said yes."""
     draw_led(screen, pad, 0, None)
     while True:
         key = pad_events(pad)
@@ -443,11 +487,10 @@ def led_setup(screen, pad):
         if key == "b":
             return None
         if key == "a":
-            ok = led_start_daemon()
-            if ok:
-                with open(LED_FLAG, "w") as f:
-                    f.write("ledd.py\n")
+            ok, detail = led_install()
             draw_led(screen, pad, 1, ok)
+            if not ok:
+                draw_led(screen, pad, 2, False, detail)
             while True:  # the press that got here must not dismiss the report
                 key = pad_events(pad)
                 if key == "quit":
