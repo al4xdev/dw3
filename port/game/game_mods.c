@@ -329,7 +329,7 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
  * (item 0x142's fifth included) through port_xp_boost, which multiplies them by `exp`, `form_exp` and `bits` (in tenths,
  * rounded down, at most 9,999,999). Above 5x (the sliders' top) a value needs `manual` (mod_resolve caps it without).
  * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. */
-enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL };
+enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL, XB_ALL_FORMS };
 static const PortModOption xb_options[] = {
     /* 20, not 10: an old game asks for it (the owner's word), and the handheld menu counts to 20 in steps of 1. */
     { .id = "exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
@@ -339,14 +339,17 @@ static const PortModOption xb_options[] = {
     { .id = "bits", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
       .input_toggle = "manual", .applies = "live" },
     { .id = "manual", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
+    { .id = "all_forms", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
 };
 static const char *const xb_names[] = { "experience", "form experience", "bits" };
 int port_mod_xp_boost;
+int port_mod_xp_boost_all_forms;
 static s32 xb_tenths[3];
 
 static void xb_start(struct PortMod *mod) {
     int k;
     port_mod_xp_boost = 1;
+    port_mod_xp_boost_all_forms = mod->values[XB_ALL_FORMS].number != 0.0;
     for (k = 0; k < 3; k++) {
         xb_tenths[k] = (s32)(mod->values[XB_EXP + k].number * 10 + 0.5);
     }

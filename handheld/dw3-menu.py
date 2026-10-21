@@ -133,7 +133,7 @@ GLYPH = {
 
 def load_state():
     s = dict(hz=50, ff=0, ff_speed="4x", skip=0, battles=0, hit=1, saveany=0,
-             party=0, share=50, xp=0, xp_mul=2, lang=0, lang_on=0)  # xp off, and the mildest step if it is turned on
+             party=0, share=50, xp=0, xp_mul=2, all_forms=0, lang=0, lang_on=0)  # xp off, and the mildest step if on
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:
@@ -205,7 +205,7 @@ def write_settings(s, disc):
     "battle_animations": { "enabled": %s, "hit_reaction": %s },
     "global_save": { "enabled": %s, "restore_map_state": true },
     "party_xp": { "enabled": %s, "share": %d, "knocked_out": false, "catch_up": false },
-    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s },
+    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s, "all_forms": %s },
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
     "led_bar": { "enabled": %s }
@@ -214,7 +214,7 @@ def write_settings(s, disc):
 }
 """ % (os.path.basename(disc), s["hz"], renderer, b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5),
+       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5), b(s["all_forms"]),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -327,6 +327,8 @@ def apply_row(s, row):
             if s["xp_mul"] > 20:  # an old game asks for it; above 5 the settings' "manual" flag allows it
                 s["xp"] = 0
                 s["xp_mul"] = 2
+    elif row == 8:  # the forms left at the lab share the form experience too
+        s["all_forms"] = 0 if s["all_forms"] else 1
 
 
 
@@ -598,6 +600,7 @@ def rows(s):
         "SAVE ANYWHERE       %s" % on(s["saveany"]),
         "PARTY XP            %s  %s%%" % (on(s["party"]), s["share"]),
         "XP / BITS BOOST     %s  %sX" % (on(s["xp"]), s["xp_mul"]),
+        "  ALL FORMS' XP     %s" % on(s["all_forms"]),
         "RENDERER            %s" % renderer_get().upper(),
         "LED BAR             %s" % led_state(),
         "SAVE LOGS           ZIP",

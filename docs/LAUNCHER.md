@@ -171,6 +171,12 @@ multiplies it by the option's value (in tenths, rounded down, at most 9,999,999)
   a battle can raise several form levels at once (`add_technique_exp` already loops; measured on the XF35H: form 4 -> 11
   in one won battle). It does not touch the Digimon's own experience or the TP. A very low-level Digimon in a rich battle
   can therefore jump a long way - the game's ceiling was the only limiter, and it is off while the mod is on.
+- **`all_forms`** (bool, default false): the forms that did **not** fight earn the same form experience the one that did
+  earned. The game hands it only to the forms that took part (`records_battle_results.members[slot].forms[]`), so a
+  Digimon carrying three digivolutions and using one leaves the other two at the lab for ever. Each of them gets the
+  same number - not a share: dividing would be a rule invented here, and it would punish carrying more forms. The
+  requirement tables stay the game's own, so a basic form taken to 99 in the late game is the player's farm, not a
+  shortcut the port hands out. No ceiling on levels per battle either, by the owner's call.
 - **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
   stops at 9,999,999.
 

@@ -491,10 +491,31 @@ void stfgtrep_member_run(StfgtrepMember *obj, StfgtrepMemberData *data) {
         if (records_battle_results.members[obj->slot].forms[obj->tech_shown] != 0) {
             tech = obj->chosen_forms[obj->tech_shown];
             if (tech >= 4) {
-                obj->tech_level_ups[obj->tech_shown].level_up = stfgtrep_funcs.add_technique_exp(
-                    digimon, obj->chosen_forms[obj->tech_shown],
-                    stfgtrep_funcs.get_technique_exp(digimon, tech, stfgtrep_rewards[records_battle_results.battle].tech_exp,
-                                               obj->main->techniques_used));
+                s32 form_exp = stfgtrep_funcs.get_technique_exp(
+                    digimon, tech, stfgtrep_rewards[records_battle_results.battle].tech_exp, obj->main->techniques_used);
+
+                obj->tech_level_ups[obj->tech_shown].level_up =
+                    stfgtrep_funcs.add_technique_exp(digimon, obj->chosen_forms[obj->tech_shown], form_exp);
+#ifdef PC_PORT
+                /* xp_boost's "all forms": the forms that did not fight earn the same experience. The game marks only the
+                 * forms that took part (records_battle_results.members[slot].forms[]), so a Digimon carrying three
+                 * digivolutions and using one would leave the other two at the lab for ever. Each of them gets what the
+                 * one that fought got - not a share of it: dividing would be a rule of this port's invention, and it
+                 * would punish carrying more forms, which is the opposite of what the game rewards. Each form still has
+                 * its own requirement table (level_thresholds, the exp staircase in add_technique_exp), so a basic form
+                 * taken to 99 late is the player's farm, not a shortcut this port hands out. */
+                if (port_mod_xp_boost_all_forms != 0) {
+                    s16 owned[44];
+                    s32 owned_count = gamestate_data.funcs.list_forms(digimon, owned);
+                    s32 owned_i;
+
+                    for (owned_i = 0; owned_i < owned_count; owned_i++) {
+                        if (owned[owned_i] >= 4 && owned[owned_i] != tech) {
+                            stfgtrep_funcs.add_technique_exp(digimon, owned[owned_i], form_exp);
+                        }
+                    }
+                }
+#endif
             }
         }
         obj->base.step++;

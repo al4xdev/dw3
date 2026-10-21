@@ -175,6 +175,10 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp);
 extern int port_mod_xp_boost;
 enum { PORT_XP_BOOST_EXP, PORT_XP_BOOST_FORM_EXP, PORT_XP_BOOST_BITS };
 s32 port_xp_boost(s32 kind, s32 amount);
+/* port_mod_xp_boost_all_forms: the same mod's "form experience for every form" option. The game gives a won battle's
+ * form experience only to the forms that fought (records_battle_results' forms[] marks them); with this on, the Digimon's
+ * other forms (the ones left at the lab, up to 44) earn an equal share of it too, at the report's own step. */
+extern int port_mod_xp_boost_all_forms;
 
 /* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE / _XP, default on).
  * A failure is logged once, never per frame. */
