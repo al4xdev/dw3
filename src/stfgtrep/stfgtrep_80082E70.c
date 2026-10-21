@@ -1453,6 +1453,14 @@ s32 stfgtrep_get_technique_exp(s32 digimon, s32 tech, s32 exp, s32 n) {
     gamestate_data.funcs.get_form(digimon, tech, &rec);
     if (e <= 0) {
         e = 1;
+#ifdef PC_PORT
+    } else if (port_mod_xp_boost != 0) {
+        /* The cap below is the game's own: a battle can hand out 10 points before the fifth level threshold and 50 after
+         * it, whatever it fought. It is applied *before* the boost, so a 6x setting multiplied 10 into 60 - enough to
+         * creep one level a battle and nothing more, which is what the owner saw. With the mod on, the share goes in as
+         * it was computed: stfgtrep_add_technique_exp raises as many levels as the experience pays for (the do/while
+         * around level_thresholds, up to 99), so the boost means what its name says. */
+#endif
     } else if (rec.level < t->level_thresholds[5]) {
         if (e > 10) {
             e = 10;
