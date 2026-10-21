@@ -595,6 +595,10 @@ static void dw3_pad_load(void) {
     if (dw3_pad.remap) {
         port_log("pad map: remap on, cross on %d circle on %d square on %d triangle on %d (the runtime's bits)",
                  (int)dw3_pad.perm[14], (int)dw3_pad.perm[13], (int)dw3_pad.perm[15], (int)dw3_pad.perm[12]);
+    } else {
+        /* One line, because the handheld's dw3.sh is what sets DW3_PAD_REMAP and losing it there would make the pad
+         * silently stop being remapped; on the SDL3 builds the runtime maps the pad and this is the expected line. */
+        port_log("pad map: read, not applied (DW3_PAD_REMAP is not set: the runtime maps the pad itself)");
     }
 }
 
