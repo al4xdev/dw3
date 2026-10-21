@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gameList>
+  <game>
+    <path>./Digimon World 3.sh</path>
+    <name>Digimon World 2003</name>
+    <desc>A source port of Digimon World 2003 (PAL), built from a matching decompilation: the game's own C with the PlayStation's hardware reimplemented on the host. Needs your own copy of the PAL disc in ports/dw3/game/.</desc>
+    <releasedate>20020705T000000</releasedate>
+    <developer>Bandai</developer>
+    <publisher>Bandai</publisher>
+    <genre>Role playing game</genre>
+    <image>./dw3/screenshot.png</image>
+  </game>
+</gameList>

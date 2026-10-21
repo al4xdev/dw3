@@ -14,6 +14,9 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+# The port is a 32-bit ARM build only (PortMaster's convention: this sets the CFW's 32-bit environment variables).
+export PORT_32BIT="Y"
+
 source $controlfolder/control.txt 2>/dev/null || true
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -59,13 +62,27 @@ fi
 export DW3_VIDEO="fbdev"
 export SDL_VIDEODRIVER="kmsdrm"
 export SDL_AUDIODRIVER="alsa"
+# The CFW's own controller database, so the pad is the same gamepad on every device (the port reads it through SDL's
+# gamecontroller API and maps it in its own menu).
+[ -n "${sdl_controllerconfig:-}" ] && export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+# A 32-bit build on a 64-bit CFW needs the CFW's own 32-bit libraries first; harmless when there are none.
+export LD_LIBRARY_PATH="$GAMEDIR/dw3${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# What PortMaster's platform helpers want to know about the binary before it runs (a no-op on CFWs without them).
+command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$GAMEDIR/dw3/dw2003" >/dev/null 2>&1
 
 # Gamepad menu on the panel, then the game. No keyboard on this handheld.
 if [ -x "$GAMEDIR/dw3.sh" ]; then
-  exec "$GAMEDIR/dw3.sh"
+  "$GAMEDIR/dw3.sh"
+else
+  "$GAMEDIR/dw3/dw2003" --disc "$DISC" --window --fullscreen --watchdog 0
 fi
-./dw2003 --disc "$DISC" --window --fullscreen --watchdog 0
 
-$ESUDO kill -9 $(pidof gptokeyb) 2>/dev/null || true
-$ESUDO systemctl restart oga_events &
+# Back to the frontend: PortMaster's cleanup when the CFW has it, gptokeyb and the frontend's events otherwise.
+if command -v pm_finish >/dev/null 2>&1; then
+  pm_finish
+else
+  $ESUDO kill -9 $(pidof gptokeyb) 2>/dev/null || true
+  $ESUDO systemctl restart oga_events &
+fi
 printf "\033c" > /dev/tty0

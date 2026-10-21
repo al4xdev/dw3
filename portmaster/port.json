@@ -1,0 +1,38 @@
+{
+    "version": 4,
+    "name": "dw3.zip",
+    "items": [
+        "Digimon World 3.sh",
+        "dw3"
+    ],
+    "items_opt": [],
+    "attr": {
+        "title": "Digimon World 2003",
+        "porter": [
+            "gascarcella"
+        ],
+        "desc": "A source port of Digimon World 2003 (PAL, SLES-03975), built from a matching decompilation of the game's own C and the PlayStation hardware models reimplemented for the host. Runs the original disc's data at 50 Hz, with a GLES renderer for the 3D and a byte-for-byte match with the software rasteriser on the VRAM.",
+        "desc_md": null,
+        "inst": "Copy your own copy of Digimon World 2003 (PAL) into ports/dw3/game/ as dw2003.cue + dw2003.bin (or any .cue/.bin pair: the launcher finds it). The port never ships the game's data.",
+        "inst_md": null,
+        "genres": [
+            "rpg"
+        ],
+        "image": {
+            "screenshot": "screenshot.png",
+            "covers": [],
+            "thumbnail": null,
+            "video": null
+        },
+        "rtr": false,
+        "exp": false,
+        "runtime": [],
+        "store": [],
+        "availability": "full",
+        "reqs": [],
+        "arch": [
+            "armhf"
+        ],
+        "min_glibc": ""
+    }
+}

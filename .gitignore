@@ -81,3 +81,5 @@ __pycache__
 
 # Ephemeral scratch (benchmarks, replays, dumps)
 .dumps/
+# The PortMaster release built by portmaster/make_release.sh (binary + launcher, regenerable)
+/dist/
