@@ -144,6 +144,19 @@ shim's padded stride) and a load restores it through the listener's power-on upl
 state is byte-identical to the software renderer's at the same frame, and the VRAM check is exact from the first check
 after a load.
 
+### What the present's wait turned out to be (measured after the four steps)
+
+The readback was moved to a pixel buffer so it would read a frame that had already finished. On the battle it is free
+(0.02 ms). On the boot and menu scenes it is **10-14 ms**, and giving the read two vsyncs of slack instead of one changes
+nothing: the cost is not the read's age but the frame's own GPU work - the boot re-uploads its art to the VRAM target -
+queued before the map, which is where the driver drains it. In a light 2D scene that makes this renderer *slower* than
+the software one: 43.5 fps against 57.7 on the scripted boot/menu run (1884 frames), because software draws those scenes
+in a couple of milliseconds and pays a 1 ms present.
+
+So the honest table is not "GLES is faster": it is faster where the GPU has something to do (battle 41.85 against 37.70)
+and slower where it does not (menus). What would fix the second case is not another readback trick: it is not reading the
+picture back at all (a KMS plane, the 17 ms swap this design exists to avoid) or not uploading what did not change.
+
 The present is now the renderer's largest cost and it is all CPU work on the picture - a 320x240 RGBA transfer and its
 conversion - not waiting. The next thing to try there is doing the picture in the GPU's own format (the fb0 present
 already knows 15-bit), or handing the display to KMS instead of reading it back at all; the second is the 17 ms swap
