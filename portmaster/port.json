@@ -13,7 +13,7 @@
         ],
         "desc": "A source port of Digimon World 2003 (PAL, SLES-03975), built from a matching decompilation of the game's own C and the PlayStation hardware models reimplemented for the host. Runs the original disc's data at 50 Hz, with a GLES renderer for the 3D and a byte-for-byte match with the software rasteriser on the VRAM.",
         "desc_md": null,
-        "inst": "Copy your own copy of Digimon World 2003 (PAL) into ports/dw3/game/ as dw2003.cue + dw2003.bin (or any .cue/.bin pair: the launcher finds it). The port never ships the game's data.",
+        "inst": "Needs your own disc: Digimon World 2003 (Europe/PAL, SLES-03975). Copy the .cue AND the .bin into ports/dw3/game/ (on ArkOS that is /storage/roms/ports/dw3/game/) - any .cue/.bin pair works, the launcher finds it. Do not rename the .bin without editing the .cue. Nothing of the game ships with the port.",
         "inst_md": null,
         "genres": [
             "rpg"

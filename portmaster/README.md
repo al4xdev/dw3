@@ -1,3 +1,18 @@
+## Installing it (no tools needed)
+
+1. Install the port with **PortMaster** on the console (Ports → PortMaster → search for "Digimon World 2003"), or unzip
+   `dw3.zip` into the card's `ports/` folder by hand. On ArkOS and EmuELEC that folder is `/storage/roms/ports/`.
+2. Put your own disc in `ports/dw3/game/` — the **`.cue` and the `.bin` together**, straight from your own copy of the
+   game (Europe / PAL, disc 1, serial `SLES-03975`; a redump-style `.cue` + `.bin` pair is what the launcher expects).
+   Copy them the way you copy any ROM: card in the PC, or over the network. The `.bin` is ~660 MB.
+3. Launch it from the **Ports** menu. A gamepad menu comes first (that is the port's own, driven only by the pad): the
+   bottom row is **PLAY**. Settings, button remapping and the LED bar are the rows above it.
+
+The port contains no game data: without the disc in `game/` it says `NO DISC IN game/` and does not start.
+
+If the game does not start after an update, the two files worth deleting are `settings.json` and `pad.map` in
+`ports/dw3/` (they are rebuilt on the next launch).
+
 ## Notes
 
 A source port of **Digimon World 2003** (PAL), built from [dw2003recomp](https://github.com/gascarcella/dw2003recomp): the
@@ -5,8 +20,7 @@ game's own C, decompiled to a matching build, compiled for 32-bit ARM, with the 
 MDEC, CD) reimplemented on the host. The disc's data is the only thing it reads from the game; nothing of the game is
 included here.
 
-It needs your own copy of the PAL disc. Copy `dw2003.cue` and `dw2003.bin` into `ports/dw3/game/` — the launcher finds
-any `.cue`/`.bin` pair there.
+It needs your own copy of the PAL disc, in `ports/dw3/game/` as described above.
 
 Two renderers ship in the binary: the software rasteriser (byte-identical to the port's reference) and a GLES one that
 draws the PlayStation's VRAM on the Mali. `ports/dw3/settings.json` picks one (`"video": { "renderer": "gles" }` or
@@ -25,8 +39,8 @@ draws the PlayStation's VRAM on the Mali. `ports/dw3/settings.json` picks one (`
 | Start | Start |
 | Select + Start | Quit |
 
-All of it can be rebound in the gamepad menu that runs before the game (BOTOES → REMAP); the menu writes the mapping into
-`settings.json` and `pad.map`.
+All of it can be rebound in the gamepad menu that runs before the game (`BUTTONS` → `REMAP`); the menu writes the mapping
+into `settings.json` and `pad.map`. `Select + Start` quits from anywhere.
 
 ## Compile
 
