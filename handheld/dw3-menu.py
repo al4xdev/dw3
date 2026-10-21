@@ -180,10 +180,21 @@ def write_settings(s, disc):
     def b(v):
         return "true" if v else "false"
     lang = LANGS[s["lang"]] if 0 <= s["lang"] < len(LANGS) else "english"
+    # The renderer is the player's choice, not the menu's: it is not on any row here, so it is carried over from the file
+    # that is already there. Writing a fixed "gles" silently overrode anyone who had chosen "software" - and made every
+    # A/B test that flipped the file meaningless, because the menu ran first and put it back.
+    try:
+        import json
+
+        renderer = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+    except (OSError, ValueError):
+        renderer = "gles"
+    if renderer not in ("gles", "software", "gpu"):
+        renderer = "gles"
     text = """{
   "schema": 1,
   "disc": { "path": "game/%s" },
-  "video": { "window": true, "scale": 2, "fullscreen": true, "refresh": %d, "renderer": "gles" },
+  "video": { "window": true, "scale": 2, "fullscreen": true, "refresh": %d, "renderer": "%s" },
   "audio": { "mute": false },
   "memcard1": "card1.mcd",
   "memcard2": "card2.mcd",
@@ -201,7 +212,7 @@ def write_settings(s, disc):
   },
   "input": { "gamepad": %s }
 }
-""" % (os.path.basename(disc), s["hz"], b(s["ff"]), s["ff_speed"], b(s["skip"]),
+""" % (os.path.basename(disc), s["hz"], renderer, b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
        b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5), b(s["lang_on"]), lang,
        b(led_mod_on()), gamepad_json(load_pad()))
