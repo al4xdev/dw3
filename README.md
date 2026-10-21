@@ -418,6 +418,15 @@ they would cost to try:
 
 ## Known limitations
 
+- **The movies have a cosmetic artefact on `gles`**: a rectangle of wrong pixels in the top-right corner of the film,
+  in some frames and not others (so it reads as blinking). The software renderer is clean. It is the one open defect
+  nobody could explain: `docs/gpu/17-movie-artefact.md` records what the game does there (two alternating VRAM areas,
+  24x416 slices written by `LoadImage`, a sprite drawn over the film) and every hypothesis already spent, so the next
+  attempt starts from the evidence instead of repeating it.
+- **The menu can choose the renderer** (`RENDERER  GLES/SOFTWARE`, written to `settings.json` immediately): the GPU path
+  wins where a frame has 3D to do (41.9 against 37.7 fps in the same battle) and costs more in a light 2D frame, where
+  the ~3.2 ms present is the same for both. In practice the card battles and the normal 2D scenes play fine on `gles`;
+  the number to watch is the scripted boot's 43.5 against 57.7.
 - **The heaviest battles are over budget**: ~24 ms of work against 20 with `gles` (41.9 fps) and ~27 ms with software
   (37.7 fps). Light battles fit; the scripted battle's window holds the 50 Hz cap.
 - **The renderer is not faster everywhere**: in light 2D scenes `gles` is slower than the software path (43.5 against
