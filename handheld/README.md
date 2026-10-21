@@ -15,6 +15,13 @@ below into it and adds the binary.
 Not here, because they are the player's: `settings.json`, `pad.map`, `card1.mcd`/`card2.mcd`, `game/` (the disc) and
 `logs/`.
 
+## Publishing it
+
+`portmaster/` (next to this directory) has the metadata the release needs - `port.json`, `README.md`, `gameinfo.xml`, a
+640x480 screenshot of gameplay - and `make_release.sh`, which assembles `dist/dw3.zip` in the layout
+<https://portmaster.games/packaging.html> asks for and checks it before it is offered. A port made from a decompilation
+goes to **PortMaster-MV-New** (the multiverse repository), not PortMaster-New.
+
 ## What the menu owns
 
 - `settings.json`: the mods and `input.gamepad`. `video.renderer` is `gles` on this machine (`"software"` reverts).

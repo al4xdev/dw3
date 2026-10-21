@@ -199,6 +199,32 @@ Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM f
 `SsUtSetReverbType(3)` writes are psx-spx's "Studio Medium" preset word for word, its size `4840h` gives the base
 `F6F8h`, and `18040h`, SsInit's cleared area, is the size of the two largest presets ("Chaos Echo", "Delay").
 
+### What it costs (measured on the handheld)
+
+The mix is the second largest item of a frame after the game's own code: **4.0 ms** per vsync in the scripted
+field/menu run and 4.9 ms in a battle when it was first measured. `DW3_GPU_LOG=1` now prints where it goes, per 882
+samples (one frame at 50 Hz):
+
+```
+spu: per 882 samples: total 4.89 ms = voices 3.66 (interpolation 0.42) + reverb 1.09 + rest 0.14
+spu: per 882 samples: total 3.84 ms = voices 2.83 (interpolation 0.41) + reverb 0.86 + rest 0.15
+```
+
+The second line is after three changes, and the WAV is byte for byte the first line's (md5 `39757ffd…`, 1200 vsyncs of the
+scripted run as the gate the plan set):
+
+1. `spu_envelope_tick` lives in `spu_internal.h` as a `static inline`. It was in `spu_dsp.c`, i.e. a call per use, and the
+   mix uses it three times per voice per sample - 63 calls a frame.
+2. A voice **released with its envelope at 0 is skipped**: its tick would step an internal counter that no register
+   exposes and that every transition resets (key-on, key-off, the block end's End+Mute), and the level it would add is
+   negative and clamped back to 0. Most voices are in that state most of the time.
+3. The reverb's 39-tap FIR runs on NEON (`vmlal_s16`, 4 taps a step). The lanes are summed in another order, which cannot
+   change an integer sum - and the build wraps on overflow (`-fwrapv`), so the WAV stays exact.
+
+What is left is the voice loop itself (2.8 ms): the interpolation is only 0.4 of that, the rest is the envelope, the two
+volume sweeps and the pitch counter of 24 voices x 882 samples, which are carried per voice and cannot be vectorised
+across without a rewrite that processes voices in parallel.
+
 ### What is modelled
 - **Registers** by offset from `0x1F801C00`, 16-bit: each stores what is written and reads it back, except ENVX
   (`+0x0C`: the envelope), the repeat address (`+0x0E`: the voice's), ENDX, STATX and the current main volume
