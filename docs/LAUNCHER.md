@@ -153,6 +153,19 @@ the three party members gain (the Digimon at the lab have no panel). The money, 
 unchanged. `tests/port/mods.py` runs the first story battle (one fighter of three) with the mod on and off; catch-up
 and knocked-out members are not reached by a scripted run.
 
+### Logs (the DEBUG group)
+
+The game's commentary is one switch, `debug.logs` in `settings.json`: `off` (the default) prints nothing, `soft` prints
+the startup lines and the events, `heavy` adds the periodic measurements (the per-second `present:` line among them).
+`handheld/dw3.sh` reads the value and passes it as `DW3_LOG`; the runtime's `port_log` honours it (`runtime/main.c`,
+`port_log_verbose()` for the periodic lines). **With the logs off the game log stays empty** - the file is still created,
+because the launcher appends to it - and the crash report keeps its last lines either way, so a report is possible
+without them. The separate one-off meters (`DW3_PRESENT_LOG`, `DW3_GPU_LOG`, `DW3_PHASE`) are commented in `dw3.sh` and
+are not the same thing: they write their own files and some cost real frames.
+
+`SAVE LOGS`, in the same group, writes `dw3-logs-<date>.zip` beside the port: `logs/*`, `crash-*.txt`, `settings.json`,
+`pad.map`, `tui.state` and a `system.txt` with the renderer, `uname` and the date. The cards and the disc are left out.
+
 ### XP boost
 
 `xp_boost`. Options: `exp`, `form_exp`, `bits` (float 1-10, step 0.1, default 2; sliders up to 5, `slider_max` with

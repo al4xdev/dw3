@@ -149,7 +149,7 @@ def load_state():
     # boost at 6x - with the menu one press away for anyone who disagrees. Fast-forward and skip start ON/OFF as he keeps
     # them; nothing here is hidden from the player.
     s = dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-             party=1, share=100, xp=1, xp_mul=2, all_forms=0, lang=0, lang_on=0)
+             party=1, share=100, xp=1, xp_mul=2, all_forms=0, logs=0, lang=0, lang_on=0)
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:
@@ -215,6 +215,7 @@ def write_settings(s, disc):
   "memcard1": "card1.mcd",
   "memcard2": "card2.mcd",
   "watchdog": 0,
+  "debug": { "logs": "%s" },
   "mods": {
     "fast_forward": { "enabled": %s, "speed": "%s", "mute": true, "hold": "", "toggle": "" },
     "skip_dialogues": { "enabled": %s, "fast_forward_waits": false },
@@ -228,7 +229,7 @@ def write_settings(s, disc):
   },
   "input": { "gamepad": %s }
 }
-""" % (os.path.basename(disc), s["hz"], renderer, b(s["ff"]), s["ff_speed"], b(s["skip"]),
+""" % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
        b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5), b(s["all_forms"]),
        b(led_mod_on()), gamepad_json(load_pad()))
@@ -349,7 +350,13 @@ GROUPS = [
         ("hz", "HZ"),
         ("renderer", "RENDERER"),
     ]),
+    ("debug", "DEBUG", [
+        ("logs", "LOGS"),
+        ("save_logs", "SAVE LOGS"),
+    ]),
 ]
+
+LOG_LEVELS = ["off", "soft", "heavy"]
 
 
 def group_rows(s):
@@ -358,8 +365,8 @@ def group_rows(s):
         "GAME                SETTINGS",
         "XP                  SETTINGS",
         "VIDEO               SETTINGS",
+        "DEBUG               SETTINGS",
         "LED BAR             %s" % led_state(),
-        "SAVE LOGS           ZIP",
         "BUTTONS             REMAP",
         "PLAY",
     ]
@@ -379,6 +386,10 @@ def field_text(s, key):
         return "%s" % s["hz"]
     if key == "renderer":
         return renderer_get().upper()
+    if key == "logs":
+        return LOG_LEVELS[s["logs"] % len(LOG_LEVELS)].upper()
+    if key == "save_logs":
+        return "ZIP"
     if key in ("skip", "battles", "hit", "saveany", "all_forms"):
         return on(s[key])
     return ""
@@ -416,6 +427,8 @@ def field_toggle(s, key):
             s["xp_mul"] = 2
     elif key == "renderer":
         renderer_toggle()
+    elif key == "logs":
+        s["logs"] = (s["logs"] + 1) % len(LOG_LEVELS)
     elif key in ("skip", "battles", "hit", "saveany", "all_forms"):
         s[key] ^= 1
 
@@ -937,13 +950,13 @@ def main():
     pad = load_pad()
     page = "main"
     count = len(rows(s, page))
-    # On the main screen: PLAY last, then BUTTONS, SAVE LOGS, LED BAR and the three group rows above them, counted from the
-    # end so a row added above cannot move any of them.
+    # On the main screen: PLAY last, then BUTTONS, LED BAR, and the four group rows above them, counted from the end so a
+    # row added above cannot move any of them. SAVE LOGS is not here any more: it lives in the DEBUG group with the logs
+    # level, which is the only place anyone looks for it.
     play = count - 1
     buttons = count - 2
-    logs_row = count - 3
-    led_row = count - 4
-    group_base = 0  # GAME, XP and VIDEO are the first three rows of the main screen, in GROUPS order
+    led_row = count - 3
+    group_base = 0  # the first len(GROUPS) rows are the groups, in GROUPS order
     sel = play
     screen = Screen()
     launch = False
@@ -964,6 +977,11 @@ def main():
                 if page != "main":
                     _title, entries = group_screen(page)
                     if 0 <= sel < len(entries):
+                        if entries[sel][0] == "save_logs":
+                            zipped = save_logs()
+                            draw(screen, s, sel, disc, pad, page)
+                            screen.text(24, screen.h - 8 * screen.scale - 8, "SAVED %s" % zipped, C_NOTE)
+                            continue
                         field_toggle(s, entries[sel][0])
                 elif sel == play:
                     launch = True
@@ -973,11 +991,6 @@ def main():
                         screen.fill(0x000000)
                         return 2
                     save_pad(pad)
-                elif sel == logs_row:
-                    zipped = save_logs()
-                    draw(screen, s, sel, disc, pad, page)
-                    screen.text(24, screen.h - 8 * screen.scale - 8, "SAVED %s" % zipped, C_NOTE)
-                    continue
                 elif sel == led_row:
                     if led_state() == "not installed":
                         if led_setup(screen, pad) == "quit":
