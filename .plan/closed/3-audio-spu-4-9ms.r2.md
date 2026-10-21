@@ -89,3 +89,21 @@ is in the ADPCM or in something serial per voice, the plan stops here and the nu
 
 The renderer's present (~3.2 ms) and the 0.7% VRAM difference in the battle stay in plan 4, which was left open with those
 two items. Here only the SPU is touched.
+
+## Closed with what it has - and what failed
+
+Closed by the owner's decision ("we can close with what we have, it is better than nothing"). The criterion below was
+**not met**, and it is worth saying so plainly:
+
+- **`aud` <= 2.5 ms was the criterion; the result is 3.0-3.3 ms in the battle** and 3.11 ms per vsync in the field. About
+  0.6 ms short. The ideal target (<= 1.5 ms) was never in reach with these stages.
+- **Stage 3 was aimed at the wrong thing.** The plan guessed the interpolation was the cost; the profile put it at 0.3-0.4
+  ms of 4.7. The NEON work that mattered was the reverb's FIR (stage 4), not stage 3, and stage 3 was not done.
+- **Stages 2 and 5 were not done.** Stage 2 (a global early out) is cheap and still on the table; stage 5 (another core)
+  was not recommended and not attempted.
+- **The biggest win was not in the plan at all**: `spu_envelope_tick` was in `spu_dsp.c`, i.e. a function call, and the
+  mix calls it three times per voice per sample. Moving it into the header as `static inline` plus skipping the tick of a
+  released voice at level 0 is most of the 1.6 ms gained. A plan that had been followed literally, stage by stage, would
+  have measured, then spent its effort on the interpolation, and found almost nothing.
+- **What was promised and kept:** the WAV is byte-identical (md5 `39757ffd…`) in every run of all three changes, and the
+  battle's `aud` did fall from 4.9 to 3.0-3.3 ms. That part is real, measured, and reproducible.

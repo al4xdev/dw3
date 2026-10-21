@@ -69,3 +69,21 @@ console: 14.6 ns/px with a working set that fits in L1, 54.8 with a 1 MB working
 
 The heaviest battle holds 50 Hz (effective fps 50, read from `game.log`) with the pixels identical to today's. If the
 0.3 ms of headroom does not survive the boss battles, step 2 pays the difference without touching the rasteriser.
+
+## What failed, or did not happen as written
+
+Added when the plan was closed. The four optimisations it lists were real and are in the code; the plan's frame did not
+survive contact with later measurements.
+
+- **The "0.3 ms of headroom" was wrong.** Later, with the same class of battle measured from a save state, the frame is
+  **23.9 ms** (41.85 fps) - 4 ms over the budget, not 0.3 under it. The 19.7 ms figure came from one instrumented window,
+  and it was treated as the general case.
+- **The premise died:** the plan exists to make the *software* rasteriser fit. The owner then made the GLES backend the
+  default (plan 4), so the game path is no longer this one. Software is now the oracle, not the way the game is played.
+- **Step 2 (audio on NEON, ~3 ms) was handed to plan 3 and stopped half way**: 4.72 -> 3.11 ms per vsync, not the 1.5 ms
+  the two plans wanted.
+- **Step 3 (decoded texture cache, ~4 ms) never happened.** It was the plan's big remaining lever and it is untouched.
+- **Step 4 was partly done**: the meters are out of `dw3.sh` and the escape switches exist, but the README's battle number
+  had to be corrected twice by later measurements.
+- **The meters this plan trusted were wrong once**: the per-part profile divided by a hardcoded 882 samples a vsync while
+  the machine was running its 60 Hz mode (735), so every figure came out 20% high until that was found.

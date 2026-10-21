@@ -77,3 +77,23 @@ present is where they are.
 the dead ends that were measured - `glBufferSubData` at 105 us a draw, reading the target as RGB565 at 28 ms - and the
 final table). Commits: `b0d17d3`, `494e60a`, `c2ce59d` (renderer), `ec234a3`, `2968e84` (`docs/gpu/16`), `876749c`,
 `0d5a41b` (default), `1796e2c`, `b28ff2b` (save state).
+
+## What failed, or did not happen as written
+
+Added when the plan was closed with what it has. Stages 0-5 exist and the renderer is the default; these are the failures.
+
+- **The completion criterion is not met.** It asked for the heavy battle at <=20 ms a frame; it measures **23.9 ms**
+  (41.85 fps). The replay window holds the cap, but that is the lighter half of the same battle.
+- **The renderer lost somewhere, and the plan never considered it.** In light 2D scenes (menus, boot) this renderer is
+  **slower** than the software one: 43.5 fps against 57.7 on the scripted run, because the present surfaces the frame's
+  GPU work (the boot's texture uploads) once per vsync. The plan's premise was that a GPU backend is faster, full stop.
+- **The present's 3.2 ms was not attacked**, and the two ideas that could (fb0 in the target's format, or a KMS plane) are
+  either untested or the 17 ms swap this design exists to avoid.
+- **The 0.7% VRAM difference is still there** and the single-triangle edge-rule experiment that would explain it was never
+  run. The 0.2% figure before the models was never explained either.
+- **The 24-bit display path was fixed by reading the code, not by watching a movie.** No FMV was ever run on this renderer
+  end to end; if the fix is wrong, nobody has seen it yet.
+- **A bug was found and left**: `--input-test` hangs on this device (no output, immune to `timeout`), and the `dw2003`
+  processes it left behind were only killed by hand.
+- **Measurement discipline failed twice**: numbers were compared across two different rates (50 Hz vs the machine's
+  60 Hz), and one "no regression" conclusion needed an A/B against an older build to be trusted. Both cost a round.

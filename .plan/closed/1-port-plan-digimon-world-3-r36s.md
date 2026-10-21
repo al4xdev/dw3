@@ -83,3 +83,28 @@
   - The launcher script (`dw3.sh`) with the environment and audio configuration.
   - A metadata file (`dw3.json`) compatible with the PortMaster ecosystem.
   - Installation documentation with clear instructions for placing the disc image.
+
+## What failed, or did not happen as written
+
+Added when the plan was closed. The port works; these are the places where the plan was wrong or left undone, written down
+because a plan that only records its successes is useless.
+
+- **The machine is not an R36S.** It is an XF35H with the same RK3326/Mali-G31, so every measurement holds - but every
+  line in this plan about "the R36S" is technically wrong, and the panel is the handheld's own 640x480, not a device we
+  chose.
+- **Point 1's comparison (Option A vs Option B) was made twice and late.** The port shipped on Option B (software +
+  `/dev/fb0`) and only much later did the GLES backend exist (plan 4) - the comparison the plan asked for at M3 happened
+  after M7, not before it.
+- **Point 4's premise was wrong.** The plan says rendering on the Mali "breaks the byte-identical picture". It does not:
+  in the frames compared with `--screenshot`, the GLES renderer's picture is byte-identical to the software one, and the
+  VRAM differs in 0.2-0.7% of its texels. A premise stated as fact closed a door that should have stayed open.
+- **M5's movie path was never verified end to end** on the GLES renderer: the 24-bit display path was corrected by
+  reading the code, not by watching an FMV run.
+- **M6's NEON work only happened where the meter pointed**, which is the right discipline but not what the milestone
+  promised: the "2D fast paths" for the flat span arrived, the decoded-texture cache never did, and the audio's NEON (plan
+  3) stopped at 3.1 ms of a 2.5 ms target.
+- **M7's real deliverable - a published port - did not happen.** The package exists and is checked
+  (`portmaster/make_release.sh`, `dist/dw3.zip`), but it was never submitted: that needs a Discord testing thread and
+  tests on CFWs this machine is not, and it is the owner's call to publish.
+- **Nothing here was ever tested on a second device or a second CFW.** Every number in this plan and in `docs/` comes
+  from one handheld.
