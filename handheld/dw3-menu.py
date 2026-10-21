@@ -28,7 +28,7 @@ EVDEV = {
 EVDEV_CODE = dict((name, code) for code, name in EVDEV.items())
 ACTIONS = ["cross", "circle", "square", "triangle", "l1", "r1", "start", "select"]
 ACTION_LABEL = {
-    "cross": "CONFIRMA", "circle": "VOLTA", "square": "QUADRADO", "triangle": "TRIANGULO",
+    "cross": "CONFIRM", "circle": "BACK", "square": "SQUARE", "triangle": "TRIANGLE",
     "l1": "L1", "r1": "R1", "start": "START", "select": "SELECT",
 }
 LETTERS = "ABXYLRSE"
@@ -291,7 +291,7 @@ def rows(s):
         "PARTY XP            %s  %s%%" % (on(s["party"]), s["share"]),
         "XP / BITS BOOST     %s  %sX" % (on(s["xp"]), s["xp_mul"]),
         "LANGUAGE            %s  %s" % (on(s["lang_on"]), lang.upper()),
-        "BOTOES              REMAP",
+        "BUTTONS             REMAP",
         "PLAY",
     ]
 
@@ -359,8 +359,8 @@ def draw(screen, s, sel, disc, pad):
     # line of all three was 774 px wide (cut at the right edge) and the file name sat at h-18, cut by the bottom.
     step = 8 * screen.scale
     y = screen.h - 3 * step - 6
-    screen.text(24, y, "%s MUDA   %s/START JOGA" % (pad["cross"][1], pad["circle"][1]), 0x888888)
-    screen.text(24, y + step, "SELECT+START SAI", 0x888888)
+    screen.text(24, y, "%s CHANGE   %s/START PLAY" % (pad["cross"][1], pad["circle"][1]), 0x888888)
+    screen.text(24, y + step, "SELECT+START QUIT", 0x888888)
     name = os.path.basename(disc) if disc else "NO DISC"
     if len(name) > 32:
         name = name[:29] + "..."
@@ -430,7 +430,7 @@ def pad_events(pad, capture=False):
 
 def draw_remap(screen, pad, sel, preset, capture):
     screen.fill(0x001018)
-    screen.text(24, 16, "BOTOES", 0x3EE0C8)
+    screen.text(24, 16, "BUTTONS", 0x3EE0C8)
     y = 48
     line = "PRESET              %s" % preset.upper()
     screen.text(16, y, ">" if sel == 0 else " ", 0xFFCC33)
@@ -445,10 +445,10 @@ def draw_remap(screen, pad, sel, preset, capture):
     step = 8 * screen.scale
     y = screen.h - 4 * step - 6
     if capture:
-        screen.text(24, y, "APERTE O BOTAO AGORA", 0xFFCC33)
-    screen.text(24, y + step, "NOME = SISTEMA. LETRA = JOGO", 0x888888)
-    screen.text(24, y + 2 * step, "START VOLTA   ESQ/DIR LETRA", 0x888888)
-    screen.text(24, y + 3 * step, "BOTAO JA USADO TROCA DE DONO", 0x666666)
+        screen.text(24, y, "PRESS THE BUTTON NOW", 0xFFCC33)
+    screen.text(24, y + step, "NAME = SYSTEM   LETTER = GAME", 0x888888)
+    screen.text(24, y + 2 * step, "START BACK   LEFT/RIGHT LETTER", 0x888888)
+    screen.text(24, y + 3 * step, "A USED BUTTON CHANGES OWNER", 0x666666)
 
 
 def remap(screen, pad):
@@ -500,10 +500,10 @@ def draw_loading(screen, phase=0):
     a = phase % width
     b = (width - phase) % width
     screen.text(24, 150, "." * a + ">" + "." * (width - a - 1), 0x3EE0C8)
-    screen.text(24, 180, "CARREGANDO O DISCO", 0x3EE0C8)
+    screen.text(24, 180, "LOADING THE DISC", 0x3EE0C8)
     screen.text(24, 220, "." * b + "<" + "." * (width - b - 1), 0x3EE0C8)
-    screen.text(24, 260, "ESPERE CERCA DE 1 MINUTO", 0xD0D0D0)
-    screen.text(24, 300, "A TELA FICA PARADA DE PROPOSITO", 0x888888)
+    screen.text(24, 260, "WAIT ABOUT A MINUTE", 0xD0D0D0)
+    screen.text(24, 300, "THE SCREEN STAYS STILL ON PURPOSE", 0x888888)
 
 
 def main():

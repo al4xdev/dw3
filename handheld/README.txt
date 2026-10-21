@@ -1,30 +1,41 @@
-Digimon World 3 / 2003 - Port Nativo para R36S (ArkOS / PortMaster)
-===================================================================
+Digimon World 2003 - native port for the RK3326 handhelds (ArkOS / PortMaster)
+=============================================================================
 
-COMO INSTALAR NO R36S:
-1. Copie o arquivo "Digimon World 3.sh" para a pasta "/roms/ports/" do cartão SD.
-2. Copie a pasta "dw3" inteira para "/roms/ports/dw3/".
-3. Coloque a imagem do jogo (Digimon World 2003 Europa, .bin e .cue) na pasta:
-   /roms/ports/dw3/game/
+INSTALLING
+1. Copy "Digimon World 3.sh" into the ports folder of the card (/roms/ports/, which is
+   /storage/roms/ports/ on ArkOS).
+2. Copy the whole "dw3" folder into /roms/ports/dw3/.
+3. Put your own copy of the game (Digimon World 2003, Europe, .bin + .cue) into
+   /roms/ports/dw3/game/. Nothing of the game ships with this port.
 
-CONTROLES NO R36S:
-- D-Pad ou Analógico Esquerdo: Movimento e menus
-- Botão A (Sul): Confirmar / Conversar (Cross)
-- Botão B (Leste): Cancelar / Menu (Circle)
-- Botão X (Oeste): Ação secundária (Square)
-- Botão Y (Norte): Status (Triangle)
-- L1 / R1: Trocar abas de menu
-- L2 / R2: Funções adicionais
-- Select: Mapa / Seleção
-- Start: Pausa / Iniciar
+CONTROLS
+- D-pad or left stick: movement and menus
+- A (south): confirm / talk (Cross)
+- B (east): cancel / menu (Circle)
+- X (west): secondary action (Square)
+- Y (north): status (Triangle)
+- L1 / R1: switch menu tabs
+- L2 / R2: the game's own functions
+- Select: map / selection
+- Start: pause / start
 
-HOTKEYS HANDHELD:
-- Select + Start: Sair do jogo de forma limpa
-- L3 + R3 (pressionar os dois analógicos): Alternar Fast-Forward (Acelerar jogo)
+All of it can be rebound in the gamepad menu that runs before the game (BUTTONS -> REMAP); that menu
+writes pad.map and settings.json, which is how the mapping reaches the game.
 
-OPÇÕES DE VÍDEO:
-Por padrão o jogo roda com DW3_VIDEO="fbdev" usando escalonamento 2x inteiro
-acelerado por ARM NEON na tela de 640x480 do R36S.
-Caso queira testar a GPU Mali via SDL2 KMSDRM, edite o launcher "Digimon World 3.sh"
-e altere para:
-export DW3_VIDEO="sdl2"
+HOTKEYS
+- Select + Start: quit cleanly (the log, the WAV and the memory card are closed)
+- L3 + R3 (press both sticks): toggle fast-forward
+
+VIDEO
+The picture goes out through /dev/fb0, scaled 2x with NEAREST by ARM NEON, on the 640x480 panel.
+settings.json picks the renderer:
+
+  "renderer": "gles"      the 3D is drawn on the Mali-G31 (the default on this device; faster in battle)
+  "renderer": "software"  the CPU rasteriser, byte-identical to the PS1's (faster in menus)
+
+To leave fb0 and use the SDL2/KMSDRM path instead, edit the launcher "Digimon World 3.sh" and set
+export DW3_VIDEO="sdl2" - it is slower here, because every frame pays a 17 ms window swap.
+
+LOGS
+logs/game.log holds the run's log. The meters (DW3_GPU_LOG, DW3_PRESENT_LOG, DW3_GLES_LOG) are off by
+default: they cost real frames when on.

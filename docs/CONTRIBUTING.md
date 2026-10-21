@@ -96,6 +96,11 @@ scripts/test.sh                                             # the reference test
 tools/venv/bin/python tools/port_inventory.py probe         # the game C still compiles for the host
 ```
 
+`scripts/check_paths.sh` runs in CI and takes a second: it fails if a tracked file carries a path from a specific machine
+(`/home/<someone>/`, `/Users/<someone>/`, `C:\Users\<someone>`, a mounted drive). Write `<name>`, `$HOME` or a path
+relative to the checkout instead — a tree meant to be read by strangers is where a copied home directory does the most
+damage.
+
 For port or launcher changes also build them (`cmake` commands in [`BUILDING.md`](BUILDING.md#the-pc-port-and-the-launcher)) and run the relevant tests
 (`tests/port/run.py`, the launcher's `--self-test`); CI also cross-builds them for Windows and runs them under Wine
 (`scripts/build_windows.sh --test` is the same gate, needs `scripts/setup.sh llvm-mingw sdl3-windows` and `wine`;

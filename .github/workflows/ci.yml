@@ -136,6 +136,11 @@ jobs:
           bash -n scripts/*.sh tools/*.sh tests/*/*.sh
           tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/port/*.py
 
+      # A home directory or a drive letter with a real name in it works for one person and breaks everybody else; in a
+      # tree meant to be read by strangers (and by assistants) it is also the easiest thing to copy. Cheap, always runs.
+      - name: No path from somebody's machine (scripts/check_paths.sh)
+        run: scripts/check_paths.sh
+
       - name: Workaround census (the game code all C, the FAKE/LOOP_BLOCK markers, the counts in docs/STATUS.md)
         if: needs.areas.outputs.game == 'true'
         run: tools/venv/bin/python tools/hacks.py --check
