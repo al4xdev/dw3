@@ -99,7 +99,7 @@ GLYPH = {
 
 def load_state():
     s = dict(hz=50, ff=0, ff_speed="4x", skip=0, battles=0, hit=1, saveany=0,
-             party=0, share=50, xp=1, xp_mul=5, lang=0, lang_on=0)
+             party=0, share=50, xp=0, xp_mul=2, lang=0, lang_on=0)  # xp off, and the mildest step if it is turned on
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:

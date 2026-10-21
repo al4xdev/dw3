@@ -2,9 +2,21 @@
 
 This is a fork of the [Digimon World 2003 decompilation](https://github.com/gascarcella/dw2003recomp) and its PC port,
 tuned to run on the **RK3326 handhelds** — R36S, XF35H and their clones: 4x Cortex-A35 (ARMv8-A in AArch32, 1.3 GHz),
-1 GB of DDR3L/LPDDR3, a 640x480 panel and a 32-bit Linux userspace. Everything is rendered in software on the CPU and
-written straight to `/dev/fb0`; there is no GPU rendering path, so the picture is byte-identical to the PS1's.
-`docs/gpu/` records what the GPU would cost and what the device answered, with the probes that produced the numbers.
+1 GB of DDR3L/LPDDR3, a 640x480 panel and a 32-bit Linux userspace.
+
+There are **two renderers** in the binary and the picture goes out through `/dev/fb0` either way (a window swap costs
+17 ms here):
+
+- `--renderer software` (the default upstream, and the oracle): the main loop is the CPU rasteriser, byte-identical to
+  the PS1's rasteriser.
+- `--renderer gles`: the VRAM is an RGBA8 texture on the Mali-G31, drawn offscreen through EGL on a GBM device — no
+  window, no DRM master, no mode change — and read back for the same fb0 present. **This machine runs it by default**
+  (`settings.json`), because in 3D it is faster than the software path; `docs/gpu/01`-`16` record how it was built and
+  measured, and `docs/gpu/16-frame-budget.md` is the account of the round that made it faster than software.
+
+What "byte-identical" means for each: the software renderer's VRAM matches the shim's exactly; the GLES renderer's differs
+in 0.2-0.7% of the VRAM's texels (edges and 5-bit rounding), and at the frames compared with `--screenshot` the picture
+that reaches the screen is byte-identical to the software one.
 
 > [!IMPORTANT]
 > **This repository contains no game data.** You need your own copy of *Digimon World 2003 (Europe) (En,Fr,De,Es,It)*,
@@ -19,20 +31,38 @@ it is "keep every frame inside the budget".
 
 | Scene | Budget | Measured frame | Verdict |
 |---|---|---|---|
-| Menus, map, field (2D) | 20 ms | ~8 ms | fits with room (a town frame: gpu 1.2 + audio 4.7 + present 1.0) |
+| Menus, map, field (2D), software | 20 ms | ~8 ms | fits with room (a town frame: gpu 1.2 + audio 4.7 + present 1.0) |
+| Menus, map, field (2D), `gles` | 20 ms | ~11 ms | fits; light 2D is where the GLES present costs more than the software path |
 | Opening movie (24-bit) | 20 ms | ~15 ms | fits; plays at full speed |
 | Scripted first battle | 20 ms | ~13 ms of drawing | fits |
-| **Heaviest battle** (large enemy, ~150k textured px) | 20 ms | **~30 ms** | **over budget: plays at ~33 fps** |
+| **Heaviest battle, software** (large enemy, ~150k textured px) | 20 ms | **~27 ms** | **over budget: 37.7 fps** |
+| **Heaviest battle, `gles`** (same state, same binary) | 20 ms | **~24 ms** | **41.9 fps** — the GPU path wins where the frame has 3D to do |
 
-The battle row is the process's own CPU time (`/proc/<pid>/stat`) divided by its frame counter, both read from the
-running process; the drawing part of it matches the GPU log's `walk`. For a battle of that kind the split is:
+The battle rows are 600 frames from one saved state, read from `window: N frames presented in X s` in `game.log`. The
+older "~30 ms" figure was the process's own CPU time divided by its frame counter, in a different fight. For the software
+renderer the split of a battle frame is:
 
 | Part | ms |
 |---|---|
 | rasteriser (`walk`) | ~18–19 |
-| **audio (SPU mix)** | **4.9** |
+| **audio (SPU mix)** | **4.9**, now **3.0–3.3** (`docs/SOUND.md`, "What it costs") |
 | present | 1.0 |
 | the game's own logic (GTE, models), compiled at `-O0` | ~6–8 |
+
+and with `gles`, where the rasteriser's 18–19 ms is what the GPU took over:
+
+| Part | ms |
+|---|---|
+| the listener (packing ~1,100 primitives) | ~1.0 |
+| the flush (one draw call a frame) | ~0.7 |
+| the read copy and the VRAM copies (blits) | ~0.7 |
+| the present (PBO readback, 8→5-bit conversion, the fb0 write) | ~3.2 |
+| **audio (SPU mix)** | **3.0–3.3** |
+| the game's own logic | ~14 |
+
+**The renderer loses somewhere too**: in light 2D scenes (boot, menus) the software path reaches 57.7 fps on the scripted
+boot where `gles` reaches 43.5, because the present surfaces the frame's GPU work (the boot's texture uploads) once per
+vsync. Fine in a menu, and still the reason a 2D-only user might prefer `--renderer software`.
 
 Two of those were measured directly and are not estimates: the audio with `DW3_NO_AUDIO=1` (4.9 ms → 0.0 ms) and the
 drawing with the GPU log. The game's logic is what is left after subtracting them.
@@ -158,14 +188,28 @@ This is as important as what was done — each of these looked like a win and is
 - **Handheld menu** (`handheld/dw3-menu.py`, versioned with the port; the build copies it into the package): a
   framebuffer menu driven only by the gamepad, no keyboard.
 - **Direct framebuffer present**: the reason the 2D game and the movies are fluid.
+- **A second renderer on the Mali** (`--renderer gles`, the default on this machine): the VRAM as an RGBA8 texture drawn
+  offscreen through EGL/GBM, faster than the software rasteriser in 3D (41.9 against 37.7 fps in the same battle). Revert
+  with `"renderer": "software"` in `settings.json` or `--renderer software`; the software renderer is also what the VRAM
+  check compares against.
 - **Fast travel**: press Cross on a visited area of the map to travel there.
 - **Map objective**: the story's next area blinks on the map.
 - **Button glyphs and remapping**: text shows the pad letter instead of the PS1 symbol; presets for Xbox, Switch and
   "modern" layouts.
-- **XP boost**: battle experience multiplied (5x by default) behind a runtime flag.
+- **XP boost, off by default**: battle experience and bits can be multiplied (2x-5x), but the owner dropped the idea as
+  too dangerous to the game's balance, so the default is off and the binary says so (`dw3_feat_xp = 0`). It stays
+  reachable through the settings file's `mods.xp_boost.enabled` or `DW3_FEAT_XP=1`; until this was caught, a build
+  shipped with it **on** by default.
 - **Fast-forward**: up to 8x where the game has headroom (menus, dialogue, cutscenes). In the field and in battle the
   CPU is the limit, so it only mutes the audio there.
-- **A frame meter that adds up**: `DW3_GPU_LOG` breaks the frame into something you can act on (see below).
+- **A frame meter that adds up**: `DW3_GPU_LOG` breaks the frame into something you can act on, GPU and SPU included (see
+  below).
+- **Quitting works**: `Select + Start`, `SIGTERM`, `SIGINT` and `SIGHUP` all end the run at the end of the current vsync,
+  through the normal exit path, so the WAV, the log and the record are closed. (Before, SDL's own handlers turned those
+  signals into an `SDL_QUIT` event this port never reads, and the game survived `kill`.)
+- **A package that checks itself**: `portmaster/make_release.sh` assembles `dist/dw3.zip` in the layout PortMaster's
+  publishing rules ask for and refuses to build it without the required files, or with a disc image inside.
+- **The plans are in the tree**: `.plan/`, with each plan's numbers and its own "what failed" section.
 
 ## Running it
 
@@ -177,12 +221,18 @@ EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, whic
   dw2003          the port binary (ARM 32-bit)
   dw3.sh          menu + game            (from handheld/)
   dw3-menu.py     the framebuffer menu    (from handheld/)
+  dw3-tui.sh      the same menu for a terminal (over ssh)
+  README.txt      what each file is, on the device
   settings.json   settings and mods (video.renderer: "gles" on this machine; "software" reverts)
   pad.map         button letters shown in text
   game/dw2003.bin the disc image (yours)
   card1.mcd       memory card 1
   logs/           game.log (and gpu.log/present.log when the meters are on)
 ```
+
+`handheld/` is the versioned source of everything in that directory except `settings.json`, `pad.map`, `game/`,
+`card1.mcd` and `logs/`, which belong to the player. `portmaster/` is the publishing side: `port.json`, `README.md`,
+`gameinfo.xml`, a 640x480 gameplay screenshot and `make_release.sh`.
 
 ### Building
 
@@ -226,7 +276,7 @@ On the map, Cross on a visited area starts a fast travel.
 | `DW3_FEAT_ICONS=0` | no button glyph replacement |
 | `DW3_FEAT_TRAVEL=0` | no fast travel |
 | `DW3_FEAT_OBJECTIVE=0` | no map objective |
-| `DW3_FEAT_XP=0` | no XP boost |
+| `DW3_FEAT_XP=1` | turns the XP/bits boost **on** (it is off by default; see the feature list) |
 | `DW3_VIDEO=fbdev` | present through `/dev/fb0` |
 | `DW3_CPU_AFFINITY=<mask>` | pin the process, e.g. `0x4` for cpu2 |
 | `DW3_NO_NEON_FLAT=1` | scalar flat textured span (escape hatch, same binary) |
@@ -234,8 +284,11 @@ On the map, Cross on a visited area starts a fast travel.
 | `DW3_PRESENT_LOG=path` | one line a second with the present cost |
 | `DW3_GPU_LOG=path` | one line a second with the whole frame's split (expensive: 1–2 ms in a battle) |
 | `DW3_PHASE=path` | per-phase CPU split, windowed runs only. **Do not leave it on to play**: it wraps every GTE call (~111k in a battle) and costs 23 ms of the 20 ms budget |
-| `DW3_NO_AUDIO=1` | measurement: play silence and skip the SPU mix (4.9 ms a frame). The voices' state stops advancing, so nothing else can be judged with it |
+| `DW3_NO_AUDIO=1` | measurement: play silence and skip the SPU mix (4.9 ms a frame, 3.0–3.3 after the work in `docs/SOUND.md`). The voices' state stops advancing, so nothing else can be judged with it |
 | `DW3_SKIP_BIG=N` | measurement: draw no triangle (by bounding box) or rectangle over N pixels, to weigh a scene's background |
+| `DW3_GLES_LOG=path` | `gles` only: one line a second with the renderer's own split (listener, flush, present) |
+| `DW3_GLES_CHECK=N` | `gles` only: compare the VRAM against the software renderer every N frames (it only means something with `DW3_GLES_REPLACE=0`) |
+| `DW3_STATE_ANY=1` | load a save state written by another build (lifts the sha1 and image checks; can hang silently if the state is really incompatible) |
 
 ## Measuring performance
 
@@ -262,7 +315,16 @@ spans 9891 neon 5734 scal 4157 fopq 5872 gok 0 alias 138 maskpx 0 load 0 | aud N
 | `spans` / `neon` / `scal` | rows drawn, and which loop drew them |
 | `fopq` / `gok` / `alias` | spans the vector path could take, and how many the self-aliasing check sent back |
 | `load` | pixels of CPU-to-VRAM transfers (texture uploads) |
-| `aud` | the SPU's per-frame mix: **4.9 ms** in a battle (0.0 with `DW3_NO_AUDIO=1`) |
+| `aud` | the SPU's per-frame mix: **4.9 ms** in a battle before the audio work, **3.0–3.3** after it (0.0 with `DW3_NO_AUDIO=1`) |
+
+`DW3_GPU_LOG` also prints a second line with the SPU's own split, per vsync:
+
+```
+spu: per vsync (735 samples): total 3.11 ms = voices 2.27 (interpolation 0.31) + reverb 0.71 + rest 0.13
+```
+
+The sample count is printed because it moves with the rate (735 at 60 Hz, 882 at 50 Hz): a figure only compares with
+another measured at the same rate. That mistake cost a round - see `docs/SOUND.md`.
 
 Two measurements worth knowing by heart:
 
@@ -286,8 +348,14 @@ undone. "Reverted" means the commit that tried it is in the history and the tree
 | 6 | `-O2` for the game's own C (it is built at `-O0`) | **Crashes at boot**: `sound_init → sound_update_loading → cdload_get_subfile`, SIGSEGV, 3 runs of 3, core dump with that stack. The decompilation has UB the optimiser exploits (one is documented in `fieldmenu.c`: `fieldmenu_name_pos[6 + i]` reads past a one-element array on purpose) | **reverted**; `PSXSTACK_GAME_OPT` exists for a narrower retry |
 | 7 | `DW3_NO_AUDIO=1`: play silence and skip the SPU mix | **The audio costs 4.9 ms per frame** (0.0 with the switch). 24% of the budget | **kept as a switch**, the SPU itself untouched |
 | 8 | `DW3_SKIP_BIG=N`: draw no triangle or rectangle over N pixels | **Inconclusive**: nothing in the battle is over 20k pixels, pixel counts identical with and without it. A battle's background is many ordinary polygons, not one big quad | **kept as a switch**; needs a per-texture-page filter to weigh the arena |
-| 9 | Microbenchmarks of the span loop (`span_bench*.c`, in `.dumps/`) | Gave the 14.6 ns/px (L1-sized working set) vs 54.8 (the whole VRAM) figure that explains the memory limit, but also **misled experiment 5**: the synthetic walk was not the game's pattern | **reference only** |
+| 9 | Microbenchmarks of the span loop (`docs/bench/span_bench*.c`) | Gave the 14.6 ns/px (L1-sized working set) vs 54.8 (the whole VRAM) figure that explains the memory limit, but also **misled experiment 5**: the synthetic walk was not the game's pattern | **reference only** |
 | 10 | "The game got slower after a build" | **Not true**: the session log and the restored build show the same ~30 ms in the same battle. The slowdown felt was experiment 4 | **settled** |
+| 11 | The GLES renderer (the VRAM as a texture on the Mali) | In a battle **41.9 fps against software's 37.7** on the same state; the picture that reaches the screen is byte-identical at the frames compared, the VRAM differs in 0.2–0.7% of its texels. **Slower than software in light 2D** (43.5 against 57.7 on the scripted boot) because the present surfaces each frame's GPU work once. Now the default | **kept, default on this machine** (`--renderer software` reverts) |
+| 12 | One VRAM read copy per batch instead of per vsync (the first GLES design) | 18.75 fps in a battle against 31.5 with one copy a vsync. The texture cannot be sampled while it is the render target, so *some* copy is unavoidable | **reverted** |
+| 13 | `glBufferSubData` into a reused vertex buffer | 105 µs of stall per draw, 60 ms a frame in 2D: the driver waits for the buffer. Orphaned `glBufferData` per batch instead | **reverted** |
+| 14 | Reading the GLES target back as RGB565 for the present | **28 ms a frame**; `glReadPixels` of RGBA8 plus an 8→5-bit conversion costs 1.7–2.0 ms, and through a PBO ring about 3.2 ms including the conversion and the fb0 write | **reverted** |
+| 15 | The SPU mix: inline the envelope tick, skip released voices at level 0, NEON the reverb's FIR | 4.72 → 3.11 ms per vsync (field/menu, 60 Hz) and 4.9 → 3.0–3.3 ms in a battle, with the **WAV byte-identical** (`cmp`) in every run. The interpolation was only 0.3 ms of it, so the NEON the plan asked for there would have been wasted effort | **kept** |
+| 16 | Letting SDL handle `SIGTERM` | It installs its own handlers and turns the signal into an `SDL_QUIT` event this port never reads: the game survived `timeout` and `kill`, and two runs outlived their sessions. Our handler sets a flag and the pump exits through `port_exit` at the end of the vsync | **kept** (SDL's handlers replaced) |
 
 ## Rolling back
 
@@ -296,8 +364,12 @@ deploy. The states worth knowing:
 
 | State | `psxstack` | `dw2003recomp` |
 |---|---|---|
-| the build that was called "the good one" (padding 32, meters off) | `4e17fca` (tag `r36s-good-50fps` is the one before the padding: `26fb162`) | `39128e1` |
-| current: that build plus the two measurement switches and no `-O2` | `9201ed8` | `2feb311` |
+| the software-renderer era, complete (the last tree before the GPU backend) | — | tag `software-closed` (`4579a0d`) |
+| the build that was called "the good one" (padding 32, meters off) | tag `r36s-good-50fps` (`26fb162` is the one before the padding: `4e17fca`) | `39128e1` |
+| when this table was written: the GLES renderer as the default, the audio work, the signal fix, the PortMaster package | `d6e5aae` | `d0cb243` |
+
+The renderer choice is also a per-install switch, not only a build one: `"renderer": "software"` in `settings.json`, or
+`--renderer software` on the command line, runs the CPU rasteriser from the same binary.
 
 ```sh
 # back to a commit, rebuild, deploy, and prove the card has it
@@ -305,9 +377,13 @@ git -C dw2003recomp/psxstack checkout <psxstack-commit>
 git -C dw2003recomp checkout <dw2003recomp-commit>
 ./build_arm.sh                      # never pipe it through `head`: SIGPIPE kills the packaging step
 md5sum dw2003recomp/build/armhf-sdl2/dw2003 portmaster/dw3/dw2003    # must be equal
-rsync -rt portmaster/dw3/dw2003 root@<console>:/storage/roms/ports/dw3/
+ssh root@<console> 'cat > /storage/roms/ports/dw3/dw2003.new' < dw2003recomp/build/armhf-sdl2/dw2003
+ssh root@<console> 'cd /storage/roms/ports/dw3 && mv -f dw2003 dw2003.prev && mv dw2003.new dw2003'
 ssh root@<console> md5sum /storage/roms/ports/dw3/dw2003             # must match the two above
 ```
+
+`scp` does not work on this card: it has no sftp server, so a deploy is `ssh 'cat > dest' < file`. Keep the previous
+binary as `dw2003.prev` for one run - it is what makes a rollback cost seconds instead of a rebuild.
 
 Two traps, both hit during this work: `build_arm.sh` runs with `set -euo pipefail`, so `./build_arm.sh | head` aborts
 the script before it copies the binary (you then deploy the previous one); and the symbol addresses move between builds,
@@ -316,27 +392,44 @@ so reading a state variable out of `/proc/<pid>/mem` needs the address from the 
 
 ## What is left
 
-The owner's decision is **not to touch the audio**, so the 4.9 ms it costs stays as it is. What is left is the
-rasteriser and the game's own code:
+Each plan in `.plan/` ends with its own "what failed" section; these are the items that are still open, ordered by what
+they would cost to try:
 
-1. **The scene's background** (unmeasured): a battle draws ~74k flat pixels — about one full screen — which is where
+1. **The GLES present** (~3.2 ms a frame, the renderer's largest remaining cost): a PBO readback of the RGBA8 target, the
+   8→5-bit conversion and the fb0 write. The ideas are to let fb0 take the format the target already has, or to deliver
+   the picture through a KMS plane the frontend lends - the second is close to the 17 ms swap this design exists to avoid.
+2. **The audio's last 0.6 ms**: the target was `aud` <= 2.5 ms; it is 3.0-3.3. What is left is the voice loop itself
+   (2.3 ms), which needs the voices processed in parallel to move.
+3. **The scene's background** (unmeasured): a battle draws ~74k flat pixels — about one full screen — which is where
    the `flat` 5.0 ms goes, and the arena is most of it. To weigh it, filter by texture page (`(tex_y >> 8) << 4 |
    (tex_x >> 6)`), not by polygon size.
-2. **A decoded texture cache** (~4 ms of the `flat` time if it works): texture rows decoded into compact blocks that
+4. **A decoded texture cache** (~4 ms of the `flat` time if it works): texture rows decoded into compact blocks that
    fit the L1, so the vertical walk stops paying for the micro-TLB (10 entries, 2 KB rows cross a 4 KB page every two
    rows). The benchmark puts that at 14.6 ns/px against 56 today. The one change that attacks the memory limit itself,
    and the riskiest.
-3. **The game's own C at `-O0`** (~6–8 ms): `-O2` for everything crashes (experiment 6), so a retry would have to be
+5. **The game's own C at `-O0`** (~6–8 ms): `-O2` for everything crashes (experiment 6), so a retry would have to be
    per module, and only after the UB is found.
+6. **The single-triangle experiment** for the GLES renderer's 0.7% VRAM difference: copy `gpu_triangle`'s edge rule (a
+   half-pixel bias in clip space) and see whether it closes the gap.
+7. **Publishing the port**: `portmaster/make_release.sh` builds and checks the package; submitting it needs a Discord
+   testing thread and tests on CFWs this machine is not - the owner's call.
 
 ## Known limitations
 
-- **The heaviest battles are over budget**: ~30 ms of work against 20, so they play at ~33 fps (measured on the process's
-  own CPU time). Light battles fit.
-- **The audio costs 4.9 ms a frame**, audible or not. It is the second largest item after the rasteriser, and by the
-  owner's decision it is left alone.
+- **The heaviest battles are over budget**: ~24 ms of work against 20 with `gles` (41.9 fps) and ~27 ms with software
+  (37.7 fps). Light battles fit; the scripted battle's window holds the 50 Hz cap.
+- **The renderer is not faster everywhere**: in light 2D scenes `gles` is slower than the software path (43.5 against
+  57.7 fps on the scripted boot). `--renderer software` is one line away.
+- **The GLES renderer's VRAM differs from the software one in 0.2–0.7% of its texels** (edges and 5-bit rounding); the
+  picture compared with `--screenshot` is byte-identical at the frames tested, which is not the same as proof for every
+  scene.
+- **No FMV has been watched on the GLES renderer**: the 24-bit display path was corrected by reading the code, not by
+  running a movie through it end to end.
+- **The audio still costs 3.0–3.3 ms a frame**, audible or not (it was 4.9; the target was 2.5).
+- **`--input-test` hangs on this device**: no output, immune to `timeout`. It does not affect playing.
 - The game's own C is built at `-O0` (`-O2` crashes at boot: undefined behaviour in the decompilation, see the
   experiment log), so its share — roughly 6–8 ms of a battle frame — stays.
+- **Everything here was measured on one handheld, one CFW**, at 60 Hz (the machine's setting; 50 Hz figures are marked).
 - Fast travel lands on the map's entry point (or the remembered position), not on a specific door.
 - Widescreen is off on the software renderer: it needs the hardware renderer.
 - With fast-forward on, the audio is muted. That is deliberate: at 8x the sound would be eight times faster and
@@ -347,4 +440,5 @@ rasteriser and the game's own code:
 
 The decompilation and the PC port are the work of the upstream project. This fork adds the handheld path: the direct
 framebuffer present, the Cortex-A35 codegen, the vector span work, the VRAM row layout, the frame meter and the
-handheld extras. Our own work is under the [MIT licence](LICENSE); the game remains the property of its publisher.
+handheld extras, the GLES renderer, the audio work and the package. Our own work is under the
+[MIT licence](LICENSE); the game remains the property of its publisher.

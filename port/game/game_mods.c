@@ -420,7 +420,10 @@ void game_savestate(struct PortState *s) {
 int dw3_feat_icons = 1;
 int dw3_feat_travel = 1;
 int dw3_feat_objective = 1;
-int dw3_feat_xp = 1;
+/* Off by default: the owner dropped the experience boost as too dangerous to the game's balance, and it stayed on by
+ * default for a while after that decision - the kind of thing a player only notices hours later. The settings file's
+ * "mods.xp_boost.enabled" (or DW3_FEAT_XP=1) turns it on for a run. */
+int dw3_feat_xp = 0;
 
 extern u8 ststatus_map_areas[];
 
