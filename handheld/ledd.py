@@ -313,6 +313,12 @@ def handle(bar, pulse, req, state):
             return "err level needs 1..%d and an optional pid" % len(LEVELS)
         if not 1 <= n <= len(LEVELS):
             return "err level %d is outside 1..%d" % (n, len(LEVELS))
+        if pulse.level != n - 1:
+            # Take the bar: whatever was running belongs to the previous reading, and leaving it on until the next tick
+            # means the new state is drawn over the old animation (a blink's dark half, a breathing colour) for as long
+            # as the gap allows. Off first, then the new mode - the rail comes back up with it, which is also the moment
+            # the MCU loses the first byte, so that path is exercised on every change.
+            bar.set(OFF)
         pulse.set(n - 1, owner)
         period, duty, mode = LEVELS[n - 1]
         shape = "factory mode" if period is None else "blinking, %.2f s, %d%% on" % (period, duty * 100)
