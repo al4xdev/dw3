@@ -432,6 +432,10 @@ forms that fought, then skills, then the Digimon's experience, then a new form):
   `records_battle_results.members[slot].forms[i]` was set in battle (`wfightmn_mark_took_part`: `took_part` for the acting member, and
   the form it was fighting as when it acted, digivolved or switched, by its place `i` in `get_chosen_forms`' packed list: chosen
   {386, -1, 367} fighting as 367 marks `forms[1]`; its own form or an unchosen one marks none [T] (`fightstg_rules`, appended by sweep2)).
+  **That 10/50 ceiling is the pacing behind "one form level a battle"** (99 battles for a form at 99). `xp_boost`'s `form_exp`
+  (`port/game/game_mods.c`) multiplies this number, and with the mod on the ceiling is skipped, so a battle can raise several form
+  levels - `add_technique_exp` already loops. The Digimon's own experience (`stfgtrep_add_exp`) and the TP (`values[1]`, +5 per
+  Digimon level-up, spent by training) are untouched by that mod.
 - **Skills** (`stfgtrep_learn_skill(d, form)`): the first empty slot i (0..5) whose `RecordsDigimon.techniques[i + 1]` exists and whose
   `technique_levels[i] <= form level` is filled (slot 5 with flag 0x8000); one per call; a later slot can fill first when the levels are out
   of order (form 375 learns slot 2 at level 10 before slot 1 at 25), and a missing technique leaves its slot empty for good.
