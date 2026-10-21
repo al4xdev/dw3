@@ -39,10 +39,18 @@ mkdir -p "$OUT/$NAME/licenses"
 cp "$HERE/port.json" "$HERE/README.md" "$HERE/gameinfo.xml" "$HERE/screenshot.png" "$OUT/"
 cp "$REPO/handheld/$SCRIPT" "$OUT/$SCRIPT"
 chmod +x "$OUT/$SCRIPT"
-for f in dw3.sh dw3-menu.py dw3-tui.sh README.txt; do
-    cp "$REPO/handheld/$f" "$OUT/$NAME/$f"
+# Everything in handheld/ that belongs on the card, by rule rather than by list: a list here drops the next file
+# somebody adds (a LED daemon, a helper), and the zip would be silently incomplete. README.md is the repository's own
+# document and the launcher sits at the package's root, above.
+for f in "$REPO"/handheld/*; do
+    case "$(basename "$f")" in
+        README.md|"$SCRIPT"|__pycache__) continue ;;
+    esac
+    cp "$f" "$OUT/$NAME/"
 done
+chmod -x "$OUT/$NAME/README.txt" 2>/dev/null || true
 chmod +x "$OUT/$NAME/dw3.sh" "$OUT/$NAME/dw3-tui.sh" "$OUT/$NAME/dw3-menu.py"
+[ -f "$OUT/$NAME/ledd.py" ] && chmod +x "$OUT/$NAME/ledd.py"
 cp "$BINARY" "$OUT/$NAME/dw2003"
 chmod +x "$OUT/$NAME/dw2003"
 
