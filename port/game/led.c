@@ -36,6 +36,9 @@ void led_stop(void) {}
 #include <unistd.h>
 
 #define LEDD_SOCK "/tmp/ledd.sock"
+/* The daemon the whole card shares, put there by the handheld menu's install (handheld/dw3-menu.py, led_install), and this
+ * port's own copy as the fallback for a card where nobody has installed it yet. */
+#define LEDD_SHARED "/storage/.config/ledd/ledd.py"
 #define LEDD_FILE "ledd.py" /* in the package's directory, which is the game's working directory (handheld/dw3.sh) */
 #define LED_REPLY 96
 
@@ -62,6 +65,16 @@ static int led_ask(const char *request) {
         close(fd);
         return 0;
     }
+    /* A daemon that accepts and then says nothing must not freeze a frame: the socket's own timeout is the bound. This
+     * runs only when the reading changes, so 100 ms of worst case is affordable. */
+    {
+        struct timeval tv;
+
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    }
     sent = send(fd, request, strlen(request), 0);
     if (sent != (ssize_t)strlen(request)) {
         close(fd);
@@ -76,9 +89,16 @@ static int led_ask(const char *request) {
  * alive after this one exits. */
 static void led_wake_daemon(void) {
     struct timespec pause;
+    const char *path;
     pid_t pid;
 
-    if (access("./" LEDD_FILE, R_OK) != 0) {
+    /* The card's shared copy first: that is the one the menu installs and the one every port should be running, so a port
+     * that starts its own beside the game is a second copy that drifts. Its own file is the fallback. */
+    if (access(LEDD_SHARED, R_OK) == 0) {
+        path = LEDD_SHARED;
+    } else if (access("./" LEDD_FILE, R_OK) == 0) {
+        path = "./" LEDD_FILE;
+    } else {
         return; /* not the handheld's package: nothing to start, and no python3 to start it with */
     }
     pid = fork();
@@ -90,7 +110,7 @@ static void led_wake_daemon(void) {
             dup2(null, 1);
             dup2(null, 2);
         }
-        execlp("python3", "python3", "./" LEDD_FILE, "--detach", (char *)NULL);
+        execlp("python3", "python3", path, "--detach", (char *)NULL);
         _exit(127); /* no python3 on this machine: the parent's retry decides what to say */
     }
     pause.tv_sec = 0;
@@ -165,19 +185,20 @@ void led_start(void) {
         port_log("led bar: the daemon answers at %s", LEDD_SOCK);
         return;
     }
-    if (access("./" LEDD_FILE, R_OK) != 0) {
+    if (access(LEDD_SHARED, R_OK) != 0 && access("./" LEDD_FILE, R_OK) != 0) {
         /* Not the handheld's package: nothing to start, and nothing will ever appear, so stop looking. */
         if (led_gave_up) {
             return;
         }
         led_gave_up = 1;
-        port_log("led bar: no daemon at %s and no %s beside the game: the bar is left alone", LEDD_SOCK, LEDD_FILE);
+        port_log("led bar: no daemon at %s, no %s and no %s here: the bar is left alone", LEDD_SOCK, LEDD_SHARED,
+                 LEDD_FILE);
         return;
     }
     led_wake_daemon();
     if (led_ask("status\n")) {
         led_ready = 1;
-        port_log("led bar: the daemon started from ./%s", LEDD_FILE);
+        port_log("led bar: the daemon started from %s", access(LEDD_SHARED, R_OK) == 0 ? LEDD_SHARED : "./" LEDD_FILE);
     }
 }
 

@@ -144,12 +144,14 @@ class Bar:
             f.write("1" if on else "0")
         self.powered = on
 
-    def set(self, byte, keep_power=False):
+    def set(self, byte, keep_power=False, force=False):
         """keep_power: write the byte and leave the regulator alone. That is what
         `dark` is for - the LEDs out while the rail stays up, the off half of a
         pulse. Dropping the rail on every pulse would flap the regulator ten
-        times a second for no gain."""
-        if byte == self.byte:
+        times a second for no gain. force: say it again although the byte is
+        already there, which is the only way to heal an MCU that fell back to its
+        own demo."""
+        if byte == self.byte and not force:
             # The byte is already there, but the rail may not be: `off` after a
             # pulse ends on a dark byte written with keep_power, and skipping the
             # power step here would leave the regulator up behind a dark bar.
@@ -159,9 +161,15 @@ class Bar:
         wait = MIN_GAP_S - (time.monotonic() - self.last)
         if wait > 0:
             time.sleep(wait)
+        was_up = self.powered
         if not keep_power:
             self.power(byte != OFF)
         os.write(self.fd, bytes([byte]))
+        if not keep_power and not was_up and byte != OFF:
+            # The first byte after the rail comes up is lost (docs/HANDHELD.md, "Open items": a blue nobody asked for,
+            # right after vcc-led rose). A lost mode byte leaves the MCU in its own demo - every colour cycling - which
+            # looks exactly like the table being ignored. Repeating it costs one byte and closes that.
+            os.write(self.fd, bytes([byte]))
         self.byte = byte
         self.last = time.monotonic()
         return "ok"
@@ -353,10 +361,22 @@ def serve(bar):
     log("listening on %s; %s open at 9600 8N1, regulator %d" % (SOCK, TTY, int(bar.powered)))
     state = {"quit": False}
     pulse = Pulse(bar)
+    last_say = time.monotonic()
     while not state["quit"]:
         wait = pulse.tick()  # the animation keeps its own time
-        if not select.select([srv], [], [], wait)[0]:
-            continue  # a pulse edge was due, not a client
+        # The MCU has no acknowledgement: a byte lost on the wire or swallowed by the power-up leaves it in its own
+        # demo (every colour cycling) for ever, and a client that only speaks on change never corrects it. Saying the
+        # current mode again every ten seconds costs one byte and heals that without the game knowing.
+        if pulse.level is not None and LEVELS[pulse.level][0] is None and time.monotonic() - last_say > 10.0:
+            # Factory modes only: an animated level has its own edges and a second voice here would fight it.
+            bar.set(MODES[LEVELS[pulse.level][2]][0], force=True)
+            last_say = time.monotonic()
+        # The wait a pulse asks for, but never unbounded: the re-say above and the owner check inside tick only run when
+        # this loop comes round, and a factory mode asks for "no edge, ever" - with a blocking select they would never
+        # run at all.
+        timeout = 10.0 if wait is None else min(wait, 10.0)
+        if not select.select([srv], [], [], timeout)[0]:
+            continue  # a pulse edge (or the re-say) was due, not a client
         conn, _ = srv.accept()
         conn.settimeout(2.0)
         try:
