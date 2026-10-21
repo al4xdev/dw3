@@ -26,7 +26,7 @@ OUT="$DIST/$NAME"
 
 fail() { echo "make_release: $*" >&2; exit 1; }
 
-[ -f "$BINARY" ] || fail "the binary is not built: $BINARY (run build_arm.sh)"
+[ -f "$BINARY" ] || fail "the binary is not built: $BINARY (run tools/build_arm.sh)"
 file "$BINARY" | grep -q "ELF 32-bit LSB.*ARM" || fail "$BINARY is not a 32-bit ARM ELF"
 for f in port.json README.md gameinfo.xml screenshot.png; do
     [ -f "$HERE/$f" ] || fail "missing $HERE/$f (the screenshot is captured on the device, 640x480 of gameplay)"

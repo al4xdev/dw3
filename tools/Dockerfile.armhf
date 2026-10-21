@@ -1,0 +1,8 @@
+# The ARM 32-bit cross toolchain for the RK3326 handhelds (XF35H, R36S and their clones). tools/build_arm.sh builds this
+# image on first use and runs CMake and Ninja inside it, so nothing is installed on the host.
+#
+# The base image is the one this project already used for the handheld builds; it carries the armhf gcc, the hard-float
+# sysroot and the SDL2/EGL headers the port links against. Whatever the base lacks for a build is installed below.
+FROM yfm-armhf-builder:latest
+RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build make qemu-user-static \
+    && rm -rf /var/lib/apt/lists/*

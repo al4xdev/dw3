@@ -35,7 +35,7 @@ The port is built with the game repository's ARM cross build (Docker with an arm
 ```
 git clone https://github.com/gascarcella/dw2003recomp --recurse-submodules
 cd dw2003recomp
-./build_arm.sh          # configures with -DPSXSTACK_SDL2=ON -DPSXSTACK_EGL=ON and packages ports/dw3
+tools/build_arm.sh      # configures with -DPSXSTACK_SDL2=ON -DPSXSTACK_EGL=ON and packages ports/dw3
 ```
 
 ## Thanks

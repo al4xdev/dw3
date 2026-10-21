@@ -1,7 +1,7 @@
 # The handheld port's launcher
 
 What goes on the console, kept here so it is versioned with the port it starts. The package on the device is
-`/storage/roms/ports/dw3/`; the build (`build_arm.sh`, which lives beside the checkout and not in it) copies the files
+`/storage/roms/ports/dw3/`; the build (`tools/build_arm.sh`) copies the files
 below into it and adds the binary.
 
 | file | what it is |

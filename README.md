@@ -236,14 +236,16 @@ EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, whic
 
 ### Building
 
-The build runs in Docker with an ARM hard-float cross toolchain:
+The build runs in Docker with an ARM hard-float cross toolchain (`tools/Dockerfile.armhf`, built on first use, so nothing
+is installed on the host):
 
 ```sh
-./build_arm.sh
+tools/build_arm.sh
 ```
 
 It configures `dw2003recomp/build/armhf-sdl2` through `cmake/armhf-linux.cmake` (Cortex-A35, NEON), builds with Ninja,
-and copies the binary and the mods into `portmaster/dw3/`.
+and assembles the package in `../portmaster` — the binary plus everything in `handheld/` and the mods — which is what the
+card holds. `DW3_PACKAGE_DIR=... tools/build_arm.sh` puts it somewhere else.
 
 ### Deploying
 
@@ -375,7 +377,7 @@ The renderer choice is also a per-install switch, not only a build one: `"render
 # back to a commit, rebuild, deploy, and prove the card has it
 git -C dw2003recomp/psxstack checkout <psxstack-commit>
 git -C dw2003recomp checkout <dw2003recomp-commit>
-./build_arm.sh                      # never pipe it through `head`: SIGPIPE kills the packaging step
+tools/build_arm.sh                  # never pipe it through `head`: SIGPIPE kills the packaging step
 md5sum dw2003recomp/build/armhf-sdl2/dw2003 portmaster/dw3/dw2003    # must be equal
 ssh root@<console> 'cat > /storage/roms/ports/dw3/dw2003.new' < dw2003recomp/build/armhf-sdl2/dw2003
 ssh root@<console> 'cd /storage/roms/ports/dw3 && mv -f dw2003 dw2003.prev && mv dw2003.new dw2003'
@@ -385,7 +387,7 @@ ssh root@<console> md5sum /storage/roms/ports/dw3/dw2003             # must matc
 `scp` does not work on this card: it has no sftp server, so a deploy is `ssh 'cat > dest' < file`. Keep the previous
 binary as `dw2003.prev` for one run - it is what makes a rollback cost seconds instead of a rebuild.
 
-Two traps, both hit during this work: `build_arm.sh` runs with `set -euo pipefail`, so `./build_arm.sh | head` aborts
+Two traps, both hit during this work: `tools/build_arm.sh` runs with `set -euo pipefail`, so `tools/build_arm.sh | head` aborts
 the script before it copies the binary (you then deploy the previous one); and the symbol addresses move between builds,
 so reading a state variable out of `/proc/<pid>/mem` needs the address from the binary that is actually running
 (`port_frames` was `0x01863750` in one build and `0x017c3750` in the next).
