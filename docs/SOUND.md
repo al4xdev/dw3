@@ -201,17 +201,19 @@ Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM f
 
 ### What it costs (measured on the handheld)
 
-The mix is the second largest item of a frame after the game's own code: **4.0 ms** per vsync in the scripted
-field/menu run and 4.9 ms in a battle when it was first measured. `DW3_GPU_LOG=1` now prints where it goes, per 882
-samples (one frame at 50 Hz):
+The mix is the second largest item of a frame after the game's own code: 4.9 ms per vsync in the plan's first
+measurement (the game's 50 Hz rate, 882 samples a vsync) and, at the machine's current **60 Hz** setting (735 samples a
+vsync), 4.7-4.9 ms in the scripted field/menu run. `DW3_GPU_LOG=1` now prints where it goes, per vsync:
 
 ```
-spu: per 882 samples: total 4.89 ms = voices 3.66 (interpolation 0.42) + reverb 1.09 + rest 0.14
-spu: per 882 samples: total 3.84 ms = voices 2.83 (interpolation 0.41) + reverb 0.86 + rest 0.15
+spu: per vsync (735 samples): total 4.72 ms = voices 3.66 (interpolation 0.42) + reverb 1.09 + rest 0.14   (before)
+spu: per vsync (735 samples): total 3.11 ms = voices 2.27 (interpolation 0.31) + reverb 0.71 + rest 0.13   (after)
 ```
 
 The second line is after three changes, and the WAV is byte for byte the first line's (md5 `39757ffd…`, 1200 vsyncs of the
-scripted run as the gate the plan set):
+scripted run as the gate the plan set). In a battle the same `aud` figure reads 3.0-3.3 ms where it read 4.9. Note the
+rate: the numbers are per vsync, and a vsync at 60 Hz carries a sixth fewer samples than one at 50 Hz, so a figure here is
+only comparable with another measured at the same rate.
 
 1. `spu_envelope_tick` lives in `spu_internal.h` as a `static inline`. It was in `spu_dsp.c`, i.e. a call per use, and the
    mix uses it three times per voice per sample - 63 calls a frame.
@@ -221,8 +223,8 @@ scripted run as the gate the plan set):
 3. The reverb's 39-tap FIR runs on NEON (`vmlal_s16`, 4 taps a step). The lanes are summed in another order, which cannot
    change an integer sum - and the build wraps on overflow (`-fwrapv`), so the WAV stays exact.
 
-What is left is the voice loop itself (2.8 ms): the interpolation is only 0.4 of that, the rest is the envelope, the two
-volume sweeps and the pitch counter of 24 voices x 882 samples, which are carried per voice and cannot be vectorised
+What is left is the voice loop itself (2.3 ms): the interpolation is only 0.3 of that, the rest is the envelope, the two
+volume sweeps and the pitch counter of 24 voices x 735 samples, which are carried per voice and cannot be vectorised
 across without a rewrite that processes voices in parallel.
 
 ### What is modelled
