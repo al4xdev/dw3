@@ -81,5 +81,8 @@ __pycache__
 
 # Ephemeral scratch (benchmarks, replays, dumps)
 .dumps/
+# The .plan task files: kept in the project tree so they are not lost, but they are working notes, not part of the
+# build. The workspace root has a symlink to this directory, so the .plan tool keeps finding them.
+.plan/
 # The PortMaster release built by portmaster/make_release.sh (binary + launcher, regenerable)
 /dist/
