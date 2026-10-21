@@ -481,32 +481,149 @@ void dw3_feats_arm(void) {
              dw3_feat_objective, dw3_feat_xp, (int)(xb_tenths[1] / 10));
 }
 
-static char dw3_letter_for(const char *action) {
-    static int loaded;
-    static char cross = 'A', circle = 'B', square = 'X', triangle = 'Y';
-    FILE *f;
-    char name[16], letter;
-    if (!loaded) {
-        loaded = 1;
-        f = fopen("pad.map", "r");
-        if (f != NULL) {
-            while (fscanf(f, "%15s %*s %c", name, &letter) == 2) {
-                if (letter >= 'a' && letter <= 'z') {
-                    letter = (char)(letter - 'a' + 'A');
-                }
-                if (strcmp(name, "cross") == 0) cross = letter;
-                else if (strcmp(name, "circle") == 0) circle = letter;
-                else if (strcmp(name, "square") == 0) square = letter;
-                else if (strcmp(name, "triangle") == 0) triangle = letter;
-            }
-            fclose(f);
-            port_log("button icons: cross %c circle %c square %c triangle %c", cross, circle, square, triangle);
+/* ---- pad.map (handheld/dw3-menu.py writes it): one line per PS1 button, "<button> <gamepad input> <letter>".
+ *
+ * The letter replaces the button's symbol in the game's text (dw3_button_glyph). The middle column is the player's pad,
+ * which dw3_pad_permute applies inside pad_read_buttons: the handheld's SDL2 runtime (psxstack/runtime/input.c, the
+ * PSXSTACK_SDL2 branch) has a fixed button map and ignores input.gamepad, so the game is the one place the player's
+ * choice can land - and it has to be there anyway, because most of the game reads the pad's bits directly and never
+ * goes through pad_state.button_map.
+ *
+ * The middle column is in the runtime's own terms (the button the player presses), and the permutation lands after
+ * records_language's rotation (src/main/pad.c), so a row of the file means the action the game's text names: circle
+ * confirms, cross goes back. That is the Japanese convention the text is drawn in, which is why the pad is rotated for
+ * the other languages at all - and why the row cannot be read straight off the runtime's bits. */
+
+/* The PS1 button each pad.map name means. */
+static const struct {
+    const char *name;
+    int bit;
+} dw3_pad_names[] = {
+    { "select", 0 }, { "start", 3 },  { "up", 4 },  { "right", 5 }, { "down", 6 },       { "left", 7 },
+    { "l2", 8 },     { "r2", 9 },     { "l1", 10 }, { "r1", 11 },   { "triangle", 12 }, { "circle", 13 },
+    { "cross", 14 }, { "square", 15 },
+};
+
+/* The PS1 button the handheld's runtime wires each gamepad input to (input.c, the SDL2 branch: SDL2's own button
+ * positions). A name that is not here - guide, the sticks, the touchpad - has no button of its own there. */
+static const struct {
+    const char *place;
+    int bit;
+} dw3_pad_places[] = {
+    { "south", 14 },        { "east", 13 },          { "west", 15 },       { "north", 12 },
+    { "leftshoulder", 10 }, { "rightshoulder", 11 }, { "lefttrigger", 8 }, { "righttrigger", 9 },
+    { "back", 0 },          { "start", 3 },          { "dpup", 4 },        { "dpright", 5 },
+    { "dpdown", 6 },        { "dpleft", 7 },
+};
+
+/* records_language's rotation of the face buttons (src/main/pad.c): cross 14 -> circle 13, triangle 12 -> cross 14,
+ * circle 13 -> triangle 12, square 15 untouched. The permutation is applied to what that rotation produced, so a place's
+ * bit has to go through it first. */
+static const u8 dw3_pad_rot[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 12, 13, 15 };
+
+#define DW3_PAD_NAMES ((int)(sizeof(dw3_pad_names) / sizeof(dw3_pad_names[0])))
+#define DW3_PAD_PLACES ((int)(sizeof(dw3_pad_places) / sizeof(dw3_pad_places[0])))
+
+static struct {
+    int loaded;
+    int remap;       /* DW3_PAD_REMAP: this runtime has no pad map, the game applies the file's */
+    char letter[16]; /* by PS1 button: the letter the text shows, or 0 for the button's own symbol */
+    u16 perm[16];    /* by PS1 button: the bit the runtime delivers when it is pressed */
+} dw3_pad;
+
+static int dw3_pad_bit_of_name(const char *name) {
+    int i;
+
+    for (i = 0; i < DW3_PAD_NAMES; i++) {
+        if (strcmp(name, dw3_pad_names[i].name) == 0) {
+            return dw3_pad_names[i].bit;
         }
     }
-    if (strcmp(action, "cross") == 0) return cross;
-    if (strcmp(action, "circle") == 0) return circle;
-    if (strcmp(action, "square") == 0) return square;
-    return triangle;
+    return -1;
+}
+
+static int dw3_pad_bit_of_place(const char *place) {
+    int i;
+
+    for (i = 0; i < DW3_PAD_PLACES; i++) {
+        if (strcmp(place, dw3_pad_places[i].place) == 0) {
+            return dw3_pad_places[i].bit;
+        }
+    }
+    return -1;
+}
+
+/* Reads pad.map once. Without the file: the identity, and the Xbox letters at the handheld's own positions. */
+static void dw3_pad_load(void) {
+    FILE *f;
+    char name[16], place[16], letter;
+    int bit, at, i;
+
+    if (dw3_pad.loaded) {
+        return;
+    }
+    dw3_pad.loaded = 1;
+    dw3_pad.remap = feat_on("DW3_PAD_REMAP", 0);
+    for (i = 0; i < 16; i++) {
+        dw3_pad.perm[i] = (u16)i;
+        dw3_pad.letter[i] = 0;
+    }
+    dw3_pad.letter[13] = 'A'; /* circle: confirm */
+    dw3_pad.letter[14] = 'B'; /* cross: back */
+    dw3_pad.letter[15] = 'X'; /* square */
+    dw3_pad.letter[12] = 'Y'; /* triangle */
+    f = fopen("pad.map", "r");
+    if (f == NULL) {
+        return;
+    }
+    while (fscanf(f, "%15s %15s %c", name, place, &letter) == 3) {
+        bit = dw3_pad_bit_of_name(name);
+        if (bit < 0) {
+            continue;
+        }
+        if (letter >= 'a' && letter <= 'z') {
+            letter = (char)(letter - 'a' + 'A');
+        }
+        dw3_pad.letter[bit] = (letter >= 'A' && letter <= 'Z') ? letter : 0; /* '-': the symbol itself */
+        at = dw3_pad_bit_of_place(place);
+        dw3_pad.perm[bit] = (u16)(at >= 0 ? at : bit); /* a place this runtime has no button for keeps its own */
+    }
+    fclose(f);
+    port_log("button icons: cross %c circle %c square %c triangle %c (pad.map)",
+             dw3_pad.letter[14] != 0 ? dw3_pad.letter[14] : '-', dw3_pad.letter[13] != 0 ? dw3_pad.letter[13] : '-',
+             dw3_pad.letter[15] != 0 ? dw3_pad.letter[15] : '-', dw3_pad.letter[12] != 0 ? dw3_pad.letter[12] : '-');
+    if (dw3_pad.remap) {
+        port_log("pad map: remap on, cross on %d circle on %d square on %d triangle on %d (the runtime's bits)",
+                 (int)dw3_pad.perm[14], (int)dw3_pad.perm[13], (int)dw3_pad.perm[15], (int)dw3_pad.perm[12]);
+    }
+}
+
+/* The pad's bits with the player's buttons in them (pad.map's middle column), or `buttons` untouched when
+ * DW3_PAD_REMAP is not set. `rotated`: records_language's face-button rotation was applied to these bits already, so
+ * the place each row names has to be looked for where the rotation put it. */
+u16 dw3_pad_permute(u16 buttons, int rotated) {
+    u16 out = 0;
+    int bit, from;
+
+    dw3_pad_load();
+    if (!dw3_pad.remap) {
+        return buttons;
+    }
+    for (bit = 0; bit < 16; bit++) {
+        from = dw3_pad.perm[bit];
+        if (rotated) {
+            from = dw3_pad_rot[from];
+        }
+        out |= (u16)(((buttons >> from) & 1) << bit);
+    }
+    return out;
+}
+
+static char dw3_letter_for(const char *action) {
+    int bit = dw3_pad_bit_of_name(action);
+
+    dw3_pad_load();
+    return bit < 0 ? 0 : dw3_pad.letter[bit];
 }
 
 s16 dw3_button_glyph(u8 code) {

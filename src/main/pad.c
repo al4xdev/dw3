@@ -287,6 +287,12 @@ void pad_read_buttons(u8 id, u8 *data, u8 *rec) {
                 buttons |= 0x1000;
             }
         }
+#ifdef PC_PORT
+        /* The player's own pad map (pad.map, through dw3_pad_permute): the handheld's SDL2 runtime has no pad map of its
+         * own, and this is the one place every read of the pad passes through - the raw bit tests as much as the button
+         * map's. After records_language's rotation, so a row of the file means the action the game's text names. */
+        buttons = dw3_pad_permute(buttons, records_language != 0);
+#endif
         if (mode == 7) {
             for (i = 0; i < 4; i++) {
                 slot->analog[i] = data[i + 4];

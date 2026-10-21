@@ -49,13 +49,17 @@ EVDEV = {
     544: "dpup", 545: "dpdown", 546: "dpleft", 547: "dpright",
 }
 EVDEV_CODE = dict((name, code) for code, name in EVDEV.items())
-ACTIONS = ["cross", "circle", "square", "triangle", "l1", "r1", "start", "select"]
+# The rows are what the button does inside the game, not what the console that sold it calls it: a player hunting for
+# "back" has nothing to do with the PlayStation's symbols. The four face rows are the bits the game reads after it
+# rotates the pad for the non-Japanese languages (src/main/pad.c): circle confirms, cross goes back, which is the
+# convention the game's own text is drawn in.
+ACTIONS = ["circle", "cross", "triangle", "square", "l1", "r1", "start", "select"]
+FACE = ["circle", "cross", "triangle", "square"]
 ACTION_LABEL = {
-    # The PlayStation's own names, because that is what the game's text calls them: "press X to talk", not "confirm".
-    "cross": "CROSS", "circle": "CIRCLE", "square": "SQUARE", "triangle": "TRIANGLE",
+    "circle": "CONFIRM", "cross": "BACK", "triangle": "TRIANGLE", "square": "SQUARE",
     "l1": "L1", "r1": "R1", "start": "START", "select": "SELECT",
 }
-LETTERS = "ABXYLRSE"
+VALID_LETTERS = set("ABXYLRSE-")  # "-": the game's text keeps the button's own symbol
 
 
 def key_label(pad, action):
@@ -66,23 +70,31 @@ def key_label(pad, action):
     return {"start": "START", "select": "SELECT", "l1": "L1", "r1": "R1"}.get(action, letter)
 
 
-PRESETS = {
+# A layout is what is printed on the pad: a letter for each of the four positions. Picking one also puts the face
+# buttons where that pad has them (A confirming, B going back), and from then on the letters follow the *positions* -
+# moving a single row can never leave the game's text naming a button that does nothing, which is the whole reason the
+# letter used to be a second thing to edit.
+LAYOUTS = {
     "xbox": {
-        "cross": ("south", "A"), "circle": ("east", "B"), "square": ("west", "X"),
-        "triangle": ("north", "Y"), "l1": ("leftshoulder", "L"), "r1": ("rightshoulder", "R"),
-        "start": ("start", "S"), "select": ("back", "E"),
+        "place": {"circle": "south", "cross": "east", "triangle": "north", "square": "west"},
+        "letter": {"south": "A", "east": "B", "north": "Y", "west": "X"},
     },
     "switch": {
-        "cross": ("east", "A"), "circle": ("south", "B"), "square": ("north", "X"),
-        "triangle": ("west", "Y"), "l1": ("leftshoulder", "L"), "r1": ("rightshoulder", "R"),
-        "start": ("start", "S"), "select": ("back", "E"),
+        "place": {"circle": "east", "cross": "south", "triangle": "north", "square": "west"},
+        "letter": {"south": "B", "east": "A", "north": "X", "west": "Y"},
     },
-    "modern": {
-        "cross": ("east", "A"), "circle": ("north", "Y"), "square": ("west", "X"),
-        "triangle": ("south", "B"), "l1": ("leftshoulder", "L"), "r1": ("rightshoulder", "R"),
-        "start": ("start", "S"), "select": ("back", "E"),
+    "ps1": {
+        # The PlayStation's own: that pad is drawn with symbols, so the text keeps them (nothing replaces them).
+        "place": {"circle": "east", "cross": "south", "triangle": "north", "square": "west"},
+        "letter": {},
     },
 }
+LAYOUT_NAMES = ["xbox", "switch", "ps1"]
+
+
+def letter_for(layout, place):
+    """The letter the game's text shows for a button at `place`; "-" leaves the button's own symbol."""
+    return LAYOUTS[layout]["letter"].get(place, "-")
 
 # 5x7, rows of bits. Enough for the menu.
 GLYPH = {
@@ -224,7 +236,24 @@ def write_settings(s, disc):
 
 
 def default_pad():
-    return dict((k, v) for k, v in PRESETS["xbox"].items())
+    pad = {"l1": ("leftshoulder", "L"), "r1": ("rightshoulder", "R"), "start": ("start", "S"),
+           "select": ("back", "E")}
+    apply_layout(pad, "xbox")
+    return pad
+
+
+def apply_layout(pad, layout):
+    """A layout is a pad's lettering and, as a starting point, where that pad keeps A and B: the face rows move to its
+    positions and take its letters. The other four rows keep the buttons the player chose; the menu shows their names."""
+    for action in FACE:
+        place = LAYOUTS[layout]["place"][action]
+        pad[action] = (place, letter_for(layout, place))
+
+
+def next_layout(current, direction):
+    step = 1 if direction == "right" else -1
+    i = LAYOUT_NAMES.index(current) if current in LAYOUT_NAMES else 0
+    return LAYOUT_NAMES[(i + step) % len(LAYOUT_NAMES)]
 
 
 def load_pad():
@@ -233,7 +262,7 @@ def load_pad():
         return pad
     for line in open(PAD_FILE):
         parts = line.split()
-        if len(parts) == 3 and parts[0] in pad and parts[2] in LETTERS:
+        if len(parts) == 3 and parts[0] in pad and parts[2] in VALID_LETTERS:
             pad[parts[0]] = (parts[1], parts[2])
     # A file written when a button could be bound twice (or by hand) has two actions on one button; the later one in
     # ACTIONS order moves to a free button, so a SELECT sharing CIRCLE cannot turn CIRCLE+START into the exit chord.
@@ -256,16 +285,16 @@ def free_place(pad, taken):
     return None
 
 
-def detect_preset(pad):
-    """Which preset the mapping currently is, worked out from the mapping itself. The screen used to keep the name in a
-    local that started at "xbox" every time, so a player who chose SWITCH saw XBOX again on coming back."""
-    for name, table in PRESETS.items():
-        if all(pad[action][0] == table[action][0] for action in ACTIONS):
+def detect_layout(pad):
+    """Which layout the letters say it is. The family belongs to the pad, not to one button, so the row still reads
+    SWITCH after a single row is moved; letters that match none of the families read CUSTOM."""
+    for name in LAYOUT_NAMES:
+        if all(pad[action][1] == letter_for(name, pad[action][0]) for action in FACE):
             return name
     return "custom"
 
 
-def set_place(pad, action, place):
+def set_place(pad, action, place, layout):
     """A gamepad button does one thing. Binding one that another action already holds swaps the two, which is what the
     player means ("this button should be cross now"), and keeps SELECT and START off the face buttons: bound twice, a
     SELECT on the same button as CIRCLE turns CIRCLE+START into the exit chord (which is what this machine had)."""
@@ -281,6 +310,11 @@ def set_place(pad, action, place):
             if spare is not None:
                 pad[holder] = (spare, pad[holder][1])
     pad[action] = (place, pad[action][1])
+    # The letter follows the position, so the game's text cannot name a button that does nothing - not even after the
+    # swap above moved the row that held this one.
+    for a in (action, holder):
+        if a is not None and a in FACE:
+            pad[a] = (pad[a][0], letter_for(layout, pad[a][0]))
 
 
 def save_pad(pad):
@@ -737,10 +771,12 @@ def draw(screen, s, sel, disc, pad, page="main"):
         y += row_step * screen.scale
     # Two legends, each saying what the button does. The disc's file name used to sit on a third line: it copied the
     # "dw2003.bin" into a menu that already knows which disc it found, and cost the last row its place.
-    x = screen.text(24, legend, key_label(pad, "cross"), C_KEY)
+    # The roles, not the symbols: circle is the game's confirm and cross its back (the pad is rotated into that
+    # convention), so the menu must read the same way.
+    x = screen.text(24, legend, key_label(pad, "circle"), C_KEY)
     x = screen.text(x, legend, " SELECT   ", C_NOTE)
     if page != "main":
-        x = screen.text(x, legend, key_label(pad, "circle"), C_KEY)
+        x = screen.text(x, legend, key_label(pad, "cross"), C_KEY)
         x = screen.text(x, legend, " BACK   ", C_NOTE)
     x = screen.text(x, legend, key_label(pad, "start"), C_KEY)
     screen.text(x, legend, " PLAY", C_NOTE)
@@ -814,23 +850,24 @@ def pad_events(pad, capture=False):
         os.close(fd)
 
 
-def draw_remap(screen, pad, sel, preset, capture):
+def draw_remap(screen, pad, sel, layout, capture):
     screen.fill(0x001018)
     screen.text(24, 16, "BUTTONS", C_TITLE)
     y = 48
     screen.text(16, y, ">" if sel == 0 else " ", C_KEY)
-    screen.text(40, y, "PRESET", C_KEY if sel == 0 else C_TEXT)
-    screen.text(40 + 20 * 6 * screen.scale, y, preset.upper(), C_KEY if sel == 0 else C_ON)
+    screen.text(40, y, "LAYOUT", C_KEY if sel == 0 else C_TEXT)
+    screen.text(40 + 20 * 6 * screen.scale, y, layout.upper(), C_KEY if sel == 0 else C_ON)
     y += 10 * screen.scale
     for i, action in enumerate(ACTIONS):
         place, letter = pad[action]
         here = sel == i + 1
         screen.text(16, y, ">" if here else " ", C_KEY)
         screen.text(40, y, "%-12s" % ACTION_LABEL[action], C_KEY if here else C_TEXT)
-        # The place is what the pad reports; the letter is what the game's text will show. Different things, different
-        # colours, so neither has to be guessed from the other.
+        # The place is what the pad reports; the letter is what the game's text will show for it, read off the layout -
+        # nothing here is typed in, so the two columns cannot disagree.
         screen.text(40 + 13 * 6 * screen.scale, y, place.upper()[:10], C_KEY if here else C_NOTE)
-        screen.text(40 + 25 * 6 * screen.scale, y, letter, C_KEY if here else C_ON)
+        if action in FACE and letter != "-":
+            screen.text(40 + 25 * 6 * screen.scale, y, letter, C_KEY if here else C_ON)
         y += 10 * screen.scale
     # Three legends, each one an instruction. The old footer was four lines of jargon ("NAME = SYSTEM. LETTER = GAME",
     # "A USED BUTTON CHANGES OWNER") that named the columns instead of saying what to press.
@@ -839,48 +876,40 @@ def draw_remap(screen, pad, sel, preset, capture):
     if capture:
         screen.text(24, y, "PRESS THE BUTTON NOW - ANY OF THEM", C_WARN)
     else:
-        x = screen.text(24, y, key_label(pad, "cross"), C_KEY)
+        x = screen.text(24, y, key_label(pad, "circle"), C_KEY)
         screen.text(x, y, ": PICK A ROW, THEN THE BUTTON", C_NOTE)
     x = screen.text(24, y + step, "LEFT/RIGHT", C_KEY)
-    screen.text(x, y + step, ": LETTER SHOWN IN TEXT", C_NOTE)
+    screen.text(x, y + step, ": LAYOUT, WHICH SETS THE LETTERS", C_NOTE)
     x = screen.text(24, y + 2 * step, key_label(pad, "start"), C_KEY)
     screen.text(x, y + 2 * step, ": BACK TO THE MENU", C_NOTE)
 
 
 def remap(screen, pad):
     sel = 0
-    preset = detect_preset(pad)
+    layout = detect_layout(pad)
     capture = False
     n = 1 + len(ACTIONS)
     while True:
-        draw_remap(screen, pad, sel, preset, capture)
+        draw_remap(screen, pad, sel, layout, capture)
         key = pad_events(pad, capture)
         if key == "quit":
             return "quit"
         if capture:
             if isinstance(key, tuple):
-                set_place(pad, ACTIONS[sel - 1], EVDEV[key[1]])
+                set_place(pad, ACTIONS[sel - 1], EVDEV[key[1]], layout)
                 capture = False
             continue
         if key == "up":
             sel = (sel - 1) % n
         elif key == "down":
             sel = (sel + 1) % n
-        elif key == "left" or key == "right":
-            if sel == 0:
-                continue
-            action = ACTIONS[sel - 1]
-            letter = pad[action][1]
-            i = LETTERS.index(letter) if letter in LETTERS else 0
-            i = (i + (1 if key == "right" else -1)) % len(LETTERS)
-            pad[action] = (pad[action][0], LETTERS[i])
+        elif (key == "left" or key == "right") and sel == 0:
+            layout = next_layout(layout, key)
+            apply_layout(pad, layout)
         elif key == "a":
             if sel == 0:
-                names = ["xbox", "switch", "modern"]
-                preset = names[(names.index(preset) + 1) % 3] if preset in names else names[0]
-                for action in ACTIONS:
-                    set_place(pad, action, PRESETS[preset][action][0])
-                    pad[action] = (pad[action][0], PRESETS[preset][action][1])
+                layout = next_layout(layout, "right")
+                apply_layout(pad, layout)
             else:
                 capture = True
         elif key == "play" or key == "b":

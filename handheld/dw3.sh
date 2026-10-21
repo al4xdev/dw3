@@ -14,6 +14,10 @@ if python3 ./dw3-menu.py > ./menu.log 2>&1; then
   export DW3_VIDEO=fbdev
   export SDL_VIDEODRIVER=kmsdrm
   export SDL_AUDIODRIVER=alsa
+  # The SDL2 build's input (psxstack/runtime/input.c, the PSXSTACK_SDL2 branch) has a fixed button map and ignores
+  # settings.json's input.gamepad, so the game applies pad.map itself (dw3_pad_permute, src/main/pad.c). The SDL3
+  # builds must not set this: there the runtime maps the pad and the game must leave the bits alone.
+  export DW3_PAD_REMAP=1
   exec ./dw2003 --config ./settings.json --window --fullscreen --watchdog 0 >> ./logs/game.log 2>&1
 fi
 exit 0
