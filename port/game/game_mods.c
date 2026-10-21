@@ -1,5 +1,5 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost and widescreen, as PortMod records the
+ * battle_animations, global_save, preset_language, party_xp, xp_boost, widescreen and led_bar, as PortMod records the
  * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
@@ -11,6 +11,7 @@
 #include "battle_scan.h"
 #include "fieldstg.h"
 #include "gamestate.h"
+#include "led.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "savestate.h"
@@ -330,11 +331,12 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
  * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. */
 enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL };
 static const PortModOption xb_options[] = {
-    { .id = "exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 10, .step = 0.1, .slider_max = 5,
+    /* 20, not 10: an old game asks for it (the owner's word), and the handheld menu counts to 20 in steps of 1. */
+    { .id = "exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
       .input_toggle = "manual", .applies = "live" },
-    { .id = "form_exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 10, .step = 0.1, .slider_max = 5,
+    { .id = "form_exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
       .input_toggle = "manual", .applies = "live" },
-    { .id = "bits", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 10, .step = 0.1, .slider_max = 5,
+    { .id = "bits", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
       .input_toggle = "manual", .applies = "live" },
     { .id = "manual", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
 };
@@ -381,6 +383,27 @@ static void ws_frame(struct PortMod *mod) {
     port_video_widescreen(ovl != NULL && strcmp(ovl->name, "FIGHTSTG") == 0);
 }
 
+/* ---- led_bar (docs/LAUNCHER.md "LED bar"): the party's health on the LED bar of the RK3326 handhelds, through the
+ * package's daemon (port/game/led.c, handheld/ledd.py). Off the handheld it is a no-op that logs one line, and it is
+ * off by default: with it on, the bar's regulator is raised in a battle and dropped when the battle ends.
+ *
+ * Nothing here reads the game's data: the daemon owns the animation and the game only says which of its six readings
+ * the party is in, once per change (measured: ~2 ms a change, so a handful of times a fight and never per frame). */
+static void led_bar_start(struct PortMod *mod) {
+    (void)mod;
+    led_start();
+}
+
+static void led_bar_frame(struct PortMod *mod) {
+    (void)mod;
+    led_frame();
+}
+
+static const char *led_bar_status(struct PortMod *mod) {
+    (void)mod;
+    return led_status();
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
@@ -396,6 +419,8 @@ static PortMod game_mod_table[] = {
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
       .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
+    { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
+      .status = led_bar_status },
 };
 
 int game_mod_count(void) {

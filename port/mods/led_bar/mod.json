@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "led_bar",
+  "name": "LED bar (R36S / XF35H handhelds)",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Shows the party's health on the handheld's LED bar: green while it is healthy, lilac in the middle, red breathing when it is low and red blinking when a knockout is close; the bar's own rotating mode when the party is out. ONLY WORKS ON THE RK3326 HANDHELDS (R36S, XF35H and their clones): it talks to the console's LED controller, which other machines do not have. Off, nothing changes. On, it starts a small helper (ledd, installed by the handheld menu) that owns the bar, raises its power in battle and drops it when the battle ends or the game goes away.",
+  "options": []
+}

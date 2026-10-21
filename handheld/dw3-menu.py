@@ -11,6 +11,23 @@ CFG = os.path.join(GAME, "settings.json")
 FB = os.environ.get("DW3_FB", "/dev/fb0")
 PAD = os.environ.get("DW3_PAD", "/dev/input/event0")
 
+# The LED bar's daemon (handheld/ledd.py): it owns the tty and the regulator, and every port on the card asks it for the
+# bar instead of writing the line itself. `.led.installed` is this port's record that somebody said yes to the risk;
+# without it the menu only reports whether a daemon is already running.
+LED_SOCK = "/tmp/ledd.sock"
+LED_FLAG = os.path.join(GAME, "led.installed")
+
+# The palette, and what each colour means. One rule: a button you can press is amber, a value that is on is green, an
+# explanation is grey, and anything that is a warning or a failure is never the same colour as a normal value.
+C_TITLE = 0x3EE0C8  # screen titles
+C_TEXT = 0xD0D0D0   # labels and values that are words
+C_DIM = 0x707070    # "off", and the shape of things
+C_ON = 0x40FF80     # "ON", an action row, a success
+C_KEY = 0xFFCC33    # a button you press, and the selected row
+C_WARN = 0xFFCC33   # a risk stated before it is taken
+C_BAD = 0xFF6060    # something that did not work
+C_NOTE = 0x888888   # the explanation line
+
 # linux/input.h on this handheld
 K_A, K_B = 304, 305
 K_SELECT, K_START = 314, 315
@@ -28,10 +45,21 @@ EVDEV = {
 EVDEV_CODE = dict((name, code) for code, name in EVDEV.items())
 ACTIONS = ["cross", "circle", "square", "triangle", "l1", "r1", "start", "select"]
 ACTION_LABEL = {
-    "cross": "CONFIRM", "circle": "BACK", "square": "SQUARE", "triangle": "TRIANGLE",
+    # The PlayStation's own names, because that is what the game's text calls them: "press X to talk", not "confirm".
+    "cross": "CROSS", "circle": "CIRCLE", "square": "SQUARE", "triangle": "TRIANGLE",
     "l1": "L1", "r1": "R1", "start": "START", "select": "SELECT",
 }
 LETTERS = "ABXYLRSE"
+
+
+def key_label(pad, action):
+    """What is printed on the button, which is not the same thing for every action: the face buttons carry a letter
+    (A/B/X/Y, the one the game's text shows) and the rest carry their own name (START, SELECT, L1, R1). A legend that
+    said "S PLAY" was naming a pad letter nobody can read on the device."""
+    _place, letter = pad[action]
+    return {"start": "START", "select": "SELECT", "l1": "L1", "r1": "R1"}.get(action, letter)
+
+
 PRESETS = {
     "xbox": {
         "cross": ("south", "A"), "circle": ("east", "B"), "square": ("west", "X"),
@@ -112,10 +140,20 @@ def load_state():
     return s
 
 
+def write_atomic(path, text):
+    """Write through a temporary file and a rename, the way the port's memory card does: a reset or a power cut in the
+    middle leaves the file as it was, not half of a new one. Without this, a truncated settings.json makes the game exit
+    at 64 on the next boot, and the player sees "it does not start" with nothing to point at."""
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
 def save_state(s):
-    with open(STATE, "w") as f:
-        for k, v in s.items():
-            f.write("%s=%s\n" % (k, v))
+    write_atomic(STATE, "".join("%s=%s\n" % (k, v) for k, v in s.items()))
 
 
 def find_disc():
@@ -151,18 +189,18 @@ def write_settings(s, disc):
     "battle_animations": { "enabled": %s, "hit_reaction": %s },
     "global_save": { "enabled": %s, "restore_map_state": true },
     "party_xp": { "enabled": %s, "share": %d, "knocked_out": false, "catch_up": false },
-    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": false },
+    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s },
     "preset_language": { "enabled": %s, "language": "%s" },
-    "widescreen": { "enabled": false }
+    "widescreen": { "enabled": false },
+    "led_bar": { "enabled": %s }
   },
   "input": { "gamepad": %s }
 }
 """ % (os.path.basename(disc), s["hz"], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["lang_on"]), lang,
-       gamepad_json(load_pad()))
-    with open(CFG, "w") as f:
-        f.write(text)
+       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5), b(s["lang_on"]), lang,
+       b(led_mod_on()), gamepad_json(load_pad()))
+    write_atomic(CFG, text)
 
 
 def default_pad():
@@ -198,6 +236,15 @@ def free_place(pad, taken):
     return None
 
 
+def detect_preset(pad):
+    """Which preset the mapping currently is, worked out from the mapping itself. The screen used to keep the name in a
+    local that started at "xbox" every time, so a player who chose SWITCH saw XBOX again on coming back."""
+    for name, table in PRESETS.items():
+        if all(pad[action][0] == table[action][0] for action in ACTIONS):
+            return name
+    return "custom"
+
+
 def set_place(pad, action, place):
     """A gamepad button does one thing. Binding one that another action already holds swaps the two, which is what the
     player means ("this button should be cross now"), and keeps SELECT and START off the face buttons: bound twice, a
@@ -217,10 +264,7 @@ def set_place(pad, action, place):
 
 
 def save_pad(pad):
-    with open(PAD_FILE, "w") as f:
-        for action in ACTIONS:
-            place, letter = pad[action]
-            f.write("%s %s %s\n" % (action, place, letter))
+    write_atomic(PAD_FILE, "".join("%s %s %s\n" % (action, pad[action][0], pad[action][1]) for action in ACTIONS))
 
 
 def gamepad_json(pad):
@@ -264,7 +308,7 @@ def apply_row(s, row):
             s["xp"] = 1
         else:
             s["xp_mul"] += 1
-            if s["xp_mul"] > 5:
+            if s["xp_mul"] > 20:  # an old game asks for it; above 5 the settings' "manual" flag allows it
                 s["xp"] = 0
                 s["xp_mul"] = 2
     elif row == 8:
@@ -275,6 +319,141 @@ def apply_row(s, row):
             if s["lang"] > 6:
                 s["lang_on"] = 0
                 s["lang"] = 0
+
+
+def led_ask(request, timeout=0.4):
+    """One request to the daemon, one reply. Returns the reply line, or None when nothing answers at the socket."""
+    import socket
+
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect(LED_SOCK)
+        s.sendall((request + "\n").encode())
+        return s.recv(200).decode(errors="replace").strip()
+    except OSError:
+        return None
+    finally:
+        s.close()
+
+
+_led_seen = [0.0, "not installed"]
+
+
+def led_mod_on():
+    """Whether the game's led_bar mod is enabled in settings.json - the file the game reads, and the only thing that
+    makes it drive the bar."""
+    import json
+
+    try:
+        cfg = json.load(open(CFG))
+    except (OSError, ValueError):
+        return False
+    return bool(cfg.get("mods", {}).get("led_bar", {}).get("enabled"))
+
+
+def led_mod_set(on):
+    """Write it, now: the game starts right after PLAY and reads the file once."""
+    import json
+
+    try:
+        cfg = json.load(open(CFG))
+    except (OSError, ValueError):
+        cfg = {}
+    cfg.setdefault("mods", {}).setdefault("led_bar", {})["enabled"] = bool(on)
+    write_atomic(CFG, json.dumps(cfg, indent=2))
+
+
+def led_state():
+    """The row: "not installed" until the daemon answers, then the mod's own switch as ON/off. Kept for a second: the
+    menu redraws on every key and a socket that is not there costs the connect timeout each time."""
+    import time
+
+    now = time.time()
+    if now - _led_seen[0] > 1.0:
+        if led_ask("status"):
+            text = "ON" if led_mod_on() else "off"
+        else:
+            text = "not installed"
+        _led_seen[0], _led_seen[1] = now, text
+    return _led_seen[1]
+
+
+def led_start_daemon():
+    """Ask the daemon to come up from this directory. ledd.py double-forks and takes a lock, so a second copy exits by
+    itself instead of opening the line twice."""
+    import subprocess
+    import time
+
+    try:
+        subprocess.Popen([sys.executable or "python3", "./ledd.py", "--detach"], cwd=GAME,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return False
+    for _ in range(20):  # it opens a tty and a regulator: a second at worst
+        if led_ask("status", 0.2):
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def draw_led(screen, pad, step, ok):
+    """The warning before anything is installed (step 0), then what happened (step 1)."""
+    screen.fill(0x001018)
+    screen.text(24, 16, "LED BAR", C_TITLE)
+    y = 60
+    line = 10 * screen.scale
+    if step == 0:
+        lines = (
+            ("THIS IS THE XF35H: RK3326, 640X480,", C_TEXT),
+            ("WITH ITS LED BAR ON /dev/ttyS2.", C_TEXT),
+            ("ONE DAEMON OWNS THAT LINE AND THE", C_TEXT),
+            ("REGULATOR. EVERY PORT ASKS IT.", C_TEXT),
+            ("", 0),
+            ("ON ANOTHER CONSOLE THOSE BYTES MAY", C_WARN),
+            ("REACH A UART THAT IS NOT A LED.", C_WARN),
+            ("THAT IS THE RISK; HENCE THIS ASKS.", C_WARN),
+            ("", 0),
+            ("%s INSTALL" % pad["cross"][1], C_ON),
+            ("%s CANCEL" % pad["circle"][1], C_NOTE),
+        )
+    else:
+        lines = (
+            ("THE DAEMON IS RUNNING" if ok else "THE DAEMON DID NOT COME UP", C_ON if ok else C_BAD),
+            ("", 0),
+            ("/tmp/ledd.sock ANSWERS status" if ok else "SEE /tmp/led-test/ledd.log", C_NOTE),
+            ("PORTS ASK, THE DAEMON DECIDES," if ok else "", C_NOTE),
+            ("AND LETS GO WHEN THE GAME DOES." if ok else "", C_NOTE),
+            ("", 0),
+            ("%s BACK" % pad["cross"][1], C_NOTE),
+        )
+    for text, color in lines:
+        if text:
+            screen.text(24, y, text, color)
+        y += line
+
+
+def led_setup(screen, pad):
+    """The row's action: warn, ask, and only then start the daemon and write this port's record of it."""
+    draw_led(screen, pad, 0, None)
+    while True:
+        key = pad_events(pad)
+        if key == "quit":
+            return "quit"
+        if key == "b":
+            return None
+        if key == "a":
+            ok = led_start_daemon()
+            if ok:
+                with open(LED_FLAG, "w") as f:
+                    f.write("ledd.py\n")
+            draw_led(screen, pad, 1, ok)
+            while True:  # the press that got here must not dismiss the report
+                key = pad_events(pad)
+                if key == "quit":
+                    return "quit"
+                if key == "a":
+                    return None
 
 
 def rows(s):
@@ -291,6 +470,7 @@ def rows(s):
         "PARTY XP            %s  %s%%" % (on(s["party"]), s["share"]),
         "XP / BITS BOOST     %s  %sX" % (on(s["xp"]), s["xp_mul"]),
         "LANGUAGE            %s  %s" % (on(s["lang_on"]), lang.upper()),
+        "LED BAR             %s" % led_state(),
         "BUTTONS             REMAP",
         "PLAY",
     ]
@@ -346,25 +526,36 @@ def draw(screen, s, sel, disc, pad):
     screen.fill(0x001018)
     screen.text(24, 18, "DIGIMON WORLD 3", 0x3EE0C8)
     items = rows(s)
+    # The rows are spaced to what is left above the legend: at 10*scale a twelfth row would end at 407 px of the 480 px
+    # panel, on top of a legend that starts at 402.
+    step = 8 * screen.scale
+    legend = screen.h - 2 * step - 8
     y = 56
+    row_step = max(7, min(10, (legend - 10 - y) // max(1, len(items))))
     for i, line in enumerate(items):
         if i == sel:
-            color = 0xFFCC33
-            screen.text(16, y, ">", color)
+            screen.text(16, y, ">", C_KEY)
+            screen.text(40, y, line, C_KEY)
         else:
-            color = 0xD0D0D0 if i < 10 else 0x40FF80
-        screen.text(40, y, line, color)
-        y += 10 * screen.scale
-    # The legends are two lines and the file name a third: on this 640x480 panel the glyph cell is 6*scale = 18 px, so one
-    # line of all three was 774 px wide (cut at the right edge) and the file name sat at h-18, cut by the bottom.
-    step = 8 * screen.scale
-    y = screen.h - 3 * step - 6
-    screen.text(24, y, "%s CHANGE   %s/START PLAY" % (pad["cross"][1], pad["circle"][1]), 0x888888)
-    screen.text(24, y + step, "SELECT+START QUIT", 0x888888)
-    name = os.path.basename(disc) if disc else "NO DISC"
-    if len(name) > 32:
-        name = name[:29] + "..."
-    screen.text(24, y + 2 * step, name, 0x666666)
+            label, value = line[:20].rstrip(), line[20:].strip()
+            if not value:  # an action row: PLAY, BUTTONS, LED BAR when it has no state
+                screen.text(40, y, label, C_ON)
+            else:
+                screen.text(40, y, label, C_TEXT)
+                color = C_ON if value in ("ON", "running") else C_DIM if value == "off" else C_TEXT
+                screen.text(40 + 20 * 6 * screen.scale, y, value, color)
+        y += row_step * screen.scale
+    # Two legends, each saying what the button does. The disc's file name used to sit on a third line: it copied the
+    # "dw2003.bin" into a menu that already knows which disc it found, and cost the last row its place.
+    x = screen.text(24, legend, key_label(pad, "cross"), C_KEY)
+    x = screen.text(x, legend, " SELECT   ", C_NOTE)
+    x = screen.text(x, legend, key_label(pad, "start"), C_KEY)
+    screen.text(x, legend, " PLAY", C_NOTE)
+    if disc:
+        x = screen.text(24, legend + step, "SELECT+START", C_KEY)
+        screen.text(x, legend + step, " QUIT", C_NOTE)
+    else:
+        screen.text(24, legend + step, "NO DISC IN game/", C_BAD)
 
 
 def event_fmt():
@@ -430,30 +621,40 @@ def pad_events(pad, capture=False):
 
 def draw_remap(screen, pad, sel, preset, capture):
     screen.fill(0x001018)
-    screen.text(24, 16, "BUTTONS", 0x3EE0C8)
+    screen.text(24, 16, "BUTTONS", C_TITLE)
     y = 48
-    line = "PRESET              %s" % preset.upper()
-    screen.text(16, y, ">" if sel == 0 else " ", 0xFFCC33)
-    screen.text(40, y, line, 0xFFCC33 if sel == 0 else 0xD0D0D0)
+    screen.text(16, y, ">" if sel == 0 else " ", C_KEY)
+    screen.text(40, y, "PRESET", C_KEY if sel == 0 else C_TEXT)
+    screen.text(40 + 20 * 6 * screen.scale, y, preset.upper(), C_KEY if sel == 0 else C_ON)
     y += 10 * screen.scale
     for i, action in enumerate(ACTIONS):
         place, letter = pad[action]
-        text = "%-12s %s  %s" % (ACTION_LABEL[action], place.upper()[:10], letter)
-        screen.text(16, y, ">" if sel == i + 1 else " ", 0xFFCC33)
-        screen.text(40, y, text, 0xFFCC33 if sel == i + 1 else 0xD0D0D0)
+        here = sel == i + 1
+        screen.text(16, y, ">" if here else " ", C_KEY)
+        screen.text(40, y, "%-12s" % ACTION_LABEL[action], C_KEY if here else C_TEXT)
+        # The place is what the pad reports; the letter is what the game's text will show. Different things, different
+        # colours, so neither has to be guessed from the other.
+        screen.text(40 + 13 * 6 * screen.scale, y, place.upper()[:10], C_KEY if here else C_NOTE)
+        screen.text(40 + 25 * 6 * screen.scale, y, letter, C_KEY if here else C_ON)
         y += 10 * screen.scale
+    # Three legends, each one an instruction. The old footer was four lines of jargon ("NAME = SYSTEM. LETTER = GAME",
+    # "A USED BUTTON CHANGES OWNER") that named the columns instead of saying what to press.
     step = 8 * screen.scale
-    y = screen.h - 4 * step - 6
+    y = screen.h - 3 * step - 6
     if capture:
-        screen.text(24, y, "PRESS THE BUTTON NOW", 0xFFCC33)
-    screen.text(24, y + step, "NAME = SYSTEM   LETTER = GAME", 0x888888)
-    screen.text(24, y + 2 * step, "START BACK   LEFT/RIGHT LETTER", 0x888888)
-    screen.text(24, y + 3 * step, "A USED BUTTON CHANGES OWNER", 0x666666)
+        screen.text(24, y, "PRESS THE BUTTON NOW - ANY OF THEM", C_WARN)
+    else:
+        x = screen.text(24, y, key_label(pad, "cross"), C_KEY)
+        screen.text(x, y, ": PICK A ROW, THEN THE BUTTON", C_NOTE)
+    x = screen.text(24, y + step, "LEFT/RIGHT", C_KEY)
+    screen.text(x, y + step, ": LETTER SHOWN IN TEXT", C_NOTE)
+    x = screen.text(24, y + 2 * step, key_label(pad, "start"), C_KEY)
+    screen.text(x, y + 2 * step, ": BACK TO THE MENU", C_NOTE)
 
 
 def remap(screen, pad):
     sel = 0
-    preset = "xbox"
+    preset = detect_preset(pad)
     capture = False
     n = 1 + len(ACTIONS)
     while True:
@@ -481,7 +682,7 @@ def remap(screen, pad):
         elif key == "a":
             if sel == 0:
                 names = ["xbox", "switch", "modern"]
-                preset = names[(names.index(preset) + 1) % 3]
+                preset = names[(names.index(preset) + 1) % 3] if preset in names else names[0]
                 for action in ACTIONS:
                     set_place(pad, action, PRESETS[preset][action][0])
                     pad[action] = (pad[action][0], PRESETS[preset][action][1])
@@ -510,7 +711,10 @@ def main():
     s = load_state()
     disc = find_disc()
     pad = load_pad()
-    sel = 10
+    count = len(rows(s))
+    play = count - 1
+    buttons = count - 2
+    sel = play
     screen = Screen()
     launch = False
     try:
@@ -518,18 +722,28 @@ def main():
         while True:
             key = pad_events(pad)
             if key == "up":
-                sel = (sel - 1) % 11
+                sel = (sel - 1) % count
             elif key == "down":
-                sel = (sel + 1) % 11
+                sel = (sel + 1) % count
             elif key == "a":
-                if sel == 10:
+                if sel == play:
                     launch = True
                     break
-                if sel == 9:
+                if sel == buttons:
                     if remap(screen, pad) == "quit":
                         screen.fill(0x000000)
                         return 2
                     save_pad(pad)
+                elif sel == buttons - 1:
+                    if led_state() == "not installed":
+                        if led_setup(screen, pad) == "quit":
+                            screen.fill(0x000000)
+                            return 2
+                    else:
+                        # Installed: the row is a toggle for the mod, and the file is written now because the game reads
+                        # it once, right after PLAY.
+                        led_mod_set(not led_mod_on())
+                        _led_seen[0] = 0.0
                 else:
                     apply_row(s, sel)
             elif key == "play":

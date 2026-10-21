@@ -230,6 +230,28 @@ def widescreen(binary, out):
     check("mods: widescreen on" in err and said == 1, f"the 4:3 picture logged once ({said} times)")
 
 
+def led_bar(binary, out):
+    """led_bar: a machine with no LED bar (this one) - the mod changes nothing and says so once.
+
+    The bar is an MCU on the handheld's /dev/ttyS2 with no sysfs node; the mod talks to the package's daemon over
+    /tmp/ledd.sock and gives up when neither the daemon nor ./ledd.py is there. That is the whole of its behaviour off
+    the handheld, so that is what is testable here: the frame log equals the run without it, and one line says why the
+    bar is being left alone. The palette and the daemon's lock are device tests (docs/HANDHELD.md).
+    """
+    print("mods: led_bar (first_battle_save to back_on_field, this machine has no LED bar)")
+    fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
+    j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")
+    script = derived(out, "led", fbs[:j + 1])
+    rc_on, log_on, _, err_on = run_port(binary, out, "led_on", script,
+                                        settings(out, "led", {"led_bar": {"enabled": True}}), True)
+    rc_off, log_off, _, err_off = run_port(binary, out, "led_off", script)
+    said = err_on.count("led bar:")
+    check(rc_on == rc_off == 0 and log_on == log_off and len(log_on) > 0,
+          f"the frame log with the mod equals the one without (exit {rc_on}, {rc_off})")
+    check(said == 1 and "led bar:" not in err_off,
+          f"the missing bar logged once ({said} time(s)), and nothing without the mod")
+
+
 GS_SCRIPT = MODS / "scripts/global_save.json"
 GS_FIELDS = {"map": 0x26C4, "prev_map": 0x26CC, "map_is_new": 0x26D8, "field_last_map": 0x26DC}
 
@@ -449,6 +471,7 @@ MODS_TESTS = {
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
     "widescreen": lambda binary, out, record: widescreen(binary, out),
+    "led_bar": lambda binary, out, record: led_bar(binary, out),
 }
 
 

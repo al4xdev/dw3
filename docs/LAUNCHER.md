@@ -198,6 +198,41 @@ is the tier-1 overlay; its start asks for the canvas and a 16:9 window (`port_vi
 its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equals the run without the mod.
 `tests/port/mods.py` (headless): the frame log unchanged and the software path's 4:3 logged once.
 
+### LED bar
+
+`led_bar`. No options: the on/off switch is the option. **Only the RK3326 handhelds have the hardware** (R36S, XF35H
+and their clones: an MCU on `/dev/ttyS2`, `docs/HANDHELD.md` "The LED bar is on a UART, not in sysfs"), so everywhere
+else the mod is a no-op that logs one line. While enabled and in a battle (FIGHTSTG is the tier-1 overlay) its frame
+callback (`port/game/led.c`) reads the party's health and sends **one message per change** to `ledd`, the package's
+daemon: the weakest member of the party picks one of six readings.
+
+| the party's weakest | the bar |
+|---|---|
+| 100-81% | green |
+| 80-61% | green, breathing |
+| 60-41% | lilac, breathing |
+| 40-21% | red, breathing |
+| 20-1% | red, blinking (200 ms on, 200 ms off) |
+| 0 | the bar's own rotating mode, every colour |
+
+Outside a battle the bar goes dark and its power rail drops: nothing is being watched there.
+
+- **Why a daemon and not the game writing the bar:** what costs in that path is not the byte (1 ms on the wire at 9600
+  8N1) but paying the setup every time. Measured on the console: the vendor script 66 ms a change, its binary 18 ms,
+  opening and closing the tty with no fork at all ~14 ms, the same fd held open 0.15-0.9 ms. One process owns the line,
+  takes an `flock` so there is only ever one, coalesces the requests of callers that queue up behind each other, and
+  runs the animation's own clock. A change then costs the game ~2 ms, a handful of times a fight.
+- **The animation does not outlive the game:** every reading is sent with the game's pid, and the daemon turns the bar
+  off within a second of that process going away - a clean exit, a crash and a `kill` alike.
+- **What it does not do:** it never changes the console's own LED setting (`ee_led.mode`); EmulationStation applies
+  that at boot and when its LED screen is used, and a writer a lock cannot reach is left alone. There is no brightness
+  in the hardware - a mode byte and nothing else - so the reading is carried by colour and rhythm.
+- **Known limits:** the palette is the measured one, not the names of the vendor script, and the breathing modes were
+  judged by eye on one console (`docs/HANDHELD.md`). Mode 25 and the `times` argument are untested.
+
+The daemon's own tests are the device (`/.dumps/led-test/`): the palette map, the cost of each path and the singleton
+lock. On the host there is nothing to see: `tests/port/mods.py` keeps the mod's silent no-op honest.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`
