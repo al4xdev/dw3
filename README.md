@@ -155,7 +155,8 @@ This is as important as what was done — each of these looked like a win and is
 
 ## Features of this fork
 
-- **Handheld menu** (`portmaster/dw3/dw3-menu.py`): a framebuffer menu driven only by the gamepad, no keyboard.
+- **Handheld menu** (`handheld/dw3-menu.py`, versioned with the port; the build copies it into the package): a
+  framebuffer menu driven only by the gamepad, no keyboard.
 - **Direct framebuffer present**: the reason the 2D game and the movies are fluid.
 - **Fast travel**: press Cross on a visited area of the map to travel there.
 - **Map objective**: the story's next area blinks on the map.
@@ -174,8 +175,8 @@ EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, whic
 ```
 /storage/roms/ports/dw3/
   dw2003          the port binary (ARM 32-bit)
-  dw3.sh          menu + game
-  dw3-menu.py     the framebuffer menu
+  dw3.sh          menu + game            (from handheld/)
+  dw3-menu.py     the framebuffer menu    (from handheld/)
   settings.json   settings and mods (video.renderer: "gles" on this machine; "software" reverts)
   pad.map         button letters shown in text
   game/dw2003.bin the disc image (yours)
