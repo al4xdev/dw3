@@ -148,7 +148,7 @@ def defaults():
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
     party sharing all the experience, a mild XP boost, every digivolution learning from a battle, and no logs."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-                party=1, share=100, xp=1, xp_mul=2, all_forms=1, logs=0, lang=0, lang_on=0)
+                party=1, share=100, xp=1, xp_mul=6, all_forms=1, logs=0, lang=0, lang_on=0)
 
 
 def load_state():
@@ -422,13 +422,18 @@ def field_toggle(s, key):
                 s["party"] = 0
                 s["share"] = 50
     elif key == "xp":
-        # off or 2x, nothing else. A battle's experience is split between the fighters and then cut by the game's own
-        # ceilings, so the honest range measured on this port is about 1.5x of what the player would otherwise get; the
-        # steps to 20x were there because the game's own restriction asks for it, not because anyone used them. The file
-        # still accepts any figure (the mod's own `manual` flag gates above 5x) - the menu just stops offering it.
-        s["xp"] = 0 if s["xp"] else 1
-        if s["xp"]:
-            s["xp_mul"] = 2
+        # off, then 2x up to 20x one step at a time, and back to off. 6x is the tuned default: with the game's own exp
+        # tables a battle hands over ~244, so 6x puts the end of the story (level 50) around 80 battles and level 99 at
+        # ~600 - a modern pace rather than the original's ~3,500. Above 5x the settings' `manual` flag is written on, or
+        # the game's own restriction would cap the figure at 5x.
+        if not s["xp"]:
+            s["xp"] = 1
+            s["xp_mul"] = 6
+        else:
+            s["xp_mul"] += 1
+            if s["xp_mul"] > 20:
+                s["xp"] = 0
+                s["xp_mul"] = 6
     elif key == "renderer":
         renderer_toggle()
     elif key == "logs":
