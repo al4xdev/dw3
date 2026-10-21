@@ -14,6 +14,8 @@ the project backlog.
 | `06-what-the-device-answered.md` | measured: GLES 3.2, `GL_ARM_shader_framebuffer_fetch`, CLUT byte-exact, and the costs |
 | `07-cost-model.md` | the 20 ms budget with and without a GPU, and the three traps (batching at 11.2 µs/draw, the feedback loop, swap at 17 ms) |
 | `08-format-and-present.md` | why VRAM stays RGBA8 instead of native 5-5-5-1, and the present path chosen (320x240 pass + RGB565 readback + fb0 memcpy = 2.4 ms) |
+| `09`-`16` | the backend's milestones, in order: the stage-0 counters, M1's design and present, M2's rectangles, M3's two bugs, the 2D artefacts, the battle's first measurement and `16-frame-budget.md` |
+| `17-movie-artefact.md` | **open item**: the movies' top-right artefact, the two VRAM areas and 24-pixel slices it is made of, every hypothesis tested against it, and what the next attempt should log |
 | `measurements.txt` | raw output of every binary below, including the attempts that failed |
 
 ## The reference
