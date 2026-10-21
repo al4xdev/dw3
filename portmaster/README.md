@@ -26,25 +26,22 @@ Two renderers ship in the binary: the software rasteriser (byte-identical to the
 draws the PlayStation's VRAM on the Mali. `ports/dw3/settings.json` picks one (`"video": { "renderer": "gles" }` or
 `"software"`); on this device GLES is the default and is faster in 3D, the software one is faster in menus.
 
-## What the menu offers (all optional, all off by default)
+## What the menu offers
 
 The menu that runs before the game is driven by the pad alone and writes `ports/dw3/settings.json` as you change it.
-`PLAY` is the last row.
+`Cross` enters a group or changes a value, `Circle` goes back, `Start` plays from anywhere, `Select + Start` quits. The
+defaults are the configuration this port was tuned with, so a player who never opens it still gets the good setup:
+8x fast-forward with the audio muted, the whole party sharing all the experience, and the XP boost at 6x.
 
-| row | what it does |
+| main row | what it holds |
 |---|---|
-| `HZ` | 50 or 60 Hz |
-| `FAST-FORWARD` | speed and off/on (up to 8x where the game has headroom; audio muted while it runs) |
-| `SKIP DIALOGUES` | presses through dialogue boxes for you |
-| `SKIP BATTLE ANIMS` / `HIT REACTION` | shorter battles |
-| `SAVE ANYWHERE` | the save menu outside a save point |
-| `PARTY XP` | the whole party shares the experience (percentage) |
-| `XP / BITS BOOST` | up to 20x experience, form experience and money (**with `ALL FORMS' XP`, the two game brakes below come off - see the notes**) |
-| `  ALL FORMS' XP` | every digivolution the Digimon owns earns what the one that fought earned |
-| `RENDERER` | `GLES` (3D) or `SOFTWARE` (2D-heavy scenes, and what the byte-exact reference uses) |
+| `GAME` | `FAST-FORWARD` (speed and off/on), `SKIP DIALOGUES`, `SKIP BATTLE ANIMS` and `HIT REACTION`, `SAVE ANYWHERE` |
+| `XP` | `PARTY XP` (percentage of the party that shares), `XP / BITS BOOST` (up to 20x experience, form experience and money), `ALL FORMS' XP` |
+| `VIDEO` | `HZ` (50 or 60), `RENDERER` (`GLES` for 3D, `SOFTWARE` for 2D-heavy scenes and the byte-exact reference) |
 | `LED BAR` | the console's LED bar follows the weakest party member's HP in battle (installs a small daemon) |
 | `SAVE LOGS` | writes `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map |
 | `BUTTONS` | remap the pad, with Xbox/Switch/modern presets |
+| `PLAY` | start the game |
 
 **The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
 points a battle before the fifth form-level threshold and 50 after it - that ceiling is what makes a digivolution gain one

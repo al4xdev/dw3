@@ -132,8 +132,12 @@ GLYPH = {
 
 
 def load_state():
-    s = dict(hz=50, ff=0, ff_speed="4x", skip=0, battles=0, hit=1, saveany=0,
-             party=0, share=50, xp=0, xp_mul=2, all_forms=0, lang=0, lang_on=0)  # xp off, and the mildest step if on
+    # The defaults are the owner's own settings on the handheld, so a player who never opens this menu gets the setup that
+    # was found to play well: 8x fast-forward with the audio muted, the whole party sharing all the experience, and the XP
+    # boost at 6x - with the menu one press away for anyone who disagrees. Fast-forward and skip start ON/OFF as he keeps
+    # them; nothing here is hidden from the player.
+    s = dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
+             party=1, share=100, xp=1, xp_mul=6, all_forms=0, lang=0, lang_on=0)
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:
@@ -290,10 +294,67 @@ def gamepad_json(pad):
     return "{ " + ", ".join(bits) + " }"
 
 
-def apply_row(s, row):
-    if row == 0:
+# The menu is grouped: the main screen holds one row per group and the actions, and each group opens as its own screen
+# with its own rows. Fourteen rows on a 640x480 panel were already colliding with the legend, and the font could not grow
+# to be read at arm's length. Each entry is (key, label, value function); a key is what the settings file calls the thing,
+# so the toggle below and the text above cannot drift apart.
+GROUPS = [
+    ("game", "GAME", [
+        ("ff", "FAST-FORWARD"),
+        ("skip", "SKIP DIALOGUES"),
+        ("battles", "SKIP BATTLE ANIMS"),
+        ("hit", "  HIT REACTION"),
+        ("saveany", "SAVE ANYWHERE"),
+    ]),
+    ("xp", "XP", [
+        ("party", "PARTY XP"),
+        ("xp", "XP / BITS BOOST"),
+        ("all_forms", "  ALL FORMS' XP"),
+    ]),
+    ("video", "VIDEO", [
+        ("hz", "HZ"),
+        ("renderer", "RENDERER"),
+    ]),
+]
+
+
+def group_rows(s):
+    """The main screen: the groups, then what acts on the console or runs once, then PLAY."""
+    return [
+        "GAME                SETTINGS",
+        "XP                  SETTINGS",
+        "VIDEO               SETTINGS",
+        "LED BAR             %s" % led_state(),
+        "SAVE LOGS           ZIP",
+        "BUTTONS             REMAP",
+        "PLAY",
+    ]
+
+
+def field_text(s, key):
+    """Label's value, as the screen shows it."""
+    def on(v):
+        return "ON" if v else "off"
+    if key == "ff":
+        return "%s  %s" % (on(s["ff"]), s["ff_speed"].upper())
+    if key == "party":
+        return "%s  %s%%" % (on(s["party"]), s["share"])
+    if key == "xp":
+        return "%s  %sX" % (on(s["xp"]), s["xp_mul"])
+    if key == "hz":
+        return "%s" % s["hz"]
+    if key == "renderer":
+        return renderer_get().upper()
+    if key in ("skip", "battles", "hit", "saveany", "all_forms"):
+        return on(s[key])
+    return ""
+
+
+def field_toggle(s, key):
+    """A press on the row: the same cycles the single-column menu had, one per setting."""
+    if key == "hz":
         s["hz"] = 60 if s["hz"] == 50 else 50
-    elif row == 1:
+    elif key == "ff":
         if not s["ff"]:
             s["ff"] = 1
         else:
@@ -303,15 +364,7 @@ def apply_row(s, row):
                 s["ff_speed"] = "4x"
             else:
                 s["ff_speed"] = order[order.index(s["ff_speed"]) + 1]
-    elif row == 2:
-        s["skip"] ^= 1
-    elif row == 3:
-        s["battles"] ^= 1
-    elif row == 4:
-        s["hit"] ^= 1
-    elif row == 5:
-        s["saveany"] ^= 1
-    elif row == 6:
+    elif key == "party":
         if not s["party"]:
             s["party"] = 1
         else:
@@ -319,7 +372,7 @@ def apply_row(s, row):
             if s["share"] > 100:
                 s["party"] = 0
                 s["share"] = 50
-    elif row == 7:
+    elif key == "xp":
         if not s["xp"]:
             s["xp"] = 1
         else:
@@ -327,9 +380,17 @@ def apply_row(s, row):
             if s["xp_mul"] > 20:  # an old game asks for it; above 5 the settings' "manual" flag allows it
                 s["xp"] = 0
                 s["xp_mul"] = 2
-    elif row == 8:  # the forms left at the lab share the form experience too
-        s["all_forms"] = 0 if s["all_forms"] else 1
+    elif key == "renderer":
+        renderer_toggle()
+    elif key in ("skip", "battles", "hit", "saveany", "all_forms"):
+        s[key] ^= 1
 
+
+def group_screen(name):
+    for key, title, entries in GROUPS:
+        if key == name:
+            return title, entries
+    return "", []
 
 
 def led_ask(request, timeout=0.4):
@@ -588,25 +649,16 @@ def save_logs():
     return name
 
 
-def rows(s):
-    def on(v):
-        return "ON" if v else "off"
-    return [
-        "HZ                  %s" % s["hz"],
-        "FAST-FORWARD        %s  %s" % (on(s["ff"]), s["ff_speed"].upper()),
-        "SKIP DIALOGUES      %s" % on(s["skip"]),
-        "SKIP BATTLE ANIMS   %s" % on(s["battles"]),
-        "  HIT REACTION      %s" % on(s["hit"]),
-        "SAVE ANYWHERE       %s" % on(s["saveany"]),
-        "PARTY XP            %s  %s%%" % (on(s["party"]), s["share"]),
-        "XP / BITS BOOST     %s  %sX" % (on(s["xp"]), s["xp_mul"]),
-        "  ALL FORMS' XP     %s" % on(s["all_forms"]),
-        "RENDERER            %s" % renderer_get().upper(),
-        "LED BAR             %s" % led_state(),
-        "SAVE LOGS           ZIP",
-        "BUTTONS             REMAP",
-        "PLAY",
-    ]
+def rows(s, screen="main"):
+    """The lines of one screen: the grouped main list, or a group's own settings."""
+    if screen == "main":
+        return group_rows(s)
+    _title, entries = group_screen(screen)
+    out = []
+    for key, label in entries:
+        pad = 20 - len(label)
+        out.append(label + " " * max(1, pad) + field_text(s, key))
+    return out
 
 
 class Screen(object):
@@ -655,16 +707,21 @@ class Screen(object):
         os.close(self.fd)
 
 
-def draw(screen, s, sel, disc, pad):
+def draw(screen, s, sel, disc, pad, page="main"):
     screen.fill(0x001018)
-    screen.text(24, 18, "DIGIMON WORLD 3", 0x3EE0C8)
-    items = rows(s)
-    # The rows are spaced to what is left above the legend: at 10*scale a twelfth row would end at 407 px of the 480 px
-    # panel, on top of a legend that starts at 402.
+    title, _entries = group_screen(page)
+    screen.text(24, 18, "DIGIMON WORLD 3" if page == "main" else "DIGIMON WORLD 3  >  " + title, 0x3EE0C8)
+    items = rows(s, page)
     step = 8 * screen.scale
     legend = screen.h - 2 * step - 8
     y = 56
-    row_step = max(7, min(10, (legend - 10 - y) // max(1, len(items))))
+    if not items:
+        items = ["NOTHING HERE"]
+    # Fit whatever is on this screen above the legend, in font units and not in pixels: the old division mixed the two and
+    # a fourteen-row list came out 43 px too tall, on top of the legend. A group screen has three to five rows, so this
+    # gives them the largest step (10 units = 30 px).
+    room = (legend - 10 - y) // max(1, len(items))
+    row_step = max(6, min(10, room // screen.scale))
     for i, line in enumerate(items):
         if i == sel:
             screen.text(16, y, ">", C_KEY)
@@ -682,6 +739,9 @@ def draw(screen, s, sel, disc, pad):
     # "dw2003.bin" into a menu that already knows which disc it found, and cost the last row its place.
     x = screen.text(24, legend, key_label(pad, "cross"), C_KEY)
     x = screen.text(x, legend, " SELECT   ", C_NOTE)
+    if page != "main":
+        x = screen.text(x, legend, key_label(pad, "circle"), C_KEY)
+        x = screen.text(x, legend, " BACK   ", C_NOTE)
     x = screen.text(x, legend, key_label(pad, "start"), C_KEY)
     screen.text(x, legend, " PLAY", C_NOTE)
     if disc:
@@ -746,7 +806,9 @@ def pad_events(pad, capture=False):
                     return "right"
                 if code == confirm:
                     return "a"
-                if code == back or code == K_START:
+                if code == back:
+                    return "b"
+                if code == K_START:
                     return "play"
     finally:
         os.close(fd)
@@ -821,7 +883,7 @@ def remap(screen, pad):
                     pad[action] = (pad[action][0], PRESETS[preset][action][1])
             else:
                 capture = True
-        elif key == "play":
+        elif key == "play" or key == "b":
             save_pad(pad)
             return "back"
 
@@ -844,39 +906,47 @@ def main():
     s = load_state()
     disc = find_disc()
     pad = load_pad()
-    count = len(rows(s))
-    # The rows above PLAY, counted from the end so that adding an action above them cannot silently move a toggle: the
-    # settings are rows 0..7 and go through apply_row; the last four are RENDERER, LED BAR, SAVE LOGS and BUTTONS.
+    page = "main"
+    count = len(rows(s, page))
+    # On the main screen: PLAY last, then BUTTONS, SAVE LOGS, LED BAR and the three group rows above them, counted from the
+    # end so a row added above cannot move any of them.
     play = count - 1
     buttons = count - 2
     logs_row = count - 3
     led_row = count - 4
-    renderer_row = count - 5
+    group_base = 0  # GAME, XP and VIDEO are the first three rows of the main screen, in GROUPS order
     sel = play
     screen = Screen()
     launch = False
     try:
-        draw(screen, s, sel, disc, pad)
+        draw(screen, s, sel, disc, pad, page)
         while True:
             key = pad_events(pad)
             if key == "up":
                 sel = (sel - 1) % count
             elif key == "down":
                 sel = (sel + 1) % count
+            elif key == "b":
+                if page != "main":
+                    page, sel, count = "main", play, len(rows(s, "main"))
+                    draw(screen, s, sel, disc, pad, page)
+                continue
             elif key == "a":
-                if sel == play:
+                if page != "main":
+                    _title, entries = group_screen(page)
+                    if 0 <= sel < len(entries):
+                        field_toggle(s, entries[sel][0])
+                elif sel == play:
                     launch = True
                     break
-                if sel == buttons:
+                elif sel == buttons:
                     if remap(screen, pad) == "quit":
                         screen.fill(0x000000)
                         return 2
                     save_pad(pad)
-                elif sel == renderer_row:
-                    renderer_toggle()
                 elif sel == logs_row:
                     zipped = save_logs()
-                    draw(screen, s, sel, disc, pad)
+                    draw(screen, s, sel, disc, pad, page)
                     screen.text(24, screen.h - 8 * screen.scale - 8, "SAVED %s" % zipped, C_NOTE)
                     continue
                 elif sel == led_row:
@@ -889,24 +959,21 @@ def main():
                         # it once, right after PLAY.
                         led_mod_set(not led_mod_on())
                         _led_seen[0] = 0.0
-                else:
-                    apply_row(s, sel)
+                elif group_base <= sel < group_base + len(GROUPS):
+                    page = GROUPS[sel - group_base][0]
+                    sel, count = 0, len(rows(s, page))
             elif key == "play":
                 launch = True
                 break
             elif key == "quit":
                 screen.fill(0x000000)
                 return 2
-            draw(screen, s, sel, disc, pad)
+            draw(screen, s, sel, disc, pad, page)
         if launch and disc:
             for phase in range(6):
                 draw_loading(screen, phase * 4)
     finally:
         screen.close()
-    if not disc:
-        return 1
-    save_state(s)
-    write_settings(s, disc)
     return 0
 
 

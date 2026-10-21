@@ -186,7 +186,10 @@ This is as important as what was done — each of these looked like a win and is
 ## Features of this fork
 
 - **Handheld menu** (`handheld/dw3-menu.py`, versioned with the port; the build copies it into the package): a
-  framebuffer menu driven only by the gamepad, no keyboard.
+  framebuffer menu driven only by the gamepad, no keyboard, grouped into `GAME` / `XP` / `VIDEO` screens plus the console
+  actions, because fourteen flat rows were already running into the legend on a 640x480 panel. Its defaults are the
+  settings this port was tuned with (8x fast-forward muted, the party sharing all the experience, XP boost 6x), so a
+  player who never opens it still plays the tuned setup.
 - **Direct framebuffer present**: the reason the 2D game and the movies are fluid.
 - **A second renderer on the Mali** (`--renderer gles`, the default on this machine): the VRAM as an RGBA8 texture drawn
   offscreen through EGL/GBM, faster than the software rasteriser in 3D (41.9 against 37.7 fps in the same battle). Revert
