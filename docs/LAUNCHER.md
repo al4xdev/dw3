@@ -165,8 +165,12 @@ multiplies it by the option's value (in tenths, rounded down, at most 9,999,999)
 
 - **`exp`**: one fighter's split share, in `stfgtrep_main_update` before the members' panels are created; party_xp's
   shares for the members that did not fight come from the boosted share, and item 0x141's fifth comes on top.
-- **`form_exp`**: a chosen form's experience, at the end of `stfgtrep_get_technique_exp`, after the game's cap (10 a
-  battle below the form's threshold level, 50 past it), so a boosted form still gains more than the cap.
+- **`form_exp`**: a chosen form's (digivolution's) experience, at the end of `stfgtrep_get_technique_exp`. The game caps
+  that number per battle - 10 points below the form's threshold level, 50 past it - and the cap is what paces a form to
+  one level a battle (99 battles to 99). **With the mod on the cap is skipped**, so the setting means what it says: at 6x
+  a battle can raise several form levels at once (`add_technique_exp` already loops; measured on the XF35H: form 4 -> 11
+  in one won battle). It does not touch the Digimon's own experience or the TP. A very low-level Digimon in a rich battle
+  can therefore jump a long way - the game's ceiling was the only limiter, and it is off while the mod is on.
 - **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
   stops at 9,999,999.
 
