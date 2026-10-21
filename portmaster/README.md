@@ -85,7 +85,7 @@ the GLES backend here was measured against (`docs/gpu/01`).
 | project | what it gave this port |
 |---|---|
 | [gascarcella/dw2003recomp](https://github.com/gascarcella/dw2003recomp) | the decompilation of the game's own C and the PC port — **the base this fork starts from** |
-| [gascarcella/psxstack](https://github.com/gascarcella/psxstack) (this fork: [al4xdev/psxstack](https://github.com/al4xdev/psxstack)) | the host runtime: arena, overlays, the pump, video, SPU, audio, input, memory cards, settings, the mods engine, the GPU backend, the crash report and the measurement switches |
+| [gascarcella/psxstack](https://github.com/gascarcella/psxstack) (this fork: [al4xdev/dw3-psxstack](https://github.com/al4xdev/dw3-psxstack)) | the host runtime: arena, overlays, the pump, video, SPU, audio, input, memory cards, settings, the mods engine, the GPU backend, the crash report and the measurement switches |
 | [stenzek/duckstation](https://github.com/stenzek/duckstation) | **studied, not linked**: the VRAM-as-a-texture design, the batch key that became per-vertex state here, and the framebuffer-fetch strategy for the mask bit and semi-transparency. `docs/gpu/01`-`05` in the game repository record what was kept and what was rejected, each claim with a `file:line`; the implementation here is our own |
 | [psx-spx](https://psx-spx.consoledev.net/) | the hardware reference everything was written from: the SPU's voices, envelopes and reverb, the GPU's commands, the GTE's arithmetic |
 | PCSX-Redux | the **oracle** for the tests (SPU traces, replay runners) — never a source of code |
