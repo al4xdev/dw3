@@ -236,7 +236,7 @@ def led_bar(binary, out):
     The bar is an MCU on the handheld's /dev/ttyS2 with no sysfs node; the mod talks to the package's daemon over
     /tmp/ledd.sock and gives up when neither the daemon nor ./ledd.py is there. That is the whole of its behaviour off
     the handheld, so that is what is testable here: the frame log equals the run without it, and one line says why the
-    bar is being left alone. The palette and the daemon's lock are device tests (docs/HANDHELD.md).
+    bar is being left alone. The palette and the daemon's lock are device tests (docs/XF35H.md).
     """
     print("mods: led_bar (first_battle_save to back_on_field, this machine has no LED bar)")
     fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]

@@ -1,4 +1,4 @@
-/* The LED bar of the RK3326 handhelds (docs/HANDHELD.md, "The LED bar is on a UART, not in sysfs"): the mod that
+/* The LED bar of the RK3326 handhelds (docs/XF35H.md, "The LED bar is on a UART, not in sysfs"): the mod that
  * shows the party's health on it, through the daemon of the package (handheld/ledd.py; `ledd` in the settings
  * directory once the handheld menu has installed it).
  *
@@ -8,7 +8,7 @@
  * the tty and its lock; the game sends one short message when the reading changes.
  *
  * The reading itself: five steps of colour and rhythm plus the bar's own rotating mode for a knocked-out party. The
- * palette is the measured one (docs/HANDHELD.md), not the names of the vendor script. */
+ * palette is the measured one (docs/XF35H.md), not the names of the vendor script. */
 #ifndef LED_H
 #define LED_H
 

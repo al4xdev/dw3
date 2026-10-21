@@ -2,7 +2,7 @@
 """ledd: the one process allowed to write the handheld's LED bar.
 
 Started by the game's led_bar mod (port/game/led.c) from the package's directory, and installed there by the handheld
-menu (handheld/dw3-menu.py). The palette and the measurements behind it are docs/HANDHELD.md, "The LED bar is on a
+menu (handheld/dw3-menu.py). The palette and the measurements behind it are docs/XF35H.md, "The LED bar is on a
 UART, not in sysfs"; the prototype it grew from, with every experiment that produced it, is .dumps/led-test/.
 
 Why a daemon at all: the bar is an MCU on /dev/ttyS2, and what makes a change
@@ -166,7 +166,7 @@ class Bar:
             self.power(byte != OFF)
         os.write(self.fd, bytes([byte]))
         if not keep_power and not was_up and byte != OFF:
-            # The first byte after the rail comes up is lost (docs/HANDHELD.md, "Open items": a blue nobody asked for,
+            # The first byte after the rail comes up is lost (docs/XF35H.md, "Open items": a blue nobody asked for,
             # right after vcc-led rose). A lost mode byte leaves the MCU in its own demo - every colour cycling - which
             # looks exactly like the table being ignored. Repeating it costs one byte and closes that.
             os.write(self.fd, bytes([byte]))

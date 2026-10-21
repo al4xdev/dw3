@@ -1,4 +1,4 @@
-/* led.c: the game's side of the handheld's LED bar (led.h; docs/HANDHELD.md, "The LED bar is on a UART, not in sysfs").
+/* led.c: the game's side of the handheld's LED bar (led.h; docs/XF35H.md, "The LED bar is on a UART, not in sysfs").
  *
  * The bar is an MCU on /dev/ttyS2 and there is no sysfs node for it: /sys/class/leds is empty. This mod does not touch
  * the tty either. It talks to the package's daemon over a Unix socket in /tmp (the card's filesystem refuses Unix

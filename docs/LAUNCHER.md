@@ -201,7 +201,7 @@ its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equ
 ### LED bar
 
 `led_bar`. No options: the on/off switch is the option. **Only the RK3326 handhelds have the hardware** (R36S, XF35H
-and their clones: an MCU on `/dev/ttyS2`, `docs/HANDHELD.md` "The LED bar is on a UART, not in sysfs"), so everywhere
+and their clones: an MCU on `/dev/ttyS2`, `docs/XF35H.md` "The LED bar is on a UART, not in sysfs"), so everywhere
 else the mod is a no-op that logs one line. While enabled and in a battle (FIGHTSTG is the tier-1 overlay) its frame
 callback (`port/game/led.c`) reads the party's health and sends **one message per change** to `ledd`, the package's
 daemon: the weakest member of the party picks one of six readings.
@@ -228,7 +228,7 @@ Outside a battle the bar goes dark and its power rail drops: nothing is being wa
   that at boot and when its LED screen is used, and a writer a lock cannot reach is left alone. There is no brightness
   in the hardware - a mode byte and nothing else - so the reading is carried by colour and rhythm.
 - **Known limits:** the palette is the measured one, not the names of the vendor script, and the breathing modes were
-  judged by eye on one console (`docs/HANDHELD.md`). Mode 25 and the `times` argument are untested.
+  judged by eye on one console (`docs/XF35H.md`). Mode 25 and the `times` argument are untested.
 
 The daemon's own tests are the device (`/.dumps/led-test/`): the palette map, the cost of each path and the singleton
 lock. On the host there is nothing to see: `tests/port/mods.py` keeps the mod's silent no-op honest.
