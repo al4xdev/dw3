@@ -8,6 +8,7 @@ import sys
 GAME = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(GAME, "tui.state")
 CFG = os.path.join(GAME, "settings.json")
+LOGS = os.path.join(GAME, "logs")
 FB = os.environ.get("DW3_FB", "/dev/fb0")
 PAD = os.environ.get("DW3_PAD", "/dev/input/event0")
 
@@ -179,7 +180,6 @@ def find_disc():
 def write_settings(s, disc):
     def b(v):
         return "true" if v else "false"
-    lang = LANGS[s["lang"]] if 0 <= s["lang"] < len(LANGS) else "english"
     # The renderer is the player's choice, not the menu's: it is not on any row here, so it is carried over from the file
     # that is already there. Writing a fixed "gles" silently overrode anyone who had chosen "software" - and made every
     # A/B test that flipped the file meaningless, because the menu ran first and put it back.
@@ -206,7 +206,7 @@ def write_settings(s, disc):
     "global_save": { "enabled": %s, "restore_map_state": true },
     "party_xp": { "enabled": %s, "share": %d, "knocked_out": false, "catch_up": false },
     "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s },
-    "preset_language": { "enabled": %s, "language": "%s" },
+    "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
     "led_bar": { "enabled": %s }
   },
@@ -214,7 +214,7 @@ def write_settings(s, disc):
 }
 """ % (os.path.basename(disc), s["hz"], renderer, b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5), b(s["lang_on"]), lang,
+       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -327,14 +327,7 @@ def apply_row(s, row):
             if s["xp_mul"] > 20:  # an old game asks for it; above 5 the settings' "manual" flag allows it
                 s["xp"] = 0
                 s["xp_mul"] = 2
-    elif row == 8:
-        if not s["lang_on"]:
-            s["lang_on"] = 1
-        else:
-            s["lang"] += 1
-            if s["lang"] > 6:
-                s["lang_on"] = 0
-                s["lang"] = 0
+
 
 
 def led_ask(request, timeout=0.4):
@@ -539,10 +532,63 @@ def led_setup(screen, pad):
                     return None
 
 
+def save_logs():
+    """Everything a bug report needs, in one zip beside the port: the game's and the menu's logs, the crash reports, the
+    settings the run used and the pad mapping the player ended up with. The memory cards and the disc are deliberately
+    left out - they are the player's, and they are the one thing here that is not a diagnostic. Returns the file name, or
+    an error string, so the row can say what happened."""
+    import time
+    import zipfile
+
+    name = "dw3-logs-%s.zip" % time.strftime("%Y%m%d-%H%M%S")
+    path = os.path.join(GAME, name)
+    try:
+        z = zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED)
+    except OSError:
+        return "FAILED"
+    with z:
+        for f in (CFG, os.path.join(GAME, "pad.map"), STATE):
+            if os.path.isfile(f):
+                try:
+                    z.write(f, os.path.basename(f))
+                except OSError:
+                    pass
+        for f in sorted(os.listdir(GAME)) if os.path.isdir(GAME) else []:
+            if f.startswith("crash-") and f.endswith(".txt"):
+                try:
+                    z.write(os.path.join(GAME, f), "crashes/" + f)
+                except OSError:
+                    pass
+        if os.path.isdir(LOGS):
+            for f in sorted(os.listdir(LOGS)):
+                src = os.path.join(LOGS, f)
+                if os.path.isfile(src):
+                    try:
+                        z.write(src, "logs/" + f)
+                    except OSError:
+                        pass
+        # What the machine and the run were, without having to read the log to find out.
+        try:
+            import json
+
+            renderer = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+        except (OSError, ValueError):
+            renderer = "?"
+        note = "renderer: %s\nsettings: %s\n" % (renderer, CFG)
+        try:
+            note += "uname: %s\n" % " ".join(os.uname())
+        except OSError:
+            pass
+        try:
+            z.writestr("system.txt", note + "date: %s\n" % time.strftime("%Y-%m-%d %H:%M:%S"))
+        except OSError:
+            pass
+    return name
+
+
 def rows(s):
     def on(v):
         return "ON" if v else "off"
-    lang = LANGS[s["lang"]] if 0 <= s["lang"] < len(LANGS) else "english"
     return [
         "HZ                  %s" % s["hz"],
         "FAST-FORWARD        %s  %s" % (on(s["ff"]), s["ff_speed"].upper()),
@@ -552,9 +598,9 @@ def rows(s):
         "SAVE ANYWHERE       %s" % on(s["saveany"]),
         "PARTY XP            %s  %s%%" % (on(s["party"]), s["share"]),
         "XP / BITS BOOST     %s  %sX" % (on(s["xp"]), s["xp_mul"]),
-        "LANGUAGE            %s  %s" % (on(s["lang_on"]), lang.upper()),
         "RENDERER            %s" % renderer_get().upper(),
         "LED BAR             %s" % led_state(),
+        "SAVE LOGS           ZIP",
         "BUTTONS             REMAP",
         "PLAY",
     ]
@@ -796,8 +842,13 @@ def main():
     disc = find_disc()
     pad = load_pad()
     count = len(rows(s))
+    # The rows above PLAY, counted from the end so that adding an action above them cannot silently move a toggle: the
+    # settings are rows 0..7 and go through apply_row; the last four are RENDERER, LED BAR, SAVE LOGS and BUTTONS.
     play = count - 1
     buttons = count - 2
+    logs_row = count - 3
+    led_row = count - 4
+    renderer_row = count - 5
     sel = play
     screen = Screen()
     launch = False
@@ -818,9 +869,14 @@ def main():
                         screen.fill(0x000000)
                         return 2
                     save_pad(pad)
-                elif sel == buttons - 2:
+                elif sel == renderer_row:
                     renderer_toggle()
-                elif sel == buttons - 1:
+                elif sel == logs_row:
+                    zipped = save_logs()
+                    draw(screen, s, sel, disc, pad)
+                    screen.text(24, screen.h - 8 * screen.scale - 8, "SAVED %s" % zipped, C_NOTE)
+                    continue
+                elif sel == led_row:
                     if led_state() == "not installed":
                         if led_setup(screen, pad) == "quit":
                             screen.fill(0x000000)
