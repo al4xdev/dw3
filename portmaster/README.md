@@ -31,12 +31,12 @@ draws the PlayStation's VRAM on the Mali. `ports/dw3/settings.json` picks one (`
 The menu that runs before the game is driven by the pad alone and writes `ports/dw3/settings.json` as you change it.
 `Cross` enters a group or changes a value, `Circle` goes back, `Start` plays from anywhere, `Select + Start` quits. The
 defaults are the configuration this port was tuned with, so a player who never opens it still gets the good setup:
-8x fast-forward with the audio muted, the whole party sharing all the experience, and the XP boost at 6x.
+8x fast-forward with the audio muted, the whole party sharing all the experience, and the XP boost at 2x.
 
 | main row | what it holds |
 |---|---|
 | `GAME` | `FAST-FORWARD` (speed and off/on), `SKIP DIALOGUES`, `SKIP BATTLE ANIMS` and `HIT REACTION`, `SAVE ANYWHERE` |
-| `XP` | `PARTY XP` (percentage of the party that shares), `XP / BITS BOOST` (up to 20x experience, form experience and money), `ALL FORMS' XP` |
+| `XP` | `PARTY XP` (percentage of the party that shares), `XP / BITS BOOST` (off or 2x, experience, form experience and money together), `ALL FORMS' XP` |
 | `VIDEO` | `HZ` (50 or 60), `RENDERER` (`GLES` for 3D, `SOFTWARE` for 2D-heavy scenes and the byte-exact reference) |
 | `LED BAR` | the console's LED bar follows the weakest party member's HP in battle (installs a small daemon) |
 | `SAVE LOGS` | writes `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map |

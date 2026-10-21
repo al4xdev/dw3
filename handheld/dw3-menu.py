@@ -137,7 +137,7 @@ def load_state():
     # boost at 6x - with the menu one press away for anyone who disagrees. Fast-forward and skip start ON/OFF as he keeps
     # them; nothing here is hidden from the player.
     s = dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-             party=1, share=100, xp=1, xp_mul=6, all_forms=0, lang=0, lang_on=0)
+             party=1, share=100, xp=1, xp_mul=2, all_forms=0, lang=0, lang_on=0)
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:
@@ -373,13 +373,13 @@ def field_toggle(s, key):
                 s["party"] = 0
                 s["share"] = 50
     elif key == "xp":
-        if not s["xp"]:
-            s["xp"] = 1
-        else:
-            s["xp_mul"] += 1
-            if s["xp_mul"] > 20:  # an old game asks for it; above 5 the settings' "manual" flag allows it
-                s["xp"] = 0
-                s["xp_mul"] = 2
+        # off or 2x, nothing else. A battle's experience is split between the fighters and then cut by the game's own
+        # ceilings, so the honest range measured on this port is about 1.5x of what the player would otherwise get; the
+        # steps to 20x were there because the game's own restriction asks for it, not because anyone used them. The file
+        # still accepts any figure (the mod's own `manual` flag gates above 5x) - the menu just stops offering it.
+        s["xp"] = 0 if s["xp"] else 1
+        if s["xp"]:
+            s["xp_mul"] = 2
     elif key == "renderer":
         renderer_toggle()
     elif key in ("skip", "battles", "hit", "saveany", "all_forms"):
