@@ -1,3 +1,6 @@
 [submodule "psxstack"]
 	path = psxstack
-	url = https://github.com/gascarcella/psxstack.git
+	# The fork, not upstream: this port's renderer, audio and signal work are commits that only exist here (upstream is
+	# 36 commits behind). Upstream is still there as the `origin` remote of the submodule.
+	url = https://github.com/al4xdev/psxstack.git
+	branch = dw3-handheld
