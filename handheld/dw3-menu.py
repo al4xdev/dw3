@@ -143,13 +143,16 @@ GLYPH = {
 }
 
 
+def defaults():
+    """The tuned setup, and what RESET SETTINGS puts back: the owner's own settings on the handheld, so a player who never
+    opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
+    party sharing all the experience, a mild XP boost, every digivolution learning from a battle, and no logs."""
+    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
+                party=1, share=100, xp=1, xp_mul=2, all_forms=1, logs=0, lang=0, lang_on=0)
+
+
 def load_state():
-    # The defaults are the owner's own settings on the handheld, so a player who never opens this menu gets the setup that
-    # was found to play well: 8x fast-forward with the audio muted, the whole party sharing all the experience, and the XP
-    # boost at 6x - with the menu one press away for anyone who disagrees. Fast-forward and skip start ON/OFF as he keeps
-    # them; nothing here is hidden from the player.
-    s = dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-             party=1, share=100, xp=1, xp_mul=2, all_forms=1, logs=0, lang=0, lang_on=0)
+    s = defaults()
     if os.path.isfile(STATE):
         for line in open(STATE):
             if "=" not in line:
@@ -368,6 +371,7 @@ def group_rows(s):
         "DEBUG               SETTINGS",
         "LED BAR             %s" % led_state(),
         "BUTTONS             REMAP",
+        "RESET SETTINGS      ASK",
         "PLAY",
     ]
 
@@ -930,6 +934,36 @@ def remap(screen, pad):
             return "back"
 
 
+def confirm_reset(screen, pad):
+    """Ask, because there is no undo: A puts everything back and writes the file, B leaves it alone. The pad map is not
+    part of it - it has its own screen, and a player who remapped the buttons does not want that thrown away by a
+    settings reset."""
+    screen.fill(0x001018)
+    screen.text(24, 40, "RESET SETTINGS?", C_TITLE)
+    y = 110
+    for line, color in (
+        ("PUT EVERY SETTING BACK TO THE", C_TEXT),
+        ("TUNED DEFAULTS AND WRITE THE FILE.", C_TEXT),
+        ("", 0),
+        ("BUTTONS AND THE LED BAR ARE NOT", C_NOTE),
+        ("TOUCHED; THE MEMORY CARDS ARE YOURS.", C_NOTE),
+        ("", 0),
+        ("%s YES" % pad["cross"][1], C_WARN),
+        ("%s NO" % pad["circle"][1], C_NOTE),
+    ):
+        if line:
+            screen.text(24, y, line, color)
+        y += 10 * screen.scale
+    while True:
+        key = pad_events(pad)
+        if key == "quit":
+            return "quit"
+        if key == "a":
+            return "yes"
+        if key == "b":
+            return "no"
+
+
 def draw_loading(screen, phase=0):
     """The wait before the game's first frame, with two lines of dots running opposite ways: a glyph cell is 18 px on
     this panel, so 28 characters fit and each frame costs one framebuffer fill plus the text."""
@@ -954,8 +988,9 @@ def main():
     # row added above cannot move any of them. SAVE LOGS is not here any more: it lives in the DEBUG group with the logs
     # level, which is the only place anyone looks for it.
     play = count - 1
-    buttons = count - 2
-    led_row = count - 3
+    reset_row = count - 2
+    buttons = count - 3
+    led_row = count - 4
     group_base = 0  # the first len(GROUPS) rows are the groups, in GROUPS order
     sel = play
     screen = Screen()
@@ -986,6 +1021,17 @@ def main():
                 elif sel == play:
                     launch = True
                     break
+                elif sel == reset_row:
+                    answer = confirm_reset(screen, pad)
+                    if answer == "quit":
+                        screen.fill(0x000000)
+                        return 2
+                    if answer == "yes":
+                        s.clear()
+                        s.update(defaults())
+                        save_state(s)
+                        if disc:
+                            write_settings(s, disc)
                 elif sel == buttons:
                     if remap(screen, pad) == "quit":
                         screen.fill(0x000000)
