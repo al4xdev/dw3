@@ -637,17 +637,14 @@ s16 dw3_button_glyph(u8 code) {
     if (!dw3_feat_icons) {
         return 0;
     }
-    /* The text code is the symbol the font draws, not the action the prompt means: the four face codes are crossed
-     * against the pad's actions (cross<->circle, square<->triangle). Map each to the action so the letter is the button
-     * the player presses; the PS1 layout has no letters, so its own symbols are left alone. */
     if (code == 0x1B) {
-        letter = dw3_letter_for("circle");
-    } else if (code == 0x2F) {
         letter = dw3_letter_for("cross");
+    } else if (code == 0x2F) {
+        letter = dw3_letter_for("circle");
     } else if (code == 0x32) {
-        letter = dw3_letter_for("triangle");
-    } else if (code == 0x34) {
         letter = dw3_letter_for("square");
+    } else if (code == 0x34) {
+        letter = dw3_letter_for("triangle");
     }
     if (letter >= 'A' && letter <= 'Z') {
         g = (s16)(0x0E + (letter - 'A'));
