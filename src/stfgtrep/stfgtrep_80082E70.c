@@ -992,8 +992,12 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
  * Digimon's level, and by the forms that took part (users), and each form keeps its own requirement table in
  * add_technique_exp. It is not a share divided among the party: dividing would be a rule invented here, and it would
  * punish carrying more forms, which is the opposite of what the game rewards. The per-form ceiling is skipped while the
- * mod is on, so calling it once per form only selects that form's record (and stores the result in that form). */
-static void stfgtrep_grant_party_forms(s32 slot, s32 tech_exp, s32 users) {
+ * mod is on, so calling it once per form only selects that form's record (and stores the result in that form).
+ *
+ * The chosen forms that level here raise their row's flag, so the report shows the level-up even though the panel
+ * itself has no experience to add for them (the form did not fight). A member without a panel (its share is zero)
+ * gets the experience but no message, as it does for the Digimon's own experience. */
+static void stfgtrep_grant_party_forms(s32 slot, s32 tech_exp, s32 users, StfgtrepMember *member) {
     s16 owned[44];
     s16 chosen[3];
     s32 digimon = gamestate_data.funcs.get_party_member(slot);
@@ -1021,9 +1025,16 @@ static void stfgtrep_grant_party_forms(s32 slot, s32 tech_exp, s32 users) {
             }
         }
         if (credited == 0) {
-            stfgtrep_funcs.add_technique_exp(
-                digimon, owned[i],
-                stfgtrep_funcs.get_technique_exp(digimon, owned[i], tech_exp, users));
+            s32 up = stfgtrep_funcs.add_technique_exp(
+                digimon, owned[i], stfgtrep_funcs.get_technique_exp(digimon, owned[i], tech_exp, users));
+
+            if (up != 0 && member != NULL && member->exp_gained != 0) {
+                for (j = 0; j < 3; j++) {
+                    if (chosen[j] == owned[i]) {
+                        member->tech_level_ups[j].level_up = 1;
+                    }
+                }
+            }
         }
     }
 }
@@ -1106,9 +1117,9 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
              * earns; the panel of the member that did fight credits its marked forms itself (stfgtrep_member_run's
              * step 20), and the helper skips exactly those. */
             if (port_mod_xp_boost_all_forms != 0) {
-                for (i = 0; i < 3; i++) {
+                for (i = 0; i < obj->member_count; i++) {
                     stfgtrep_grant_party_forms(i, stfgtrep_rewards[records_battle_results.battle].tech_exp,
-                                               obj->techniques_used);
+                                               obj->techniques_used, data->members[i]);
                 }
             }
 #endif

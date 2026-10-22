@@ -197,9 +197,10 @@ multiplies it by the option's value (in tenths, rounded down, at most 9,999,999)
   share among the forms that took part), not a share divided among the party: dividing would be a rule invented here,
   and it would punish carrying more forms. Each form keeps its own requirement table, so a basic form taken to 99 in the
   late game is the player's farm, not a shortcut the port hands out. No ceiling on levels per battle either, by the
-  owner's call. The member that fought still shows its marked forms' level-ups in the report; the other forms (and the
-  members that waited) level silently, as the fighter's unchosen forms already did. A member knocked out in the battle
-  has its marks cleared before the report, so its forms earn too - the report cannot tell it apart from one that sat out.
+  owner's call. The report shows the level-up of every **chosen** form that goes up, including one of a member that
+  waited: its row highlights and the "level up" message appears even though the form did not fight. A form outside the
+  three chosen slots still levels silently (there is no row for it). A member knocked out in the battle has its marks
+  cleared before the report, so its forms earn too - the report cannot tell it apart from one that sat out.
 - **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
   stops at 9,999,999.
 
