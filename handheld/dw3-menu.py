@@ -77,13 +77,10 @@ def key_label(pad, action):
 # layout (the PlayStation's: X down, square left, circle right, triangle up), so the input never moves when the label
 # changes; the BUTTONS rows are the one place that moves it.
 LAYOUTS = {
-    "xbox": {
-        "place": {"cross": "south", "square": "west", "circle": "east", "triangle": "north"},
-        "letter": {"south": "A", "west": "X", "east": "B", "north": "Y"},
-    },
-    "switch": {
-        "place": {"cross": "south", "square": "west", "circle": "east", "triangle": "north"},
-        "letter": {"south": "B", "west": "Y", "east": "A", "north": "X"},
+    "modern": {
+        # The same four positions; only the printed letters change (Xbox's A down, B right, X left, Y up).
+        "place": {"cross": "south", "square": "north", "circle": "east", "triangle": "west"},
+        "letter": {"south": "A", "north": "X", "east": "B", "west": "Y"},
     },
     "ps1": {
         # The PlayStation's own: that pad is drawn with symbols, so the text keeps them (nothing replaces them). The
@@ -92,7 +89,7 @@ LAYOUTS = {
         "letter": {},
     },
 }
-LAYOUT_NAMES = ["ps1", "xbox", "switch"]
+LAYOUT_NAMES = ["ps1", "modern"]
 
 # Kernel place -> the direction printed on this handheld's pad (its kernel calls the physical top "west" and the
 # physical left "north").
@@ -253,7 +250,7 @@ def write_settings(s, disc):
 def default_pad():
     pad = {"l1": ("leftshoulder", "L"), "r1": ("rightshoulder", "R"), "start": ("start", "S"),
            "select": ("back", "E")}
-    apply_layout(pad, "ps1")
+    apply_layout(pad, "modern")
     return pad
 
 
@@ -984,10 +981,10 @@ def confirm_reset(screen, pad):
     for line, color in (
         ("PUT EVERY SETTING BACK TO THE", C_TEXT),
         ("TUNED DEFAULTS AND WRITE THE FILE:", C_TEXT),
-        ("BUTTONS TO THE PS1 LAYOUT AND THE", C_TEXT),
+        ("BUTTONS TO THE MODERN LAYOUT AND THE", C_TEXT),
         ("LED BAR SWITCHED BACK ON.", C_TEXT),
         ("", 0),
-        ("A SWITCH OR XBOX PAD NEEDS ITS", C_NOTE),
+        ("A PS1 PAD NEEDS ITS LAYOUT PUT", C_NOTE),
         ("LAYOUT PUT BACK IN BUTTONS.", C_NOTE),
         ("THE MEMORY CARDS ARE NEVER TOUCHED.", C_NOTE),
         ("", 0),
@@ -1075,7 +1072,7 @@ def main():
                         save_state(s)
                         # The pad goes back too: a reset exists to undo a bad state, and a remap that made the menu or
                         # the game unplayable is exactly the kind of thing someone resets to get out of. The layout is
-                        # the PS1 one (default_pad), so a modern pad needs its layout row put back by hand.
+                        # the modern one (default_pad), so a PS1 pad needs its layout row put back by hand.
                         pad.clear()
                         pad.update(default_pad())
                         save_pad(pad)
