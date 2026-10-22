@@ -148,10 +148,10 @@ members' panels) asks `port_party_xp_share` (`port/game/game_mods.c`) for each m
   fighters included.
 
 The report then shows, counts and adds that experience as it does a fighter's: its panel, the level-ups and their stat
-draws, a new form, and item 0x141's fifth more. Form experience still goes only to the forms that fought, and only
-the three party members gain (the Digimon at the lab have no panel). The money, the item and the battle are
-unchanged. `tests/port/mods.py` runs the first story battle (one fighter of three) with the mod on and off; catch-up
-and knocked-out members are not reached by a scripted run.
+draws, a new form, and item 0x141's fifth more. Form experience is xp_boost's `all_forms` option, not this one, and only
+the three party members gain the Digimon's experience (the Digimon at the lab have no panel). The money, the item and
+the battle are unchanged. `tests/port/mods.py` runs the first story battle (one fighter of three) with the mod on and
+off; catch-up and knocked-out members are not reached by a scripted run.
 
 ### Logs (the DEBUG group)
 
@@ -168,9 +168,14 @@ are not the same thing: they write their own files and some cost real frames.
 
 ### XP boost
 
-`xp_boost`. Options: `exp`, `form_exp`, `bits` (float 1-10, step 0.1, default 2; sliders up to 5, `slider_max` with
+`xp_boost`. Options: `exp`, `form_exp`, `bits` (float 1-20, step 0.1, default 2; sliders up to 5, `slider_max` with
 `input_toggle: manual`), `manual` (bool, default false: values above 5x count as 5x). Presets (launcher only): Boost
 (all 2x, the defaults), Turbo (all 3x), Ultra (all 5x). No hotkey: it acts whenever enabled (`port_mod_xp_boost`).
+
+The handheld menu's XP screen exposes `exp` and `bits` together on its `XP / BITS BOOST` row (off, then 2x-20x), and
+`form_exp` alone on the `FORM XP` row below it (1x-20x): the Digimon's experience and the forms' experience are
+different rewards, so the forms can be calibrated without moving the other two. `manual` is written on as soon as
+either row passes 5x.
 
 A won battle's rewards come from one row of `stfgtrep_rewards` (`docs/MECHANICS.md` section 6, "Who gets a battle's
 experience"). With the mod on, STFGTREP's report passes each through `port_xp_boost` (`port/game/game_mods.c`), which
@@ -184,12 +189,17 @@ multiplies it by the option's value (in tenths, rounded down, at most 9,999,999)
   a battle can raise several form levels at once (`add_technique_exp` already loops; measured on the XF35H: form 4 -> 11
   in one won battle). It does not touch the Digimon's own experience or the TP. A very low-level Digimon in a rich battle
   can therefore jump a long way - the game's ceiling was the only limiter, and it is off while the mod is on.
-- **`all_forms`** (bool, default false): the forms that did **not** fight earn the same form experience the one that did
-  earned. The game hands it only to the forms that took part (`records_battle_results.members[slot].forms[]`), so a
-  Digimon carrying three digivolutions and using one leaves the other two at the lab for ever. Each of them gets the
-  same number - not a share: dividing would be a rule invented here, and it would punish carrying more forms. The
-  requirement tables stay the game's own, so a basic form taken to 99 in the late game is the player's farm, not a
-  shortcut the port hands out. No ceiling on levels per battle either, by the owner's call.
+- **`all_forms`** (bool, on by default): **every** digivolution every party member owns earns the battle's form
+  experience, whether it fought or not. The game hands it only to the forms that took part
+  (`records_battle_results.members[slot].forms[]`), and its report opens the form step only for a member that earned
+  experience, so a Digimon carrying three digivolutions and using one left the other two at the lab for ever - and the
+  two members that waited got nothing at all. The number is the game's own for each Digimon (its level, and the battle's
+  share among the forms that took part), not a share divided among the party: dividing would be a rule invented here,
+  and it would punish carrying more forms. Each form keeps its own requirement table, so a basic form taken to 99 in the
+  late game is the player's farm, not a shortcut the port hands out. No ceiling on levels per battle either, by the
+  owner's call. The member that fought still shows its marked forms' level-ups in the report; the other forms (and the
+  members that waited) level silently, as the fighter's unchosen forms already did. A member knocked out in the battle
+  has its marks cleared before the report, so its forms earn too - the report cannot tell it apart from one that sat out.
 - **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
   stops at 9,999,999.
 

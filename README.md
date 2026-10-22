@@ -204,15 +204,17 @@ This is as important as what was done — each of these looked like a win and is
   handheld's SDL2 runtime has a fixed button map of its own and never read `input.gamepad`.
 - **XP boost, off by default**: battle experience, **form (digivolution) experience** and bits can be multiplied, 2x by
   default and up to 20x with `manual`. The default is off and the binary says so (`dw3_feat_xp = 0`); it is turned on
-  from the handheld menu and written to `mods.xp_boost` (or `DW3_FEAT_XP=1` for a run). With it on, two of the game's
-  own brakes are gone, on purpose:
+  from the handheld menu and written to `mods.xp_boost` (or `DW3_FEAT_XP=1` for a run). The menu's `XP / BITS BOOST` row
+  sets the Digimon's experience and the money; `FORM XP` sets the forms' multiplier alone (1x-20x), because the two are
+  different rewards. With it on, two of the game's own brakes are gone, on purpose:
   - **the 10/50 per-battle ceiling on form experience** - the rule that paces a digivolution to one level a battle (99
     battles to 99), applied before the multiplier so a 6x setting still crept one level. Off while the mod is on, so a
     won battle can raise several form levels (`tests` measured form 4 → 11 on the XF35H).
-  - **"only the forms that fought earn experience"** (`all_forms`, on by default): every form the Digimon owns earns
-    what the fighting one earned - the same number, not a share, because dividing would punish carrying more forms.
-    Each form keeps its own requirement table, so taking a basic form to 99 in the late game is a farm the player built,
-    not a shortcut the port hands out. No cap on levels per battle either.
+  - **"only the forms that fought earn experience"** (`all_forms`, on by default): every digivolution every party
+    member owns earns the battle's form experience, whether it fought or not - the game's own number for that Digimon,
+    not a share divided among the party, because dividing would punish carrying more forms. Each form keeps its own
+    requirement table, so taking a basic form to 99 in the late game is a farm the player built, not a shortcut the port
+    hands out. No cap on levels per battle either.
 - **Fast-forward**: up to 8x where the game has headroom (menus, dialogue, cutscenes). In the field and in battle the
   CPU is the limit, so it only mutes the audio there.
 - **A frame meter that adds up**: `DW3_GPU_LOG` breaks the frame into something you can act on, GPU and SPU included (see

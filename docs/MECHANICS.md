@@ -397,7 +397,9 @@ a big exp award gives several levels in one call and returns 1; cap level 99; wi
     at the end for a member at 0 HP (which is left at 1 HP). The battle has one acting member per side; the others wait to be switched in.
   - It is split, not copied: n = 1 (or 0) -> `exp` each, 2 -> `exp * 6 / 10` each (120% in all), 3 -> `exp / 3` each.
     A member that did not take part is created with 0; the report skips its panel's experience step (`member_exp == 0`), so it gets no
-    experience, no form experience and no new-form check (`learn_technique`) this battle.
+    experience, no form experience and no new-form check (`learn_technique`) this battle. With `xp_boost`'s `all_forms` on, the report
+    credits the forms of every party member before the panels open (the game's own form number for that Digimon, once per form); the
+    Digimon's experience and the new-form check stay skipped.
   - Item 0x141 (equipment slot 4 or 5) then adds a fifth to the member's share (`stfgtrep_member_get_exp`, through `get_exp`).
   - Base Digimon versus forms: the share goes to the party Digimon's own record (`digimon[id].record.exp` and its level, through
     `stfgtrep_add_exp` in the panel's step 40) whichever form it fought as. A form keeps its own level and experience
@@ -434,7 +436,9 @@ forms that fought, then skills, then the Digimon's experience, then a new form):
   {386, -1, 367} fighting as 367 marks `forms[1]`; its own form or an unchosen one marks none [T] (`fightstg_rules`, appended by sweep2)).
   **That 10/50 ceiling is the pacing behind "one form level a battle"** (99 battles for a form at 99). `xp_boost`'s `form_exp`
   (`port/game/game_mods.c`) multiplies this number, and with the mod on the ceiling is skipped, so a battle can raise several form
-  levels - `add_technique_exp` already loops. The Digimon's own experience (`stfgtrep_add_exp`) and the TP (`values[1]`, +5 per
+  levels - `add_technique_exp` already loops. `all_forms`, the same mod's other option, credits every owned form of every party
+  member once, whether it fought or not, before the report's panels open; the specific forms the game marked are left to the
+  panel, so they are not counted twice. The Digimon's own experience (`stfgtrep_add_exp`) and the TP (`values[1]`, +5 per
   Digimon level-up, spent by training) are untouched by that mod.
 - **Skills** (`stfgtrep_learn_skill(d, form)`): the first empty slot i (0..5) whose `RecordsDigimon.techniques[i + 1]` exists and whose
   `technique_levels[i] <= form level` is filled (slot 5 with flag 0x8000); one per call; a later slot can fill first when the levels are out

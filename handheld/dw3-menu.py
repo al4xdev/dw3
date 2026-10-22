@@ -148,7 +148,7 @@ def defaults():
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
     party sharing all the experience, a mild XP boost, every digivolution learning from a battle, and no logs."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-                party=1, share=100, xp=1, xp_mul=6, all_forms=1, logs=0, lang=0, lang_on=0)
+                party=1, share=100, xp=1, xp_mul=6, form_mul=6, all_forms=1, logs=0, lang=0, lang_on=0)
 
 
 def load_state():
@@ -234,7 +234,7 @@ def write_settings(s, disc):
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(s["xp"]), s["xp_mul"], s["xp_mul"], s["xp_mul"], b(s["xp_mul"] > 5), b(s["all_forms"]),
+       b(s["xp"]), s["xp_mul"], s["form_mul"], s["xp_mul"], b(s["xp_mul"] > 5 or s["form_mul"] > 5), b(s["all_forms"]),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -347,6 +347,7 @@ GROUPS = [
     ("xp", "XP", [
         ("party", "PARTY XP"),
         ("xp", "XP / BITS BOOST"),
+        ("form_xp", "  FORM XP"),
         ("all_forms", "  ALL FORMS' XP"),
     ]),
     ("video", "VIDEO", [
@@ -386,6 +387,10 @@ def field_text(s, key):
         return "%s  %s%%" % (on(s["party"]), s["share"])
     if key == "xp":
         return "%s  %sX" % (on(s["xp"]), s["xp_mul"])
+    if key == "form_xp":
+        # The whole boost's switch is the XP / BITS row; this one is the multiplier the forms alone get. 1X is "no
+        # multiplier" (the battle's own numbers, with the per-battle ceiling still skipped because the mod is on).
+        return "%s  %sX" % ("" if s["xp"] else "OFF", s["form_mul"])
     if key == "hz":
         return "%s" % s["hz"]
     if key == "renderer":
@@ -434,6 +439,13 @@ def field_toggle(s, key):
             if s["xp_mul"] > 20:
                 s["xp"] = 0
                 s["xp_mul"] = 6
+    elif key == "form_xp":
+        # 1x (the battle's own form experience) up to 20x, one step at a time. Separate from the row above on purpose:
+        # the Digimon's experience and the forms' experience are different rewards, and this is the knob for the forms
+        # (the game unlocks a form's later skills at form levels 25, 45...). Above 5x `manual` goes on in write_settings.
+        s["form_mul"] += 1
+        if s["form_mul"] > 20:
+            s["form_mul"] = 1
     elif key == "renderer":
         renderer_toggle()
     elif key == "logs":

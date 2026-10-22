@@ -496,26 +496,6 @@ void stfgtrep_member_run(StfgtrepMember *obj, StfgtrepMemberData *data) {
 
                 obj->tech_level_ups[obj->tech_shown].level_up =
                     stfgtrep_funcs.add_technique_exp(digimon, obj->chosen_forms[obj->tech_shown], form_exp);
-#ifdef PC_PORT
-                /* xp_boost's "all forms": the forms that did not fight earn the same experience. The game marks only the
-                 * forms that took part (records_battle_results.members[slot].forms[]), so a Digimon carrying three
-                 * digivolutions and using one would leave the other two at the lab for ever. Each of them gets what the
-                 * one that fought got - not a share of it: dividing would be a rule of this port's invention, and it
-                 * would punish carrying more forms, which is the opposite of what the game rewards. Each form still has
-                 * its own requirement table (level_thresholds, the exp staircase in add_technique_exp), so a basic form
-                 * taken to 99 late is the player's farm, not a shortcut this port hands out. */
-                if (port_mod_xp_boost_all_forms != 0) {
-                    s16 owned[44];
-                    s32 owned_count = gamestate_data.funcs.list_forms(digimon, owned);
-                    s32 owned_i;
-
-                    for (owned_i = 0; owned_i < owned_count; owned_i++) {
-                        if (owned[owned_i] >= 4 && owned[owned_i] != tech) {
-                            stfgtrep_funcs.add_technique_exp(digimon, owned[owned_i], form_exp);
-                        }
-                    }
-                }
-#endif
             }
         }
         obj->base.step++;
@@ -1000,6 +980,55 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
     }
 }
 
+#ifdef PC_PORT
+/* xp_boost's "all forms", now for the whole party: every digivolution the party owns earns the battle's form experience,
+ * not only the forms that fought. The report credits the forms the game marked in records_battle_results
+ * (members[slot].forms[]) inside the member's panel, so this covers the rest: the other forms of the member that fought,
+ * every form of the members that did not, and every form of a member that fought as its own form (which marks none).
+ * Each form is credited once. A Digimon that digivolved in the battle has two marked forms and the panel credits both
+ * itself, so they are skipped here - crediting them here too was the double count the old loop had.
+ *
+ * The number is the game's own for that Digimon: stfgtrep_get_technique_exp divides the battle's tech_exp by the
+ * Digimon's level, and by the forms that took part (users), and each form keeps its own requirement table in
+ * add_technique_exp. It is not a share divided among the party: dividing would be a rule invented here, and it would
+ * punish carrying more forms, which is the opposite of what the game rewards. The per-form ceiling is skipped while the
+ * mod is on, so calling it once per form only selects that form's record (and stores the result in that form). */
+static void stfgtrep_grant_party_forms(s32 slot, s32 tech_exp, s32 users) {
+    s16 owned[44];
+    s16 chosen[3];
+    s32 digimon = gamestate_data.funcs.get_party_member(slot);
+    s32 count;
+    s32 i;
+    s32 j;
+    s32 credited;
+
+    if (digimon < 0) {
+        return;
+    }
+    count = gamestate_data.funcs.list_forms(digimon, owned);
+    if (count <= 0) {
+        return;
+    }
+    gamestate_data.funcs.get_chosen_forms(digimon, chosen);
+    for (i = 0; i < count; i++) {
+        if (owned[i] < 4) {
+            continue;
+        }
+        credited = 0;
+        for (j = 0; j < 3; j++) {
+            if (records_battle_results.members[slot].forms[j] != 0 && chosen[j] == owned[i]) {
+                credited = 1;
+            }
+        }
+        if (credited == 0) {
+            stfgtrep_funcs.add_technique_exp(
+                digimon, owned[i],
+                stfgtrep_funcs.get_technique_exp(digimon, owned[i], tech_exp, users));
+        }
+    }
+}
+#endif
+
 void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
     StfgtrepMember *m;
     s32 exp;
@@ -1071,6 +1100,15 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
                     m->exp_gained = port_party_xp_share(i, records_battle_results.members[i].took_part, exp);
                     m->bonus_applied = 0;
                     obj->member_exp[i] = m->get_exp(m);
+                }
+            }
+            /* all_forms is granted here, before the panels open, so a member without a panel (it did not fight) still
+             * earns; the panel of the member that did fight credits its marked forms itself (stfgtrep_member_run's
+             * step 20), and the helper skips exactly those. */
+            if (port_mod_xp_boost_all_forms != 0) {
+                for (i = 0; i < 3; i++) {
+                    stfgtrep_grant_party_forms(i, stfgtrep_rewards[records_battle_results.battle].tech_exp,
+                                               obj->techniques_used);
                 }
             }
 #endif

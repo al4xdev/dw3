@@ -270,7 +270,7 @@ static void pl_start(struct PortMod *mod) {
  * (at least 1 when both are above 0), a knocked-out one (port_party_xp_knocked_out, from WFIGHTMN) only with
  * `knocked_out`. With `catch_up` a member below the party's highest level gets 10% more per level below it, at most
  * twice as much. The report then shows, counts and adds it as it does a fighter's (item 0x141's fifth included); form
- * experience still goes only to the forms that fought. */
+ * experience is xp_boost's own business (its all_forms option), not this mod's. */
 enum { PX_SHARE, PX_KNOCKED_OUT, PX_CATCH_UP };
 static const PortModOption px_options[] = {
     { .id = "share", .type = PORT_MOD_INT, .def = "50", .min = 0, .max = 100, .step = 5, .applies = "live" },
@@ -328,7 +328,8 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
  * battle's experience (one fighter's split share), each form's experience (after the game's 10 or 50 cap) and the money
  * (item 0x142's fifth included) through port_xp_boost, which multiplies them by `exp`, `form_exp` and `bits` (in tenths,
  * rounded down, at most 9,999,999). Above 5x (the sliders' top) a value needs `manual` (mod_resolve caps it without).
- * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. */
+ * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. `all_forms` is
+ * not a multiplier: STFGTREP's report credits every owned form of every party member once, whether it fought or not. */
 enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL, XB_ALL_FORMS };
 static const PortModOption xb_options[] = {
     /* 20, not 10: an old game asks for it (the owner's word), and the handheld menu counts to 20 in steps of 1. */
