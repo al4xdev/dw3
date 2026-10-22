@@ -49,16 +49,17 @@ EVDEV = {
     544: "dpup", 545: "dpdown", 546: "dpleft", 547: "dpright",
 }
 EVDEV_CODE = dict((name, code) for code, name in EVDEV.items())
-# The rows are what the button does inside the game, not what the console that sold it calls it: a player hunting for
-# "back" has nothing to do with the PlayStation's symbols. The four face rows are the bits the game reads after it
-# rotates the pad for the non-Japanese languages (src/main/pad.c): circle confirms, cross goes back, which is the
-# convention the game's own text is drawn in.
-ACTIONS = ["circle", "cross", "triangle", "square", "l1", "r1", "start", "select"]
-FACE = ["circle", "cross", "triangle", "square"]
+# The four face rows are the original PlayStation symbols, the base the game was drawn for: X (down), square (left),
+# circle (right) and triangle (up). The layouts below only change the label printed on those same positions; the base
+# mapping never moves. This is the game's own pad, not a console's "confirm"/"back" vocabulary.
+ACTIONS = ["cross", "square", "circle", "triangle", "l1", "r1", "start", "select"]
+FACE = ["cross", "square", "circle", "triangle"]
 ACTION_LABEL = {
-    "circle": "CONFIRM", "cross": "BACK", "triangle": "TRIANGLE", "square": "SQUARE",
+    "cross": "X", "square": "SQUARE", "circle": "CIRCLE", "triangle": "TRIANGLE",
     "l1": "L1", "r1": "R1", "start": "START", "select": "SELECT",
 }
+# The legends have one line for three buttons; the rows can keep the full names, these are for the legends.
+KEY_SHORT = {"cross": "X", "square": "SQ", "circle": "CIR", "triangle": "TRI"}
 VALID_LETTERS = set("ABXYLRSE-")  # "-": the game's text keeps the button's own symbol
 
 
@@ -67,29 +68,39 @@ def key_label(pad, action):
     (A/B/X/Y, the one the game's text shows) and the rest carry their own name (START, SELECT, L1, R1). A legend that
     said "S PLAY" was naming a pad letter nobody can read on the device."""
     _place, letter = pad[action]
-    return {"start": "START", "select": "SELECT", "l1": "L1", "r1": "R1"}.get(action, letter)
+    # On the PS1 layout a face button has no letter: its own symbol (the row's label) is what the game draws.
+    return {"start": "START", "select": "SELECT", "l1": "L1", "r1": "R1"}.get(
+        action, letter if letter != "-" else KEY_SHORT[action])
 
 
-# A layout is what is printed on the pad: a letter for each of the four positions. Picking one also puts the face
-# buttons where that pad has them (A confirming, B going back), and from then on the letters follow the *positions* -
-# moving a single row can never leave the game's text naming a button that does nothing, which is the whole reason the
-# letter used to be a second thing to edit.
+# A layout is what is printed on the pad: a letter for each of the four positions. The positions are the same on every
+# layout (the PlayStation's: X down, square left, circle right, triangle up), so the input never moves when the label
+# changes; the BUTTONS rows are the one place that moves it.
 LAYOUTS = {
     "xbox": {
-        "place": {"circle": "south", "cross": "east", "triangle": "north", "square": "west"},
-        "letter": {"south": "A", "east": "B", "north": "Y", "west": "X"},
+        "place": {"cross": "south", "square": "west", "circle": "east", "triangle": "north"},
+        "letter": {"south": "A", "west": "X", "east": "B", "north": "Y"},
     },
     "switch": {
-        "place": {"circle": "east", "cross": "south", "triangle": "north", "square": "west"},
-        "letter": {"south": "B", "east": "A", "north": "X", "west": "Y"},
+        "place": {"cross": "south", "square": "west", "circle": "east", "triangle": "north"},
+        "letter": {"south": "B", "west": "Y", "east": "A", "north": "X"},
     },
     "ps1": {
-        # The PlayStation's own: that pad is drawn with symbols, so the text keeps them (nothing replaces them).
-        "place": {"circle": "east", "cross": "south", "triangle": "north", "square": "west"},
+        # The PlayStation's own: that pad is drawn with symbols, so the text keeps them (nothing replaces them). The
+        # places are the kernel's (what the launcher reads and navigates with); save_pad writes the game's SDL names.
+        "place": {"cross": "south", "square": "north", "circle": "east", "triangle": "west"},
         "letter": {},
     },
 }
-LAYOUT_NAMES = ["xbox", "switch", "ps1"]
+LAYOUT_NAMES = ["ps1", "xbox", "switch"]
+
+# Kernel place -> the direction printed on this handheld's pad (its kernel calls the physical top "west" and the
+# physical left "north").
+PLACE_DISPLAY = {"north": "west", "west": "north"}
+# The launcher reads the kernel's face places; the game sees SDL's, a quarter turn away. pad.map is written in the
+# game's names, so the launcher keeps its own and translates on the way in and out.
+PLACE_TO_GAME = {"south": "west", "north": "north", "west": "east", "east": "south"}
+PLACE_FROM_GAME = dict((game, kernel) for kernel, game in PLACE_TO_GAME.items())
 
 
 def letter_for(layout, place):
@@ -242,13 +253,13 @@ def write_settings(s, disc):
 def default_pad():
     pad = {"l1": ("leftshoulder", "L"), "r1": ("rightshoulder", "R"), "start": ("start", "S"),
            "select": ("back", "E")}
-    apply_layout(pad, "xbox")
+    apply_layout(pad, "ps1")
     return pad
 
 
 def apply_layout(pad, layout):
-    """A layout is a pad's lettering and, as a starting point, where that pad keeps A and B: the face rows move to its
-    positions and take its letters. The other four rows keep the buttons the player chose; the menu shows their names."""
+    """A layout is a pad's lettering: the face rows keep the PlayStation positions and take the letters that pad
+    prints on them. The other four rows keep the buttons the player chose; the menu shows their names."""
     for action in FACE:
         place = LAYOUTS[layout]["place"][action]
         pad[action] = (place, letter_for(layout, place))
@@ -264,10 +275,15 @@ def load_pad():
     pad = default_pad()
     if not os.path.isfile(PAD_FILE):
         return pad
+    game_places = False
     for line in open(PAD_FILE):
         parts = line.split()
+        if parts and parts[0] == "#":
+            game_places = True  # "# game-places": the file is in the game's SDL names
+            continue
         if len(parts) == 3 and parts[0] in pad and parts[2] in VALID_LETTERS:
-            pad[parts[0]] = (parts[1], parts[2])
+            place = PLACE_FROM_GAME.get(parts[1], parts[1]) if game_places else parts[1]
+            pad[parts[0]] = (place, parts[2])
     # A file written when a button could be bound twice (or by hand) has two actions on one button; the later one in
     # ACTIONS order moves to a free button, so a SELECT sharing CIRCLE cannot turn CIRCLE+START into the exit chord.
     seen = set()
@@ -322,13 +338,19 @@ def set_place(pad, action, place, layout):
 
 
 def save_pad(pad):
-    write_atomic(PAD_FILE, "".join("%s %s %s\n" % (action, pad[action][0], pad[action][1]) for action in ACTIONS))
+    # Three tokens: the game reads pad.map with "%15s %15s %c" (the space before %c skips whitespace), so the marker
+    # needs its own letter for the %c; then the next line starts cleanly.
+    lines = ["# game-places x\n"]
+    for action in ACTIONS:
+        place = PLACE_TO_GAME.get(pad[action][0], pad[action][0])
+        lines.append("%s %s %s\n" % (action, place, pad[action][1]))
+    write_atomic(PAD_FILE, "".join(lines))
 
 
 def gamepad_json(pad):
     bits = []
     for action in ACTIONS:
-        bits.append('"%s": "%s"' % (action, pad[action][0]))
+        bits.append('"%s": "%s"' % (action, PLACE_TO_GAME.get(pad[action][0], pad[action][0])))
     return "{ " + ", ".join(bits) + " }"
 
 
@@ -805,12 +827,12 @@ def draw(screen, s, sel, disc, pad, page="main"):
         y += row_step * screen.scale
     # Two legends, each saying what the button does. The disc's file name used to sit on a third line: it copied the
     # "dw2003.bin" into a menu that already knows which disc it found, and cost the last row its place.
-    # The roles, not the symbols: circle is the game's confirm and cross its back (the pad is rotated into that
-    # convention), so the menu must read the same way.
-    x = screen.text(24, legend, key_label(pad, "circle"), C_KEY)
+    # The roles, not the symbols: the game's own pad confirms with X (cross) and goes back with triangle, so the menu
+    # must read the same way.
+    x = screen.text(24, legend, key_label(pad, "cross"), C_KEY)
     x = screen.text(x, legend, " SELECT   ", C_NOTE)
     if page != "main":
-        x = screen.text(x, legend, key_label(pad, "cross"), C_KEY)
+        x = screen.text(x, legend, key_label(pad, "triangle"), C_KEY)
         x = screen.text(x, legend, " BACK   ", C_NOTE)
     x = screen.text(x, legend, key_label(pad, "start"), C_KEY)
     screen.text(x, legend, " PLAY", C_NOTE)
@@ -831,7 +853,7 @@ def event_fmt():
 def pad_events(pad, capture=False):
     size, fmt = event_fmt()
     confirm = EVDEV_CODE.get(pad["cross"][0], K_A)
-    back = EVDEV_CODE.get(pad["circle"][0], K_B)
+    back = EVDEV_CODE.get(pad["triangle"][0], K_B)
     fd = os.open(PAD, os.O_RDONLY)
     select_down = start_down = False
     try:
@@ -899,7 +921,8 @@ def draw_remap(screen, pad, sel, layout, capture):
         screen.text(40, y, "%-12s" % ACTION_LABEL[action], C_KEY if here else C_TEXT)
         # The place is what the pad reports; the letter is what the game's text will show for it, read off the layout -
         # nothing here is typed in, so the two columns cannot disagree.
-        screen.text(40 + 13 * 6 * screen.scale, y, place.upper()[:10], C_KEY if here else C_NOTE)
+        screen.text(40 + 13 * 6 * screen.scale, y, PLACE_DISPLAY.get(place, place).upper()[:10],
+                    C_KEY if here else C_NOTE)
         if action in FACE and letter != "-":
             screen.text(40 + 25 * 6 * screen.scale, y, letter, C_KEY if here else C_ON)
         y += 10 * screen.scale
@@ -910,11 +933,11 @@ def draw_remap(screen, pad, sel, layout, capture):
     if capture:
         screen.text(24, y, "PRESS THE BUTTON NOW - ANY OF THEM", C_WARN)
     else:
-        x = screen.text(24, y, key_label(pad, "circle"), C_KEY)
+        x = screen.text(24, y, key_label(pad, "cross"), C_KEY)
         screen.text(x, y, ": PICK A ROW, THEN THE BUTTON", C_NOTE)
     x = screen.text(24, y + step, "LEFT/RIGHT", C_KEY)
     screen.text(x, y + step, ": LAYOUT, WHICH SETS THE LETTERS", C_NOTE)
-    x = screen.text(24, y + 2 * step, key_label(pad, "start"), C_KEY)
+    x = screen.text(24, y + 2 * step, key_label(pad, "triangle"), C_KEY)
     screen.text(x, y + 2 * step, ": BACK TO THE MENU", C_NOTE)
 
 
@@ -961,15 +984,15 @@ def confirm_reset(screen, pad):
     for line, color in (
         ("PUT EVERY SETTING BACK TO THE", C_TEXT),
         ("TUNED DEFAULTS AND WRITE THE FILE:", C_TEXT),
-        ("BUTTONS TO THE XBOX LAYOUT AND THE", C_TEXT),
+        ("BUTTONS TO THE PS1 LAYOUT AND THE", C_TEXT),
         ("LED BAR SWITCHED BACK ON.", C_TEXT),
         ("", 0),
-        ("A NINTENDO PAD NEEDS ITS LAYOUT PUT", C_NOTE),
-        ("BACK IN BUTTONS AFTERWARDS.", C_NOTE),
+        ("A SWITCH OR XBOX PAD NEEDS ITS", C_NOTE),
+        ("LAYOUT PUT BACK IN BUTTONS.", C_NOTE),
         ("THE MEMORY CARDS ARE NEVER TOUCHED.", C_NOTE),
         ("", 0),
-        ("%s YES" % pad["cross"][1], C_WARN),
-        ("%s NO" % pad["circle"][1], C_NOTE),
+        ("%s YES" % key_label(pad, "cross"), C_WARN),
+        ("%s NO" % key_label(pad, "triangle"), C_NOTE),
     ):
         if line:
             screen.text(24, y, line, color)
@@ -1052,7 +1075,7 @@ def main():
                         save_state(s)
                         # The pad goes back too: a reset exists to undo a bad state, and a remap that made the menu or
                         # the game unplayable is exactly the kind of thing someone resets to get out of. The layout is
-                        # the Xbox one (default_pad), so a Nintendo-style pad needs its layout row put back by hand.
+                        # the PS1 one (default_pad), so a modern pad needs its layout row put back by hand.
                         pad.clear()
                         pad.update(default_pad())
                         save_pad(pad)

@@ -188,10 +188,10 @@ extern int dw3_feat_travel;
 extern int dw3_feat_objective;
 extern int dw3_feat_xp;
 void dw3_feats_arm(void);
-/* The player's pad map (pad.map's middle column), applied by pad_read_buttons on the bits records_language's rotation
- * has already re-labelled (`rotated`), so the four face rows are the actions the game's text names: circle confirms,
- * cross goes back. Identity unless DW3_PAD_REMAP is set - the handheld's SDL2 runtime maps the pad itself and ignores
- * input.gamepad, the SDL3 builds apply it there and must not be permuted twice. */
+/* The player's pad map (pad.map's middle column), applied by pad_read_buttons on the raw pad bits: the port keeps the
+ * original PS1 positions and does not apply records_language's face-button rotation first. Identity unless
+ * DW3_PAD_REMAP is set - the handheld's SDL2 runtime maps the pad itself and ignores input.gamepad, the SDL3 builds
+ * apply it there and must not be permuted twice. */
 u16 dw3_pad_permute(u16 buttons, int rotated);
 /* Face-button text code (1, then 0x1B/0x2F/0x32/0x34) as a main-font letter, or 0. */
 s16 dw3_button_glyph(u8 code);

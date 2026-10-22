@@ -710,7 +710,9 @@ s32 message_handle_char(MessageWindow *obj, MessageLine *line, MessageDrawState 
         /* Face buttons are 2 bytes. Swap the picture, keep the advance. */
         if (dw3_feat_icons) {
             s16 letter = dw3_button_glyph((u8)n);
-            if (letter >= 4) {
+            /* A font's glyphs cover codes 4..glyph_end - 1. The main font has the letters, but a smaller overlay font
+             * may not; keep the character's own symbol when the letter is outside this font's table. */
+            if (letter >= 4 && letter < obj->font->glyph_end) {
                 state->glyph = &obj->font->glyphs[letter - 4];
                 *pos += 2;
                 break;

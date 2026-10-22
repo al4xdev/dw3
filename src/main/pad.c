@@ -270,6 +270,10 @@ void pad_read_buttons(u8 id, u8 *data, u8 *rec) {
         }
     } else {
         buttons = ~*(u16 *)&data[2];
+#ifndef PC_PORT
+        /* The console's own rotation (circle confirms, cross goes back) is what the Japanese text is drawn in. The
+         * port's launcher writes the player's pad map and its layouts are the original PS1 base (X down, square left,
+         * triangle up, circle right), so the port keeps the raw bits instead of rotating them on top of that map. */
         if (records_language != 0) {
             u16 raw = buttons;
             s16 circle = (raw >> 13) & 1;
@@ -287,11 +291,12 @@ void pad_read_buttons(u8 id, u8 *data, u8 *rec) {
                 buttons |= 0x1000;
             }
         }
+#endif
 #ifdef PC_PORT
         /* The player's own pad map (pad.map, through dw3_pad_permute): the handheld's SDL2 runtime has no pad map of its
          * own, and this is the one place every read of the pad passes through - the raw bit tests as much as the button
-         * map's. After records_language's rotation, so a row of the file means the action the game's text names. */
-        buttons = dw3_pad_permute(buttons, records_language != 0);
+         * map's. No language rotation first: the map's places are the pad's own PS1 positions. */
+        buttons = dw3_pad_permute(buttons, 0);
 #endif
         if (mode == 7) {
             for (i = 0; i < 4; i++) {
