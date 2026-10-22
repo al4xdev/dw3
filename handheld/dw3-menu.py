@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Gamepad menu drawn on /dev/fb0. Exit 0 = play, 2 = quit."""
+import glob
 import mmap
 import os
 import struct
@@ -379,6 +380,7 @@ GROUPS = [
     ("debug", "DEBUG", [
         ("logs", "LOGS"),
         ("save_logs", "SAVE LOGS"),
+        ("clean_logs", "CLEAN LOGS"),
     ]),
 ]
 
@@ -421,6 +423,8 @@ def field_text(s, key):
         return LOG_LEVELS[s["logs"] % len(LOG_LEVELS)].upper()
     if key == "save_logs":
         return "ZIP"
+    if key == "clean_logs":
+        return "ASK"
     if key in ("skip", "battles", "hit", "saveany", "all_forms"):
         return on(s[key])
     return ""
@@ -739,6 +743,26 @@ def save_logs():
     return name
 
 
+def clean_logs():
+    """Delete the diagnostics the console accumulates: every file in logs/, the crash reports, the SAVE LOGS zips and
+    the menu's own logs. The settings, the pad map, the memory cards and the disc are never touched. Returns how many
+    files went."""
+    paths = glob.glob(os.path.join(LOGS, "*"))
+    paths += glob.glob(os.path.join(GAME, "crash-*.txt"))
+    paths += glob.glob(os.path.join(GAME, "dw3-logs-*.zip"))
+    for name in ("menu.log", "log.txt"):
+        paths.append(os.path.join(GAME, name))
+    removed = 0
+    for path in paths:
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def rows(s, screen="main"):
     """The lines of one screen: the grouped main list, or a group's own settings."""
     if screen == "main":
@@ -997,8 +1021,37 @@ def confirm_reset(screen, pad):
         ("LED BAR SWITCHED BACK ON.", C_TEXT),
         ("", 0),
         ("A PS1 PAD NEEDS ITS LAYOUT PUT", C_NOTE),
-        ("LAYOUT PUT BACK IN BUTTONS.", C_NOTE),
+        ("BACK IN BUTTONS.", C_NOTE),
         ("THE MEMORY CARDS ARE NEVER TOUCHED.", C_NOTE),
+        ("", 0),
+        ("%s YES" % key_label(pad, "cross"), C_WARN),
+        ("%s NO" % key_label(pad, "triangle"), C_NOTE),
+    ):
+        if line:
+            screen.text(24, y, line, color)
+        y += 10 * screen.scale
+    while True:
+        key = pad_events(pad)
+        if key == "quit":
+            return "quit"
+        if key == "a":
+            return "yes"
+        if key == "b":
+            return "no"
+
+
+def confirm_clean_logs(screen, pad):
+    """Ask before deleting: the logs are how a bug gets reported, but the card is small and they are not the player's
+    data. A deletes, B keeps them; the memory cards, the settings, the pad map and the disc are not touched."""
+    screen.fill(0x001018)
+    screen.text(24, 40, "CLEAN LOGS AND DUMPS?", C_TITLE)
+    y = 110
+    for line, color in (
+        ("DELETE logs/, crash-*.txt, menu.log,", C_TEXT),
+        ("log.txt AND THE OLD dw3-logs-*.zip?", C_TEXT),
+        ("", 0),
+        ("THE MEMORY CARDS, SETTINGS, PAD MAP", C_NOTE),
+        ("AND THE DISC ARE NEVER TOUCHED.", C_NOTE),
         ("", 0),
         ("%s YES" % key_label(pad, "cross"), C_WARN),
         ("%s NO" % key_label(pad, "triangle"), C_NOTE),
@@ -1064,6 +1117,19 @@ def main():
                 if page != "main":
                     _title, entries = group_screen(page)
                     if 0 <= sel < len(entries):
+                        if entries[sel][0] == "clean_logs":
+                            answer = confirm_clean_logs(screen, pad)
+                            if answer == "quit":
+                                screen.fill(0x000000)
+                                return 2
+                            if answer == "yes":
+                                removed = clean_logs()
+                                draw(screen, s, sel, disc, pad, page)
+                                screen.text(24, screen.h - 8 * screen.scale - 8,
+                                            "CLEANED %d FILE(S)" % removed, C_NOTE)
+                            else:
+                                draw(screen, s, sel, disc, pad, page)
+                            continue
                         if entries[sel][0] == "save_logs":
                             zipped = save_logs()
                             draw(screen, s, sel, disc, pad, page)
