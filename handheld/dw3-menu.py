@@ -61,6 +61,8 @@ ACTION_LABEL = {
 # The legends have one line for three buttons; the rows can keep the full names, these are for the legends.
 KEY_SHORT = {"cross": "X", "square": "SQ", "circle": "CIR", "triangle": "TRI"}
 VALID_LETTERS = set("ABXYLRSE-")  # "-": the game's text keeps the button's own symbol
+# The per-row letter cycle: "-" keeps the game's own symbol (the PS1 base), the letters are the modern glyphs.
+FACE_LETTERS = ["-", "A", "B", "X", "Y"]
 
 
 def key_label(pad, action):
@@ -329,9 +331,10 @@ def set_place(pad, action, place, layout):
     pad[action] = (place, pad[action][1])
     # The letter follows the position, so the game's text cannot name a button that does nothing - not even after the
     # swap above moved the row that held this one.
-    for a in (action, holder):
-        if a is not None and a in FACE:
-            pad[a] = (pad[a][0], letter_for(layout, pad[a][0]))
+    if layout in LAYOUTS:
+        for a in (action, holder):
+            if a is not None and a in FACE:
+                pad[a] = (pad[a][0], letter_for(layout, pad[a][0]))
 
 
 def save_pad(pad):
@@ -933,7 +936,7 @@ def draw_remap(screen, pad, sel, layout, capture):
         x = screen.text(24, y, key_label(pad, "cross"), C_KEY)
         screen.text(x, y, ": PICK A ROW, THEN THE BUTTON", C_NOTE)
     x = screen.text(24, y + step, "LEFT/RIGHT", C_KEY)
-    screen.text(x, y + step, ": LAYOUT, WHICH SETS THE LETTERS", C_NOTE)
+    screen.text(x, y + step, ": THE LAYOUT OR THIS ROW'S LETTER", C_NOTE)
     x = screen.text(24, y + 2 * step, key_label(pad, "triangle"), C_KEY)
     screen.text(x, y + 2 * step, ": BACK TO THE MENU", C_NOTE)
 
@@ -960,6 +963,15 @@ def remap(screen, pad):
         elif (key == "left" or key == "right") and sel == 0:
             layout = next_layout(layout, key)
             apply_layout(pad, layout)
+        elif key == "left" or key == "right":
+            # On a face row the same keys cycle that row's letter, on top of the layout's set.
+            action = ACTIONS[sel - 1]
+            if action in FACE:
+                letter = pad[action][1]
+                i = FACE_LETTERS.index(letter) if letter in FACE_LETTERS else 0
+                step = 1 if key == "right" else -1
+                pad[action] = (pad[action][0], FACE_LETTERS[(i + step) % len(FACE_LETTERS)])
+                layout = detect_layout(pad)
         elif key == "a":
             if sel == 0:
                 layout = next_layout(layout, "right")
