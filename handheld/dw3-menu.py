@@ -157,9 +157,10 @@ GLYPH = {
 def defaults():
     """The tuned setup, and what RESET SETTINGS puts back: the owner's own settings on the handheld, so a player who never
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
-    party sharing all the experience, a mild XP boost, every digivolution learning from a battle, and no logs."""
+    party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, and no
+    logs."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
-                party=1, share=100, xp=1, xp_mul=6, form_mul=6, all_forms=1, logs=0, lang=0, lang_on=0)
+                party=1, share=100, xp=1, xp_mul=2, form_mul=14, all_forms=1, logs=0, lang=0, lang_on=0)
 
 
 def load_state():
@@ -453,18 +454,17 @@ def field_toggle(s, key):
                 s["party"] = 0
                 s["share"] = 50
     elif key == "xp":
-        # off, then 2x up to 20x one step at a time, and back to off. 6x is the tuned default: with the game's own exp
-        # tables a battle hands over ~244, so 6x puts the end of the story (level 50) around 80 battles and level 99 at
-        # ~600 - a modern pace rather than the original's ~3,500. Above 5x the settings' `manual` flag is written on, or
+        # off, then 2x up to 20x one step at a time, and back to off. 2x is the tuned default (the owner's calibration):
+        # the Digimon's own pace, with the forms on their own row. Above 5x the settings' `manual` flag is written on, or
         # the game's own restriction would cap the figure at 5x.
         if not s["xp"]:
             s["xp"] = 1
-            s["xp_mul"] = 6
+            s["xp_mul"] = 2
         else:
             s["xp_mul"] += 1
             if s["xp_mul"] > 20:
                 s["xp"] = 0
-                s["xp_mul"] = 6
+                s["xp_mul"] = 2
     elif key == "form_xp":
         # 1x (the battle's own form experience) up to 20x, one step at a time. Separate from the row above on purpose:
         # the Digimon's experience and the forms' experience are different rewards, and this is the knob for the forms
