@@ -531,18 +531,16 @@ def led_mod_set(on):
 
 
 def led_state():
-    """The row: "not installed" until a daemon answers, then the mod's own switch as ON/off. A daemon that answers IS
-    the install - the marker only says who accepted the risk, and a card where another port installed it shows as
-    installed here too. Kept for a second: the menu redraws on every key and a socket that is not there costs the
-    connect timeout each time."""
+    """The row: "not installed" until a daemon answers or the shared copy is on the card, then the mod's own switch as
+    ON/off. A daemon that answers IS the install - the marker only says who accepted the risk, and a card where another
+    port installed it shows as installed here too. Kept for a second: the menu redraws on every key and a socket that is
+    not there costs the connect timeout each time."""
     import time
 
     now = time.time()
     if now - _led_seen[0] > 1.0:
-        if led_ask("status"):
+        if led_ask("status") or os.path.isfile(LED_COPY):
             text = "ON" if led_mod_on() else "off"
-        elif os.path.isfile(LED_COPY):
-            text = "installed, off"
         else:
             text = "not installed"
         _led_seen[0], _led_seen[1] = now, text
