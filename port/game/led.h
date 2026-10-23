@@ -1,5 +1,5 @@
 /* The LED bar of the RK3326 handhelds (docs/XF35H.md, "The LED bar is on a UART, not in sysfs"): the mod that
- * shows the party's health on it, through the daemon of the package (handheld/ledd.py; `ledd` in the settings
+ * shows the acting member's health on it, through the daemon of the package (handheld/ledd.py; `ledd` in the settings
  * directory once the handheld menu has installed it).
  *
  * Why a daemon and not the game writing the bar: what costs in that path is not the byte (1 ms on the wire at 9600

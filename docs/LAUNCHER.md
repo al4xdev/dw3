@@ -237,10 +237,10 @@ its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equ
 `led_bar`. No options: the on/off switch is the option. **Only the RK3326 handhelds have the hardware** (R36S, XF35H
 and their clones: an MCU on `/dev/ttyS2`, `docs/XF35H.md` "The LED bar is on a UART, not in sysfs"), so everywhere
 else the mod is a no-op that logs one line. While enabled and in a battle (FIGHTSTG is the tier-1 overlay) its frame
-callback (`port/game/led.c`) reads the party's health and sends **one message per change** to `ledd`, the package's
-daemon: the weakest member of the party picks one of six readings.
+callback (`port/game/led.c`) reads the acting member's health and sends **one message per change** to `ledd`, the
+package's daemon: the Digimon in front picks one of six readings, so a switch updates the bar at once.
 
-| the party's weakest | the bar |
+| the acting member | the bar |
 |---|---|
 | 100-81% | green |
 | 80-61% | green, breathing |

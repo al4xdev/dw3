@@ -387,12 +387,13 @@ static void ws_frame(struct PortMod *mod) {
     port_video_widescreen(ovl != NULL && strcmp(ovl->name, "FIGHTSTG") == 0);
 }
 
-/* ---- led_bar (docs/LAUNCHER.md "LED bar"): the party's health on the LED bar of the RK3326 handhelds, through the
- * package's daemon (port/game/led.c, handheld/ledd.py). Off the handheld it is a no-op that logs one line, and it is
- * off by default: with it on, the bar's regulator is raised in a battle and dropped when the battle ends.
+/* ---- led_bar (docs/LAUNCHER.md "LED bar"): the acting member's health on the LED bar of the RK3326 handhelds, through
+ * the package's daemon (port/game/led.c, handheld/ledd.py). Off the handheld it is a no-op that logs one line, and it
+ * is off by default: with it on, the bar's regulator is raised in a battle and dropped when the battle ends.
  *
  * Nothing here reads the game's data: the daemon owns the animation and the game only says which of its six readings
- * the party is in, once per change (measured: ~2 ms a change, so a handful of times a fight and never per frame). */
+ * the acting member is in, once per change (measured: ~2 ms a change, so a handful of times a fight and never per
+ * frame). */
 static void led_bar_start(struct PortMod *mod) {
     (void)mod;
     led_start();

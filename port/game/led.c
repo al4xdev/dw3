@@ -139,41 +139,31 @@ static void led_apply(int level) {
     port_log("led bar: frame %ld: level %d", port_frames, level);
 }
 
-/* The party's health as one of the six readings: the weakest member that is in this battle, because a party is as
- * healthy as its worst member and that is the one worth noticing. A member with no max HP is a slot WFIGHTMN left
- * empty, not a knocked-out Digimon. */
+/* The acting member's health as one of the six readings. It follows the Digimon that is in front, so a switch updates the
+ * bar at once; the party's other members are not watched. A member with no max HP is a slot WFIGHTMN left empty, not a
+ * knocked-out Digimon. */
 static int led_read_level(void) {
     const FightstgMember *party = fightstg_battle.state.members[0];
-    s32 worst = -1;
-    int i;
+    s32 active = fightstg_battle.state.current[0];
+    s32 pct;
 
-    for (i = 0; i < 3; i++) {
-        s32 pct;
-
-        if (party[i].max_hp <= 0) {
-            continue;
-        }
-        pct = (s32)party[i].hp * 100 / (s32)party[i].max_hp;
-        if (worst < 0 || pct < worst) {
-            worst = pct;
-        }
-    }
-    if (worst < 0) {
+    if (active < 0 || active >= 3 || party[active].max_hp <= 0) {
         return LED_NONE; /* the state is not filled yet: the battle has not started */
     }
-    if (worst <= 0) {
+    pct = (s32)party[active].hp * 100 / (s32)party[active].max_hp;
+    if (pct <= 0) {
         return LED_OUT;
     }
-    if (worst <= 20) {
+    if (pct <= 20) {
         return LED_DYING;
     }
-    if (worst <= 40) {
+    if (pct <= 40) {
         return LED_CRITICAL;
     }
-    if (worst <= 60) {
+    if (pct <= 60) {
         return LED_BAD;
     }
-    if (worst <= 80) {
+    if (pct <= 80) {
         return LED_HURT;
     }
     return LED_HEALTHY;
