@@ -36,12 +36,12 @@ defaults are the configuration this port was tuned with, so a player who never o
 | main row | what it holds |
 |---|---|
 | `GAME` | `FAST-FORWARD` (speed and off/on), `SKIP DIALOGUES`, `SKIP BATTLE ANIMS` and `HIT REACTION`, `SAVE ANYWHERE` |
-| `XP` | `PARTY XP` (percentage of the party that shares), `XP / BITS BOOST` (off, or 2x to 20x in steps, default 6x: experience, form experience and money together), `ALL FORMS' XP` (on by default) |
+| `XP` | `PARTY XP` (percentage of the party that shares), `XP / BITS BOOST` (off, or 2x to 20x, default 2x), `FORM XP` (1x to 20x, default 14x: the digivolutions' multiplier alone), `ALL FORMS' XP` (on by default) |
 | `VIDEO` | `HZ` (50 or 60), `RENDERER` (`GLES` for 3D, `SOFTWARE` for 2D-heavy scenes and the byte-exact reference) |
-| `DEBUG` | `LOGS` (off / soft / heavy, off by default, set by the launcher as `DW3_LOG`) and `SAVE LOGS`, which writes `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map |
-| `LED BAR` | the console's LED bar follows the weakest party member's HP in battle (installs a small daemon) |
-| `BUTTONS` | remap the pad: a `LAYOUT` row (Xbox, Switch, PlayStation) for the letters, then one row per action (`CONFIRM`, `BACK`, ...) holding only the button |
-| `RESET SETTINGS` | after asking, puts everything back: the tuned settings, the pad map (Xbox layout) and the LED bar switched on. The memory cards are never touched |
+| `DEBUG` | `LOGS` (off / soft / heavy, off by default, set by the launcher as `DW3_LOG`), `SAVE LOGS` (a `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map) and `CLEAN LOGS`, after asking, which deletes those files and the old zips |
+| `LED BAR` | the console's LED bar follows the acting Digimon's HP in battle (installs a small daemon) |
+| `BUTTONS` | remap the pad: a `LAYOUT` row (`PS1` symbols or `MODERN` A/B/X/Y) for the letters, then one row per action (`X`, `SQUARE`, `CIRCLE`, `TRIANGLE`, `L1`...); left/right on a face row edits that row's letter |
+| `RESET SETTINGS` | after asking, puts everything back: the tuned settings, the pad map (modern layout) and the LED bar switched on. The memory cards are never touched |
 | `PLAY` | start the game |
 
 **The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
