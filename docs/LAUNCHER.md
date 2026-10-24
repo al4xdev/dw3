@@ -226,8 +226,9 @@ the enemy turn that follows the evolution**.
 - **One per battle.** `dw3_evo_shield_member` is set on the first evolution and cleared at the next party turn's start,
   so the shield covers exactly the enemy turn after it. `dw3_evo_buff_member` is reset at the battle's start
   (`wfightmn_main_create`) and lasts the whole battle; a later evolution in the same fight changes nothing.
-- **The HUD** draws the buffed member's icon with the active palette even when it is not the acting one, so the buff
-  is visible without opening a status page.
+- **No HUD marker, on purpose.** It drew the buffed member's icon in the active palette for a while; the highlight was
+  indistinguishable from the acting member's own and nobody noticed it, and the buff is felt where it matters (the
+  numbers and the protected turn), so the game's HUD is left as the original draws it.
 - **Balance:** the stats are a flat +100, not a multiplier, so it is decisive in the early game and small late.
 
 ### Widescreen battles

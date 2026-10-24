@@ -3220,17 +3220,8 @@ void fightstg_hud_draw(FightstgHud *obj, FightstgHudData *data) {
                 } else {
                     k = member->hp != member->max_hp;
                 }
-                {
-                    s32 base = (fightstg_battle.state.current[i] == j) ? 0xC : 0x3C;
-#ifdef PC_PORT
-                    /* evo_buff: the buffed member is drawn with the active (highlighted) palette even when
-                     * it is not the acting member, so it stands out from the inactive icons. */
-                    if (i == 0 && j == dw3_evo_buff_member) {
-                        base = 0xC;
-                    }
-#endif
-                    sprite.draw(bank, base + k, fightstg_hud_icon_x[i][j], 0x30);
-                }
+                sprite.draw(bank, (fightstg_battle.state.current[i] == j ? 0xC : 0x3C) + k,
+                              fightstg_hud_icon_x[i][j], 0x30);
             }
         }
     }
