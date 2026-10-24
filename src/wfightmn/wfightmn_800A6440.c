@@ -476,6 +476,11 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
     switch (obj->base.substep) {
     case 0:
     default:
+#ifdef PC_PORT
+        /* evo_buff: the shield (Guard at the ceiling) lasts the enemy turn after the evolution; clear it at the
+         * start of the next party turn, so the buffed member is protected for exactly one enemy turn. */
+        dw3_evo_shield_member = -1;
+#endif
         event = fightstg_events.find_member(8, 0, fightstg_battle.state.current[0]);
         if (event >= 0) {
             fightstg_events.events[event].type = 0;
@@ -554,6 +559,19 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
     }
 }
 
+#ifdef PC_PORT
+/* evo_buff: the first evolution of a battle grants the buff (+100 to every stat) and the one-turn shield to the
+ * member that evolved; dw3_evo_buff_member is set once (on the first evolution) and lasts the whole battle,
+ * dw3_evo_shield_member for the one enemy turn after, cleared at the next party turn's start
+ * (wfightmn_party_turn). Both digivolve and blast are evolutions. */
+static void wfightmn_evo_buff_apply(void) {
+    if (port_mod_evo_buff && dw3_evo_buff_member < 0) {
+        dw3_evo_buff_member = (s16)fightstg_battle.state.current[0];
+        dw3_evo_shield_member = (s16)fightstg_battle.state.current[0];
+    }
+}
+#endif
+
 void wfightmn_digivolve(WfightmnMain *obj, WfightmnMainData *data) {
     FightstgMember *member;
     RecordsDigimon *digimon;
@@ -565,6 +583,9 @@ void wfightmn_digivolve(WfightmnMain *obj, WfightmnMainData *data) {
         member->digimon = data->command->arg2;
         wfightmn_mark_took_part();
         wfightmn_end_blast();
+#ifdef PC_PORT
+        wfightmn_evo_buff_apply();
+#endif
         data->wait.obj = fightstg_digivolve_create(member->digimon, 0);
         obj->base.substep++;
         break;
@@ -1103,6 +1124,9 @@ void wfightmn_blast(WfightmnMain *obj, WfightmnMainData *data) {
             member->base_digimon = member->digimon;
             member->digimon = records_digimon[digimon->blast_forms[stage] - 1].id;
             member->blasted = 1;
+#ifdef PC_PORT
+            wfightmn_evo_buff_apply();
+#endif
             fightstg_events_start_blast(id);
             data->wait.obj = fightstg_digivolve_create(member->digimon, 1);
             obj->base.substep++;
@@ -1573,6 +1597,11 @@ Object *wfightmn_main_create(void) {
 
     heap_funcs.bzero(&fightstg_battle.state, sizeof(FightstgBattleState));
     heap_funcs.bzero(&records_battle_results, 0x12); /* PC_PORT: a byte count: the fields before unk_12 (pointer-free) */
+#ifdef PC_PORT
+    /* evo_buff: one per battle, so the member indices start fresh at the battle's start. */
+    dw3_evo_buff_member = -1;
+    dw3_evo_shield_member = -1;
+#endif
     return obj;
 }
 

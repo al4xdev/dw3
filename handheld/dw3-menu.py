@@ -157,9 +157,9 @@ GLYPH = {
 def defaults():
     """The tuned setup, and what RESET SETTINGS puts back: the owner's own settings on the handheld, so a player who never
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
-    party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, and no
-    logs."""
-    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0,
+    party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, the
+    evolution buff, and no logs."""
+    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0, evo=1,
                 party=1, share=100, xp=1, xp_mul=2, form_mul=14, all_forms=1, logs=0, lang=0, lang_on=0)
 
 
@@ -240,13 +240,14 @@ def write_settings(s, disc):
     "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s, "all_forms": %s },
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
+    "evo_buff": { "enabled": %s },
     "led_bar": { "enabled": %s }
   },
   "input": { "gamepad": %s }
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(s["xp"]), s["xp_mul"], s["form_mul"], s["xp_mul"], b(s["xp_mul"] > 5 or s["form_mul"] > 5), b(s["all_forms"]),
+       b(s["xp"]), s["xp_mul"], s["form_mul"], s["xp_mul"], b(s["xp_mul"] > 5 or s["form_mul"] > 5), b(s["all_forms"]), b(s["evo"]),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -367,6 +368,7 @@ GROUPS = [
         ("battles", "SKIP BATTLE ANIMS"),
         ("hit", "  HIT REACTION"),
         ("saveany", "SAVE ANYWHERE"),
+        ("evo", "EVO BUFF"),
     ]),
     ("xp", "XP", [
         ("party", "PARTY XP"),
@@ -426,7 +428,7 @@ def field_text(s, key):
         return "ZIP"
     if key == "clean_logs":
         return "ASK"
-    if key in ("skip", "battles", "hit", "saveany", "all_forms"):
+    if key in ("skip", "battles", "hit", "saveany", "all_forms", "evo"):
         return on(s[key])
     return ""
 
@@ -476,7 +478,7 @@ def field_toggle(s, key):
         renderer_toggle()
     elif key == "logs":
         s["logs"] = (s["logs"] + 1) % len(LOG_LEVELS)
-    elif key in ("skip", "battles", "hit", "saveany", "all_forms"):
+    elif key in ("skip", "battles", "hit", "saveany", "all_forms", "evo"):
         s[key] ^= 1
 
 
@@ -1181,6 +1183,11 @@ def main():
                 return 2
             draw(screen, s, sel, disc, pad, page)
         if launch and disc:
+            # A flipped toggle only lives in the menu's memory; the game reads settings.json once, right after PLAY.
+            # Write on the way out (this launcher used to) so the player's flips reach the game — a RESET alone would
+            # restore the tuned defaults, not the current values.
+            save_state(s)
+            write_settings(s, disc)
             for phase in range(6):
                 draw_loading(screen, phase * 4)
     finally:

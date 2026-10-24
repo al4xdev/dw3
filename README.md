@@ -217,6 +217,10 @@ This is as important as what was done — each of these looked like a win and is
     hands out. No cap on levels per battle either.
 - **Fast-forward**: up to 8x where the game has headroom (menus, dialogue, cutscenes). In the field and in battle the
   CPU is the limit, so it only mutes the audio there.
+- **Evolution buff, on in the tuned defaults**: the first Digimon in each battle to evolve gets +100 to every stat for
+  the rest of the fight, and the enemy turn right after the evolution does it no damage (Guard at the ceiling). Once per
+  battle, and only as a target: the buffed Digimon's own attacks keep their real numbers. The menu's `EVO BUFF` row
+  (battle page) sets `mods.evo_buff`; see `docs/LAUNCHER.md` "Evolution buff".
 - **A frame meter that adds up**: `DW3_GPU_LOG` breaks the frame into something you can act on, GPU and SPU included (see
   below).
 - **Quitting works**: `Select + Start`, `SIGTERM`, `SIGINT` and `SIGHUP` all end the run at the end of the current vsync,

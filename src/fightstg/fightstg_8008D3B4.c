@@ -3220,8 +3220,17 @@ void fightstg_hud_draw(FightstgHud *obj, FightstgHudData *data) {
                 } else {
                     k = member->hp != member->max_hp;
                 }
-                sprite.draw(bank, (fightstg_battle.state.current[i] == j ? 0xC : 0x3C) + k,
-                              fightstg_hud_icon_x[i][j], 0x30);
+                {
+                    s32 base = (fightstg_battle.state.current[i] == j) ? 0xC : 0x3C;
+#ifdef PC_PORT
+                    /* evo_buff: the buffed member is drawn with the active (highlighted) palette even when
+                     * it is not the acting member, so it stands out from the inactive icons. */
+                    if (i == 0 && j == dw3_evo_buff_member) {
+                        base = 0xC;
+                    }
+#endif
+                    sprite.draw(bank, base + k, fightstg_hud_icon_x[i][j], 0x30);
+                }
             }
         }
     }
@@ -7187,6 +7196,24 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
                 out->stats[i] = 1;
             }
         }
+#ifdef PC_PORT
+        /* evo_buff: the buffed member (dw3_evo_buff_member) gets +100 to every stat for the rest of the battle; the
+         * shielded member (dw3_evo_shield_member) has Guard at the ceiling so it takes no damage on the enemy turn
+         * after its evolution. Both only apply to party members (side == 0), the path reached when the rules read
+         * stats for an attacker (first=1) or a target (first=0). */
+        if (member == dw3_evo_buff_member) {
+            for (i = 0; i < 5; i++) {
+                out->stats[i] += 100;
+            }
+        }
+        /* The shield is the party member as a target only: the rules reach here with side 0 and first 0 for the target
+         * (get_tech_damage, get_special_damage), and first 1 for the attacker. Without the "first == 0" the buffed
+         * Digimon's own attacks would each be divided by 9999 on the evolution turn's enemy phase, because the very
+         * next write, fightstg_rules_scale_damage, reads target->stats[1]. */
+        if (first == 0 && member == dw3_evo_shield_member) {
+            out->stats[1] = 9999;
+        }
+#endif
         p = &stats.values[12];
         for (i = 0; i < 7; i++) {
             if (p[i] > 0) {

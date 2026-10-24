@@ -370,6 +370,28 @@ s32 port_xp_boost(s32 kind, s32 amount) {
     return (s32)r;
 }
 
+/* ---- evo_buff (docs/LAUNCHER.md "Evolution buff"): while enabled, the first Digimon in each battle to evolve gains
+ * +100 to every stat for the rest of the fight (fightstg_rules_get_stats, side 0) and, on the enemy turn that follows,
+ * takes no damage (Guard at the ceiling, get_stats, and only where the member is the target: first == 0). The per-battle
+ * member indices (dw3_evo_buff_member, the buff;
+ * dw3_evo_shield_member, the one-turn shield; -1 for none) are set by the battle on the first evolution
+ * (wfightmn_digivolve / wfightmn_blast), reset by the battle's start (wfightmn_main_create); the shield is cleared
+ * at each party turn's start (wfightmn_party_turn). The binary starts it off; the handheld menu's tuned defaults turn
+ * it on (`mods.evo_buff`), as they turn on the party's shared experience. */
+int port_mod_evo_buff;
+s16 dw3_evo_buff_member = -1;
+s16 dw3_evo_shield_member = -1;
+
+static void eb_start(struct PortMod *mod) {
+    (void)mod;
+    port_mod_evo_buff = 1;
+}
+
+static const char *eb_status(struct PortMod *mod) {
+    (void)mod;
+    return "evo buff";
+}
+
 /* ---- widescreen (docs/LAUNCHER.md "Widescreen battles"): the battle at 16:9 through the hardware renderer's wide
  * canvas (psxstack render_gpu_wide.c). FIGHTSTG already sends the 3D a 16:9 frame needs: its only screen-space cull,
  * fightstg_model_mesh_is_visible, keeps a mesh with a bounding point within the clip plus 64 pixels (x within 224 of
@@ -423,6 +445,7 @@ static PortMod game_mod_table[] = {
       .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
       .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
+    { .id = "evo_buff", .version = "0.1", .start = eb_start, .status = eb_status },
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
     { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
       .status = led_bar_status },

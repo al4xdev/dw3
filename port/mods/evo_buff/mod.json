@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "evo_buff",
+  "name": "Evolution buff",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Once per battle, the first Digimon to evolve gains +100 to every stat for the rest of the fight and, on the enemy turn that follows, takes no damage (Guard at the ceiling). The buff lasts the whole battle; the shield only the one turn after the evolution.",
+  "options": []
+}

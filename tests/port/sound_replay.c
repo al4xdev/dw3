@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "libsnd_internal.h"
 #include "psyq/libsnd.h"
@@ -42,6 +43,28 @@ void psyq_trace_printf(const char *fmt, ...) {
 void port_unimplemented(const char *fn) {
     fprintf(stderr, "sound_replay: unimplemented: %s\n", fn);
     exit(3);
+}
+
+/* ---- The frame meter's clock spu.c reads for its profile (spu_prof, DW3_GPU_LOG) ----
+ * The replay measures nothing, so the clock only has to exist and to move: the GPU's counter is the ARM virtual
+ * counter in the port (psyq/gpu.c) and a monotonic nanosecond count elsewhere. The profile stays off (port_gpu_log_on
+ * is 0), so spu.c reads the counter only around the work it times, never for the trace. */
+extern int port_gpu_log_on;
+int port_gpu_log_on = 0;
+
+unsigned long long port_gpu_cycles(void) {
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (unsigned long long)ts.tv_sec * 1000000000ULL + (unsigned long long)ts.tv_nsec;
+}
+
+long long port_clock_ns(void) {
+    return (long long)port_gpu_cycles();
+}
+
+void port_log(const char *fmt, ...) {
+    (void)fmt;
 }
 
 static int video_mode = 1; /* MODE_PAL; the 4th argument "ntsc": 0 (the 60 Hz game: SsSetTickMode(0x1000) ticks at 60) */

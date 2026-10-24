@@ -30,6 +30,9 @@ goes to **PortMaster-MV-New** (the multiverse repository), not PortMaster-New.
 - `settings.json`: the mods and `input.gamepad`. `video.renderer` is `gles` on this machine (`"software"` reverts).
   The handheld build is the `PSXSTACK_SDL2` one, whose input (`psxstack/runtime/input.c`) has a fixed button map and
   does not read `input.gamepad`; this file still carries the same mapping for the SDL3 builds.
+- The menu writes `settings.json` when PLAY is pressed, not only when a console action runs: the game reads the file
+  once, at its start, so a toggle the player flipped reaches it through that write. Without it a row like `EVO BUFF`
+  looked saved and was not.
 - `pad.map`: one line per PS1 button, `<button> <gamepad input> <letter>`. The name is what the *game* calls the action
   after it rotates the pad for the non-Japanese languages, so the four face rows read `circle` = confirm, `cross` = back,
   `triangle` and `square`; the gamepad input is SDL's button name (`south`, `east`, `west`, `north`, ...). It is the file
