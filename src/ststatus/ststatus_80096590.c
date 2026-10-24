@@ -728,7 +728,7 @@ void ststatus_map_handle_pad(StstatusMapPage *obj, StstatusMapPageData *data) {
         obj->base.state = OBJECT_STATE_END;
     }
 #ifdef PC_PORT
-    /* Cross on a visited area: travel when the menu closes. No door: the ask logs once and stays. */
+    /* Circle on a visited area: travel when the menu closes. No door: the ask logs once and stays. */
     if (dw3_feat_travel && obj->on_area != 0 && PAD_PRESSED(13)) {
         if (dw3_fast_travel_ask(obj->area - 1, obj->region)) {
             sound_module.play(0x8004503C);
