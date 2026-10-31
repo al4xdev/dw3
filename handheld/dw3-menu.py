@@ -493,7 +493,19 @@ def field_toggle(s, key):
         renderer_toggle()
     elif key == "logs":
         s["logs"] = (s["logs"] + 1) % len(LOG_LEVELS)
-    elif key in ("skip", "battles", "hit", "saveany", "all_forms", "evo"):
+    elif key == "hit":
+        if not s["battles"]:
+            s["battles"] = 1
+            s["hit"] = 1
+        else:
+            s["hit"] ^= 1
+    elif key == "all_forms":
+        if not s.get("form_xp", 1):
+            s["form_xp"] = 1
+            s["all_forms"] = 1
+        else:
+            s["all_forms"] ^= 1
+    elif key in ("skip", "battles", "saveany", "evo"):
         s[key] ^= 1
 
 
@@ -821,7 +833,7 @@ class Screen(object):
 
     def text(self, x, y, msg, color):
         for ch in msg:
-            g = GLYPH.get(ch, GLYPH[" "])
+            g = GLYPH.get(ch.upper(), GLYPH[" "])
             for row, bits in enumerate(g):
                 for col, bit in enumerate(bits):
                     if bit == "1":
