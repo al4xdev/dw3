@@ -415,14 +415,14 @@ def field_text(s, key):
     def on(v):
         return "ON" if v else "off"
     if key == "ff":
-        return "%s  %s" % (on(s["ff"]), s["ff_speed"].upper())
+        return "%s  %s" % (on(s["ff"]), s["ff_speed"].upper()) if s["ff"] else "off"
     if key == "party":
-        return "%s  %s%%" % (on(s["party"]), s["share"])
+        return "%s  %s%%" % (on(s["party"]), s["share"]) if s["party"] else "off"
     if key == "xp":
-        return "%s  %sX" % (on(s["xp"]), s["xp_mul"])
+        return "%s  %sX" % (on(s["xp"]), s["xp_mul"]) if s["xp"] else "off"
     if key == "form_xp":
         # Independent from the Digimon XP row: forms can be boosted while general Digimon XP remains vanilla (1x).
-        return "%s  %sX" % (on(s.get("form_xp", 1)), s["form_mul"])
+        return "%s  %sX" % (on(s.get("form_xp", 1)), s["form_mul"]) if s.get("form_xp", 1) else "off"
     if key == "hz":
         return "%s" % s["hz"]
     if key == "renderer":
@@ -857,7 +857,7 @@ def draw(screen, s, sel, disc, pad, page="main"):
                 screen.text(40, y, label, C_ON)
             else:
                 screen.text(40, y, label, C_TEXT)
-                color = C_ON if value in ("ON", "running") else C_DIM if value == "off" else C_TEXT
+                color = C_ON if (value in ("ON", "running") or value.startswith("ON")) else C_DIM if value == "off" else C_TEXT
                 screen.text(40 + 20 * 6 * screen.scale, y, value, color)
         y += row_step * screen.scale
     # Two legends, each saying what the button does. The disc's file name used to sit on a third line: it copied the
