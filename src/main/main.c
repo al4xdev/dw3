@@ -88,6 +88,9 @@ int main(void) {
             heap_funcs.free_state(2);
             gamestate_data.funcs.change_map();
             main_object = overlay_create_object();
+#ifdef PC_PORT
+            port_audio_resync();
+#endif
         }
         main_object = heap_objects.try_run(main_object);
         gfx_module.funcs.end_frame(PTR_TO_S32(main_object));

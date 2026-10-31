@@ -128,6 +128,8 @@
 
 #include "psxstack/hooks.h" /* the generic macros and the port_* interface (the stack's) */
 
+void port_audio_resync(void);
+
 /* The game's typed slot functions: a map's entry in slot 2 (fieldstg_stages, fieldstg_stages_2d), a stage overlay's
  * entry in slot 1 (overlay_entries). */
 #define WSTAG_ENTRY(addr) SLOT_FUNC(void *(*)(), addr)
