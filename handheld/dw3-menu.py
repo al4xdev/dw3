@@ -433,7 +433,11 @@ def field_text(s, key):
         return "ZIP"
     if key == "clean_logs":
         return "ASK"
-    if key in ("skip", "battles", "hit", "saveany", "all_forms", "evo"):
+    if key == "all_forms":
+        return on(s["all_forms"]) if s.get("form_xp", 1) else "off"
+    if key == "hit":
+        return on(s["hit"]) if s["battles"] else "off"
+    if key in ("skip", "battles", "saveany", "evo"):
         return on(s[key])
     return ""
 
@@ -857,7 +861,7 @@ def draw(screen, s, sel, disc, pad, page="main"):
                 screen.text(40, y, label, C_ON)
             else:
                 screen.text(40, y, label, C_TEXT)
-                color = C_ON if (value in ("ON", "running") or value.startswith("ON")) else C_DIM if value == "off" else C_TEXT
+                color = C_ON if (value in ("ON", "running") or value.startswith("ON")) else C_DIM if value.lower() == "off" else C_TEXT
                 screen.text(40 + 20 * 6 * screen.scale, y, value, color)
         y += row_step * screen.scale
     # Two legends, each saying what the button does. The disc's file name used to sit on a third line: it copied the
