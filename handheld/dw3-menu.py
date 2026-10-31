@@ -160,7 +160,7 @@ def defaults():
     party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, the
     evolution buff, and no logs."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0, evo=1,
-                party=1, share=100, xp=1, xp_mul=2, form_mul=14, all_forms=1, logs=0, lang=0, lang_on=0)
+                party=1, share=100, xp=1, xp_mul=2, form_xp=1, form_mul=14, all_forms=1, logs=0, lang=0, lang_on=0)
 
 
 def load_state():
@@ -222,6 +222,12 @@ def write_settings(s, disc):
         renderer = "gles"
     if renderer not in ("gles", "software", "gpu"):
         renderer = "gles"
+    xb_on = bool(s["xp"] or s.get("form_xp", 1))
+    xb_exp = s["xp_mul"] if s["xp"] else 1
+    xb_bits = s["xp_mul"] if s["xp"] else 1
+    xb_form = s["form_mul"] if s.get("form_xp", 1) else 1
+    xb_manual = bool((s["xp"] and s["xp_mul"] > 5) or (s.get("form_xp", 1) and s["form_mul"] > 5))
+    xb_all_forms = bool(s["all_forms"]) if s.get("form_xp", 1) else False
     text = """{
   "schema": 1,
   "disc": { "path": "game/%s" },
@@ -247,7 +253,7 @@ def write_settings(s, disc):
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(s["xp"]), s["xp_mul"], s["form_mul"], s["xp_mul"], b(s["xp_mul"] > 5 or s["form_mul"] > 5), b(s["all_forms"]), b(s["evo"]),
+       b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(s["evo"]),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -415,9 +421,8 @@ def field_text(s, key):
     if key == "xp":
         return "%s  %sX" % (on(s["xp"]), s["xp_mul"])
     if key == "form_xp":
-        # The whole boost's switch is the XP / BITS row; this one is the multiplier the forms alone get. 1X is "no
-        # multiplier" (the battle's own numbers, with the per-battle ceiling still skipped because the mod is on).
-        return "%s  %sX" % ("" if s["xp"] else "OFF", s["form_mul"])
+        # Independent from the Digimon XP row: forms can be boosted while general Digimon XP remains vanilla (1x).
+        return "%s  %sX" % (on(s.get("form_xp", 1)), s["form_mul"])
     if key == "hz":
         return "%s" % s["hz"]
     if key == "renderer":
@@ -468,12 +473,18 @@ def field_toggle(s, key):
                 s["xp"] = 0
                 s["xp_mul"] = 2
     elif key == "form_xp":
-        # 1x (the battle's own form experience) up to 20x, one step at a time. Separate from the row above on purpose:
-        # the Digimon's experience and the forms' experience are different rewards, and this is the knob for the forms
-        # (the game unlocks a form's later skills at form levels 25, 45...). Above 5x `manual` goes on in write_settings.
-        s["form_mul"] += 1
-        if s["form_mul"] > 20:
+        # 1x (the battle's own form experience) up to 20x, one step at a time, then off. Separate from the row above
+        # on purpose: the Digimon's experience and the forms' experience are different rewards, and this is the knob
+        # for the forms (the game unlocks a form's later skills at form levels 25, 45...). Above 5x `manual` goes on
+        # in write_settings.
+        if not s.get("form_xp", 1):
+            s["form_xp"] = 1
             s["form_mul"] = 1
+        else:
+            s["form_mul"] += 1
+            if s["form_mul"] > 20:
+                s["form_xp"] = 0
+                s["form_mul"] = 1
     elif key == "renderer":
         renderer_toggle()
     elif key == "logs":
