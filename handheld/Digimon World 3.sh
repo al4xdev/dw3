@@ -50,7 +50,9 @@ fi
 
 if [ -z "$DISC" ]; then
   echo "Missing Digimon World 2003 disc image (.bin/.cue) in $GAMEDIR/game/"
-  if [ -f "$controlfolder/harfbuzz_run" ]; then
+  if command -v pm_show_error >/dev/null 2>&1; then
+    pm_show_error "Please copy your Digimon World 2003 .bin/.cue into ports/dw3/game/" --title "Digimon World 3"
+  elif [ -f "$controlfolder/harfbuzz_run" ]; then
     $ESUDO $controlfolder/harfbuzz_run "Digimon World 3" "Please copy your Digimon World 2003 .bin/.cue into ports/dw3/game/"
   fi
   exit 1
@@ -78,11 +80,5 @@ else
   "$GAMEDIR/dw3/dw2003" --disc "$DISC" --window --fullscreen --watchdog 0
 fi
 
-# Back to the frontend: PortMaster's cleanup when the CFW has it, gptokeyb and the frontend's events otherwise.
-if command -v pm_finish >/dev/null 2>&1; then
-  pm_finish
-else
-  $ESUDO kill -9 $(pidof gptokeyb) 2>/dev/null || true
-  $ESUDO systemctl restart oga_events &
-fi
-printf "\033c" > /dev/tty0
+# Back to the frontend: standard PortMaster cleanup
+pm_finish
