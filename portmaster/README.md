@@ -52,21 +52,22 @@ ceiling is skipped, so a won battle can raise several form levels. `ALL FORMS' X
 fought earn experience in the original, which leaves the other digivolutions at the lab for ever. Each form keeps its own
 requirement table, so nothing is free - a basic form taken to 99 in the late game is a farm the player built.
 
-## Controls
+## Controls (Default PS1 Layout)
 
-| Button | Action |
+| Button | PS1 Action |
 |--|--|
 | D-Pad | Move / menu |
-| A (east) | Confirm (Cross) |
-| B (south) | Cancel (Circle) |
-| X (north) | Square |
-| Y (west) | Triangle |
+| South | Cross (✕) |
+| East | Circle (◯) |
+| North | Square (▢) |
+| West | Triangle (△) |
 | L1 / R1 | L1 / R1 |
+| L2 / R2 | L2 / R2 |
 | Start | Start |
 | Select + Start | Quit |
 
 All of it can be rebound in the gamepad menu that runs before the game (`BUTTONS` → `REMAP`); the menu writes the mapping
-into `settings.json` and `pad.map`. `Select + Start` quits from anywhere.
+into `settings.json` and `pad.map`. The button display can also be switched between classic PS1 symbols and Modern (A/B/X/Y) labels. `Select + Start` quits from anywhere.
 
 ## Tested on
 
