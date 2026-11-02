@@ -3,7 +3,7 @@
 1. Install the port with **PortMaster** on the console (Ports → PortMaster → search for "Digimon World 2003"), or unzip
    `dw3.zip` into the card's `ports/` folder by hand. On ArkOS and EmuELEC that folder is `/storage/roms/ports/`.
 2. Put your own disc in `ports/dw3/game/` — the **`.cue` and the `.bin` together**, straight from your own copy of the
-   game (Europe / PAL, disc 1, serial `SLES-03975`; a redump-style `.cue` + `.bin` pair is what the launcher expects).
+   game (Europe / PAL, disc 1, serial `SLES-03936`; a redump-style `.cue` + `.bin` pair is what the launcher expects).
    Copy them the way you copy any ROM: card in the PC, or over the network. The `.bin` is ~660 MB.
 3. Launch it from the **Ports** menu. A gamepad menu comes first (that is the port's own, driven only by the pad): the
    bottom row is **PLAY**. Settings, button remapping and the LED bar are the rows above it.

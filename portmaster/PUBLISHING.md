@@ -18,7 +18,7 @@ A **decompilation** of a commercial game is not accepted by the main catalogue: 
       `dw3-port-1` release asset (`sha256:10ba4313…`).
 - [x] **`port.json`** — version 4, `name: dw3.zip`, `items: ["Digimon World 3.sh", "dw3"]`, `arch: ["armhf"]`, `rtr:
       false`, `exp: false`, `availability: full`, `porter: ["al4xdev"]`, and an `inst` field that names the disc (Europe /
-      PAL, `SLES-03975`), says the `.cue` and the `.bin` go in together, gives the folder as `ports/dw3/game/` and as the
+      PAL, `SLES-03936`), says the `.cue` and the `.bin` go in together, gives the folder as `ports/dw3/game/` and as the
       ArkOS path, and warns that renaming the `.bin` without the `.cue` breaks it. Validated with `python3 -m json.tool`.
 - [x] **`README.md`** — an "Installing it (no tools needed)" section for players, then Notes, Controls (with what is
       printed on the buttons, `Select + Start` to quit), Compile and Thanks.
