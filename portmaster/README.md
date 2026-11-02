@@ -13,6 +13,10 @@ The port contains no game data: without the disc in `game/` it says `NO DISC IN 
 If the game does not start after an update, the two files worth deleting are `settings.json` and `pad.map` in
 `ports/dw3/` (they are rebuilt on the next launch).
 
+On a handheld with no writable `/dev/fb0`, or where Wayland is the display (ROCKNIX on some devices), the
+framebuffer menu is skipped. Mods and the renderer are then whatever is already in `ports/dw3/settings.json`
+(`"video": { "renderer": "software" }` or `"gles"`). `DW3_FORCE_RENDERER` and `DW3_FORCE_VIDEO` override detection.
+
 ## Notes
 
 A source port of **Digimon World 2003** (PAL), built from [dw2003recomp](https://github.com/gascarcella/dw2003recomp): the

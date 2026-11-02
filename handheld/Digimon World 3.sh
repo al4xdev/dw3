@@ -58,27 +58,51 @@ if [ -z "$DISC" ]; then
   exit 1
 fi
 
-# Environment and display configuration:
-# DW3_VIDEO="fbdev" selects direct /dev/fb0 presentation with ARM NEON 2x scaling.
-# To force SDL2 KMSDRM instead: export DW3_VIDEO="sdl2"
-export DW3_VIDEO="fbdev"
-export SDL_VIDEODRIVER="kmsdrm"
-export SDL_AUDIODRIVER="alsa"
+# Display, audio and renderer come from detect-env.sh (framebuffer on the reference handheld,
+# SDL/Wayland when that is what the CFW actually has). Overrides: DW3_FORCE_VIDEO, DW3_FORCE_RENDERER.
+# shellcheck disable=SC1091
+. "$GAMEDIR/detect-env.sh"
+sh "$GAMEDIR/probe.sh" || true
+detect_env
+
 # The CFW's own controller database, so the pad is the same gamepad on every device (the port reads it through SDL's
 # gamecontroller API and maps it in its own menu).
 [ -n "${sdl_controllerconfig:-}" ] && export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # A 32-bit build on a 64-bit CFW needs the CFW's own 32-bit libraries first; harmless when there are none.
 export LD_LIBRARY_PATH="$GAMEDIR/dw3${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
+BIN="$GAMEDIR/dw2003"
+if command -v ldd >/dev/null 2>&1; then
+  missing="$(ldd "$BIN" 2>&1 | grep 'not found' || true)"
+  if [ -n "$missing" ]; then
+    echo "BLOCKER: 32-bit libraries missing:"
+    echo "$missing"
+    if command -v pm_show_error >/dev/null 2>&1; then
+      pm_show_error "This 32-bit build is missing ARM libraries. See ports/dw3/log.txt." --title "Digimon World 3"
+    fi
+    exit 1
+  fi
+else
+  echo "ldd unavailable; library check skipped (TODO: validate)"
+fi
+
 # What PortMaster's platform helpers want to know about the binary before it runs (a no-op on CFWs without them).
-command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$GAMEDIR/dw3/dw2003" >/dev/null 2>&1
+command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$BIN" >/dev/null 2>&1
+
+pm_done() {
+  if [ "${DW3_PM_DONE:-0}" = 1 ]; then
+    return 0
+  fi
+  DW3_PM_DONE=1
+  if command -v pm_finish >/dev/null 2>&1; then
+    pm_finish
+  fi
+}
+trap pm_done EXIT INT TERM
 
 # Gamepad menu on the panel, then the game. No keyboard on this handheld.
 if [ -x "$GAMEDIR/dw3.sh" ]; then
   "$GAMEDIR/dw3.sh"
 else
-  "$GAMEDIR/dw3/dw2003" --disc "$DISC" --window --fullscreen --watchdog 0
+  "$BIN" --disc "$DISC" --window --fullscreen --watchdog 0
 fi
-
-# Back to the frontend: standard PortMaster cleanup
-pm_finish

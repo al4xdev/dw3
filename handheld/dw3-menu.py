@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gamepad menu drawn on /dev/fb0. Exit 0 = play, 2 = quit."""
+"""Gamepad menu drawn on /dev/fb0. Exit 0 = play, 2 = quit, 3 = framebuffer unavailable."""
 import glob
 import mmap
 import os
@@ -802,9 +802,16 @@ def rows(s, screen="main"):
     return out
 
 
+class FramebufferUnavailable(Exception):
+    """Exit 3 is reserved for this. Any other failure stays a normal non-zero exit."""
+
+
 class Screen(object):
     def __init__(self):
-        self.fd = os.open(FB, os.O_RDWR)
+        try:
+            self.fd = os.open(FB, os.O_RDWR)
+        except OSError as exc:
+            raise FramebufferUnavailable("%s: %s" % (FB, exc))
         self.w, self.h, self.stride, self.bpp = 640, 480, 640 * 4, 32
         try:
             import fcntl
@@ -1125,7 +1132,12 @@ def main():
     led_row = count - 4
     group_base = 0  # the first len(GROUPS) rows are the groups, in GROUPS order
     sel = play
-    screen = Screen()
+    try:
+        screen = Screen()
+    except FramebufferUnavailable as exc:
+        with open(os.path.join(GAME, "menu.log"), "a") as log:
+            log.write("framebuffer unavailable: %s\n" % exc)
+        return 3
     launch = False
     try:
         draw(screen, s, sel, disc, pad, page)
