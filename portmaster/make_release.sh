@@ -73,7 +73,8 @@ with zipfile.ZipFile(name + ".zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) 
     for root, _dirs, files in os.walk(name):
         for f in sorted(files):
             path = os.path.join(root, f)
-            info = zipfile.ZipInfo.from_file(path, path)
+            arcname = os.path.relpath(path, name)
+            info = zipfile.ZipInfo.from_file(path, arcname)
             info.compress_type = zipfile.ZIP_DEFLATED
             with open(path, "rb") as src:
                 z.writestr(info, src.read())
@@ -88,10 +89,10 @@ import zipfile
 
 z = zipfile.ZipFile(sys.argv[1])
 names = z.namelist()
-with z.open("dw3/port.json") as f:
+with z.open("port.json") as f:
     port = json.load(f)
-missing = [n for n in ("dw3/Digimon World 3.sh", "dw3/port.json", "dw3/README.md", "dw3/gameinfo.xml",
-                       "dw3/screenshot.png", "dw3/dw3/dw2003", "dw3/dw3/dw3.sh", "dw3/dw3/dw3-menu.py")
+missing = [n for n in ("Digimon World 3.sh", "port.json", "README.md", "gameinfo.xml",
+                       "screenshot.png", "dw3/dw2003", "dw3/dw3.sh", "dw3/dw3-menu.py")
            if n not in names]
 if missing:
     sys.exit("missing from the zip: " + ", ".join(missing))
