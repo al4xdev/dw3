@@ -53,8 +53,7 @@ buff on (the first Digimon to evolve in a battle gets +100 to every stat for the
 **The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
 points a battle before the fifth form-level threshold and 50 after it - that ceiling is what makes a digivolution gain one
 level per battle, and it is applied before the multiplier, so at 6x a battle still crept one level. With the mod on the
-ceiling is skipped, so a won battle can raise several form levels. `ALL FORMS' XP` goes further: only the forms that
-fought earn experience in the original, which leaves the other digivolutions at the lab for ever. Each form keeps its own
+ceiling is skipped, so a won battle can raise several form levels. `ALL FORMS' XP` credits the three chosen forms of each party member, not a form left in the lab. Each form keeps its own
 requirement table, so nothing is free - a basic form taken to 99 in the late game is a farm the player built.
 
 ## Controls (Default PS1 Layout)

@@ -189,18 +189,11 @@ multiplies it by the option's value (in tenths, rounded down, at most 9,999,999)
   a battle can raise several form levels at once (`add_technique_exp` already loops; measured on the XF35H: form 4 -> 11
   in one won battle). It does not touch the Digimon's own experience or the TP. A very low-level Digimon in a rich battle
   can therefore jump a long way - the game's ceiling was the only limiter, and it is off while the mod is on.
-- **`all_forms`** (bool, on by default): **every** digivolution every party member owns earns the battle's form
-  experience, whether it fought or not. The game hands it only to the forms that took part
-  (`records_battle_results.members[slot].forms[]`), and its report opens the form step only for a member that earned
-  experience, so a Digimon carrying three digivolutions and using one left the other two at the lab for ever - and the
-  two members that waited got nothing at all. The number is the game's own for each Digimon (its level, and the battle's
-  share among the forms that took part), not a share divided among the party: dividing would be a rule invented here,
-  and it would punish carrying more forms. Each form keeps its own requirement table, so a basic form taken to 99 in the
-  late game is the player's farm, not a shortcut the port hands out. No ceiling on levels per battle either, by the
-  owner's call. The report shows the level-up of every **chosen** form that goes up, including one of a member that
-  waited: its row highlights and the "level up" message appears even though the form did not fight. A form outside the
-  three chosen slots still levels silently (there is no row for it). A member knocked out in the battle has its marks
-  cleared before the report, so its forms earn too - the report cannot tell it apart from one that sat out.
+- **`all_forms`** (bool, on by default): the three **chosen** forms of each party member earn the battle's form
+  experience, whether that form fought or not. Nine at most. A form left in the lab is not chosen and earns nothing:
+  it could otherwise reach 99 without a skill, because `learn_skill` only runs for a chosen slot. The number is the
+  game's own for that Digimon. A member whose panel does not open still has its chosen forms credited here, and they
+  learn one skill, the call the panel would have made.
 - **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
   stops at 9,999,999.
 
