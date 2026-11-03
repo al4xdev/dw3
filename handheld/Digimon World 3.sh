@@ -103,15 +103,28 @@ else
   echo "renderer: software (CPU part ${cpu_part:-unknown})"
 fi
 
+# pm_finish clears the TTY. It does not clear the pixels this port wrote to /dev/fb0.
+blank_fb() {
+  if [ -w /dev/fb0 ]; then
+    dd if=/dev/zero of=/dev/fb0 bs=4096 count=2048 status=none 2>/dev/null || true
+  fi
+}
+
 menu_rc=0
 if [ "$menu" = "fb" ]; then
   python3 ./dw3-menu.py > ./menu.log 2>&1
   menu_rc=$?
   if [ "$menu_rc" -eq 3 ]; then
     echo "menu: framebuffer unavailable (exit 3); continuing with settings.json" >> ./menu.log
+  elif [ "$menu_rc" -eq 2 ]; then
+    blank_fb
+    pm_finish
+    exit 0
   elif [ "$menu_rc" -ne 0 ]; then
     echo "menu failed with status $menu_rc" >> ./menu.log
     pm_show_error "The menu failed (status $menu_rc). See ports/dw3/menu.log." --title "Digimon World 3"
+    blank_fb
+    pm_finish
     exit "$menu_rc"
   fi
 else
@@ -158,5 +171,5 @@ elif [ "${DW3_DEFAULT_RENDERER:-}" = "gles" ] && [ ! -f ./settings.json ]; then
 fi
 
 ./dw2003 "$@" >> ./logs/game.log 2>&1
-
+blank_fb
 pm_finish
