@@ -17,12 +17,8 @@ directory and was a version-2 draft; it was deleted so nobody publishes the wron
 Not here, because they are the player's: `settings.json`, `pad.map`, `card1.mcd`/`card2.mcd`, `game/` (the disc) and
 `logs/`.
 
-## Publishing it
-
-`portmaster/` (next to this directory) has the metadata the release needs - `port.json`, `README.md`, `gameinfo.xml`, a
-640x480 screenshot of gameplay - and `make_release.sh`, which assembles `dist/dw3.zip` in the layout
-<https://portmaster.games/packaging.html> asks for and checks it before it is offered. A port made from a decompilation
-goes to **PortMaster-MV-New** (the multiverse repository), not PortMaster-New.
+The player page and the zip are `../portmaster/` (`README.md`, `make_release.sh`). The checklist is
+`../portmaster/PUBLISHING.md`. This file is only what lives in this folder.
 
 ## What the menu owns
 

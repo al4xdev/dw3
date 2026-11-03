@@ -268,7 +268,7 @@ card holds. `DW3_PACKAGE_DIR=... tools/build_arm.sh` puts it somewhere else.
 
 ```sh
 rsync -rt -e ssh portmaster/dw3/dw2003 root@<console>:/storage/roms/ports/dw3/
-rsync -rt -e ssh "portmaster/Digimon World 3.sh" root@<console>:"/storage/roms/ports/Digimon World 3.sh"
+rsync -rt -e ssh "portmaster/Digimon World 3.sh" root@<console>:"/storage/roms/ports_scripts/Digimon World 3.sh"
 ```
 
 The card's filesystem refuses Unix sockets, so debug sockets must live in `/tmp`.
