@@ -25,8 +25,19 @@ if ! docker image inspect "$IMAGE" &> /dev/null; then
     docker build -t "$IMAGE" -f "$TOOLS_DIR/Dockerfile.armhf" "$TOOLS_DIR"
 fi
 
+# The image has no git. The development stamp is the host commit, not a release tag.
+stamp=$(git -C "$REPO" describe --always --dirty)
+case "$stamp" in
+    v[0-9]*) PSXSTACK_VERSION=${stamp#v} ;;
+    *) PSXSTACK_VERSION=dev-$stamp ;;
+esac
+PSXSTACK_COMMIT=$(git -C "$REPO" rev-parse HEAD)
+export PSXSTACK_VERSION PSXSTACK_COMMIT
+echo "Version stamp: $PSXSTACK_VERSION ($PSXSTACK_COMMIT)"
+
 echo "Configuring and compiling with CMake + Ninja inside Docker..."
 docker run --rm -u "$(id -u):$(id -g)" \
+    -e PSXSTACK_VERSION -e PSXSTACK_COMMIT \
     -v "$REPO:/work" \
     -w /work \
     "$IMAGE" \
