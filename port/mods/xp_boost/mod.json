@@ -32,6 +32,9 @@
       "type": "bool", "default": false, "applies": "live" },
     { "id": "all_forms", "name": "All forms earn experience",
       "description": "Every Digivolution every party member owns earns the battle's form experience, whether it fought or not.",
+      "type": "bool", "default": true, "applies": "live" },
+    { "id": "card_boost", "name": "Card drop boost",
+      "description": "Booster packs won from a battle drop 15 packs instead of 1. Other items drop normally.",
       "type": "bool", "default": true, "applies": "live" }
   ]
 }

@@ -330,7 +330,7 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
  * rounded down, at most 9,999,999). Above 5x (the sliders' top) a value needs `manual` (mod_resolve caps it without).
  * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. `all_forms` is
  * not a multiplier: STFGTREP's report credits every owned form of every party member once, whether it fought or not. */
-enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL, XB_ALL_FORMS };
+enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL, XB_ALL_FORMS, XB_CARD_BOOST };
 static const PortModOption xb_options[] = {
     /* 20, not 10: an old game asks for it (the owner's word), and the handheld menu counts to 20 in steps of 1. */
     { .id = "exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
@@ -341,22 +341,27 @@ static const PortModOption xb_options[] = {
       .input_toggle = "manual", .applies = "live" },
     { .id = "manual", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
     { .id = "all_forms", .type = PORT_MOD_BOOL, .def = "true", .applies = "live" },
+    { .id = "card_boost", .type = PORT_MOD_BOOL, .def = "true", .applies = "live" },
 };
 static const char *const xb_names[] = { "experience", "form experience", "bits" };
 int port_mod_xp_boost;
 int port_mod_xp_boost_all_forms;
+int port_mod_xp_boost_card_boost = 1;
 static s32 xb_tenths[3];
 
 static void xb_start(struct PortMod *mod) {
     int k;
     port_mod_xp_boost = 1;
     port_mod_xp_boost_all_forms = mod->values[XB_ALL_FORMS].number != 0.0;
+    port_mod_xp_boost_card_boost = mod->values[XB_CARD_BOOST].number != 0.0;
     for (k = 0; k < 3; k++) {
         xb_tenths[k] = (s32)(mod->values[XB_EXP + k].number * 10 + 0.5);
     }
-    port_log("xp boost: experience %d.%dx, form experience %d.%dx, bits %d.%dx", (int)xb_tenths[0] / 10,
-             (int)xb_tenths[0] % 10, (int)xb_tenths[1] / 10, (int)xb_tenths[1] % 10, (int)xb_tenths[2] / 10,
-             (int)xb_tenths[2] % 10);
+    port_log("xp boost: experience %d.%dx, form experience %d.%dx, bits %d.%dx (card boost: %d)",
+             (int)xb_tenths[0] / 10, (int)xb_tenths[0] % 10,
+             (int)xb_tenths[1] / 10, (int)xb_tenths[1] % 10,
+             (int)xb_tenths[2] / 10, (int)xb_tenths[2] % 10,
+             port_mod_xp_boost_card_boost);
 }
 
 s32 port_xp_boost(s32 kind, s32 amount) {

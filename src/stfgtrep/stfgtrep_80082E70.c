@@ -909,12 +909,20 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         break;
     case 21:
         if (records_battle_results.item != 0) {
+            s32 item_gain = 1;
+#ifdef PC_PORT
+            if (port_mod_xp_boost != 0 && port_mod_xp_boost_card_boost != 0 &&
+                (records_battle_results.item == 91 ||
+                 (records_battle_results.item >= 361 && records_battle_results.item <= 394))) {
+                item_gain = 15;
+            }
+#endif
             data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 11);
             data->messages->set_line_text(data->messages, cdload_module.files.get_file(records_language + 0x6A), records_battle_results.item, 1);
             data->messages->set_speed(data->messages, 6);
             obj->base.step = 25;
             obj->base.substep = 1;
-            gamestate_data.items[records_battle_results.item]++;
+            gamestate_data.items[records_battle_results.item] += item_gain;
             if (gamestate_data.items[records_battle_results.item] >= 100) {
                 gamestate_data.items[records_battle_results.item] = 99;
             }
