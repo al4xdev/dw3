@@ -50,7 +50,7 @@ cp "$BUILD_DIR/dw2003" "$PACKAGE_DIR/dw3/dw2003"
 chmod +x "$PACKAGE_DIR/dw3/dw2003"
 
 # Retired files: the package is a mirror, so a file that left handheld/ has to leave it too (the copy loop only adds).
-rm -f "$PACKAGE_DIR/dw3/dw3-tui.sh"   # the terminal menu, replaced by nothing: the console has one UI, dw3-menu.py
+rm -f "$PACKAGE_DIR/dw3/dw3-tui.sh" "$PACKAGE_DIR/dw3/dw3.sh" "$PACKAGE_DIR/dw3/detect-env.sh"
 
 cp "$REPO/handheld/Digimon World 3.sh" "$PACKAGE_DIR/Digimon World 3.sh"
 chmod +x "$PACKAGE_DIR/Digimon World 3.sh"
@@ -64,7 +64,7 @@ for f in "$REPO"/handheld/*; do
     cp "$f" "$PACKAGE_DIR/dw3/"
 done
 chmod -x "$PACKAGE_DIR/dw3/README.txt" 2>/dev/null || true
-chmod +x "$PACKAGE_DIR/dw3/dw3.sh" "$PACKAGE_DIR/dw3/dw3-menu.py" 2>/dev/null || true
+chmod +x "$PACKAGE_DIR/dw3/dw3-menu.py" 2>/dev/null || true
 chmod +x "$PACKAGE_DIR/dw3/ledd.py" 2>/dev/null || true
 
 if [ -d "$BUILD_DIR/mods" ]; then

@@ -76,16 +76,7 @@ mkdir -p "$LOG_DIR"
   fi
   ls /sys/class/devfreq 2>/dev/null || echo "no /sys/class/devfreq"
   echo "--- armhf loader / ldd ---"
-  if [ -e /lib/ld-linux-armhf.so.3 ]; then
-    echo "/lib/ld-linux-armhf.so.3: present"
-  else
-    echo "/lib/ld-linux-armhf.so.3: absent"
-  fi
-  if [ -d /lib/arm-linux-gnueabihf ]; then
-    echo "/lib/arm-linux-gnueabihf: present"
-  else
-    echo "/lib/arm-linux-gnueabihf: absent"
-  fi
+  echo "DEVICE_HAS_ARMHF=${DEVICE_HAS_ARMHF:-}"
   if [ ! -f "$BIN" ]; then
     echo "binary missing: $BIN"
   elif ! command -v ldd >/dev/null 2>&1; then

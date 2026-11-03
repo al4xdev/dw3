@@ -157,10 +157,10 @@ off; catch-up and knocked-out members are not reached by a scripted run.
 
 The game's commentary is one switch, `debug.logs` in `settings.json`: `off` (the default) prints nothing, `soft` prints
 the startup lines and the events, `heavy` adds the periodic measurements (the per-second `present:` line among them).
-`handheld/dw3.sh` reads the value and passes it as `DW3_LOG`; the runtime's `port_log` honours it (`runtime/main.c`,
+`handheld/Digimon World 3.sh` reads the value and passes it as `DW3_LOG`; the runtime's `port_log` honours it (`runtime/main.c`,
 `port_log_verbose()` for the periodic lines). **With the logs off the game log stays empty** - the file is still created,
 because the launcher appends to it - and the crash report keeps its last lines either way, so a report is possible
-without them. The separate one-off meters (`DW3_PRESENT_LOG`, `DW3_GPU_LOG`, `DW3_PHASE`) are commented in `dw3.sh` and
+without them. The separate one-off meters (`DW3_PRESENT_LOG`, `DW3_GPU_LOG`, `DW3_PHASE`) are commented in that launcher and
 are not the same thing: they write their own files and some cost real frames.
 
 `SAVE LOGS`, in the same group, writes `dw3-logs-<date>.zip` beside the port: `logs/*`, `crash-*.txt`, `settings.json`,

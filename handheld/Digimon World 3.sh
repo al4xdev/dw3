@@ -1,33 +1,30 @@
 #!/bin/bash
-# PortMaster Launcher Script for Digimon World 2003 / Digimon World 3 Handheld Port
-# Architecture: armhf (32-bit ARM Linux userspace) for R36S / RK3326
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
-if [ -d "/opt/system/Tools/PortMaster" ]; then
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
-elif [ -d "/opt/tools/PortMaster" ]; then
+elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
-elif [ -d "$XDG_DATA_HOME/PortMaster" ]; then
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
   controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-# The port is a 32-bit ARM build only (PortMaster's convention: this sets the CFW's 32-bit environment variables).
+source $controlfolder/control.txt
 export PORT_32BIT="Y"
-
-source $controlfolder/control.txt 2>/dev/null || true
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
-GAMEDIR="/$directory/ports/dw3"
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+GAMEDIR=/$directory/ports/dw3
+BINARY=dw2003
 
 cd "$GAMEDIR"
 
-# Check for required game disc (.bin / .cue)
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# The player's disc. This list is the game's; pm has no finder.
 DISC=""
 for candidate in \
   "$GAMEDIR/game/dw3.cue" \
@@ -50,59 +47,116 @@ fi
 
 if [ -z "$DISC" ]; then
   echo "Missing Digimon World 2003 disc image (.bin/.cue) in $GAMEDIR/game/"
-  if command -v pm_show_error >/dev/null 2>&1; then
-    pm_show_error "Please copy your Digimon World 2003 .bin/.cue into ports/dw3/game/" --title "Digimon World 3"
-  elif [ -f "$controlfolder/harfbuzz_run" ]; then
-    $ESUDO $controlfolder/harfbuzz_run "Digimon World 3" "Please copy your Digimon World 2003 .bin/.cue into ports/dw3/game/"
-  fi
+  pm_show_error "Please copy your Digimon World 2003 .bin/.cue into ports/dw3/game/" --title "Digimon World 3"
   exit 1
 fi
 
-# Display, audio and renderer come from detect-env.sh (framebuffer on the reference handheld,
-# SDL/Wayland when that is what the CFW actually has). Overrides: DW3_FORCE_VIDEO, DW3_FORCE_RENDERER.
-# shellcheck disable=SC1091
-. "$GAMEDIR/detect-env.sh"
-sh "$GAMEDIR/probe.sh" || true
-detect_env
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# The CFW's own controller database, so the pad is the same gamepad on every device (the port reads it through SDL's
-# gamecontroller API and maps it in its own menu).
-[ -n "${sdl_controllerconfig:-}" ] && export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-# A 32-bit build on a 64-bit CFW needs the CFW's own 32-bit libraries first; harmless when there are none.
-export LD_LIBRARY_PATH="$GAMEDIR/dw3${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fb=0
+if [ -r /dev/fb0 ] && [ -w /dev/fb0 ]; then
+  fb=1
+fi
+if [ -n "${DW3_FORCE_VIDEO:-}" ]; then
+  export DW3_VIDEO="$DW3_FORCE_VIDEO"
+  if [ "$DW3_VIDEO" = "fbdev" ]; then
+    menu=fb
+  else
+    menu=skip
+  fi
+elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
+  # A dummy fb0 still opens. sdl2 keeps the binary off that present.
+  export DW3_VIDEO=sdl2
+  menu=skip
+elif [ "$fb" = 1 ]; then
+  export DW3_VIDEO=fbdev
+  menu=fb
+else
+  export DW3_VIDEO=sdl2
+  menu=skip
+fi
 
-BIN="$GAMEDIR/dw2003"
+BIN="$GAMEDIR/$BINARY"
 if command -v ldd >/dev/null 2>&1; then
   missing="$(ldd "$BIN" 2>&1 | grep 'not found' || true)"
   if [ -n "$missing" ]; then
     echo "BLOCKER: 32-bit libraries missing:"
     echo "$missing"
-    if command -v pm_show_error >/dev/null 2>&1; then
-      pm_show_error "This 32-bit build is missing ARM libraries. See ports/dw3/log.txt." --title "Digimon World 3"
-    fi
+    pm_show_error "This 32-bit build is missing ARM libraries. See ports/dw3/log.txt." --title "Digimon World 3"
     exit 1
   fi
 else
-  echo "ldd unavailable; library check skipped (TODO: validate)"
+  echo "ldd unavailable; library check skipped"
 fi
 
-# What PortMaster's platform helpers want to know about the binary before it runs (a no-op on CFWs without them).
-command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$BIN" >/dev/null 2>&1
+mkdir -p ./logs
 
-pm_done() {
-  if [ "${DW3_PM_DONE:-0}" = 1 ]; then
-    return 0
-  fi
-  DW3_PM_DONE=1
-  if command -v pm_finish >/dev/null 2>&1; then
-    pm_finish
-  fi
-}
-trap pm_done EXIT INT TERM
-
-# Gamepad menu on the panel, then the game. No keyboard on this handheld.
-if [ -x "$GAMEDIR/dw3.sh" ]; then
-  "$GAMEDIR/dw3.sh"
+# software is the binary default. gles only on the same chip (Cortex-A35, CPU part 0xd04).
+cpu_part=""
+if [ -r /proc/cpuinfo ]; then
+  cpu_part=$(awk -F': ' '/CPU part/ { gsub(/^[ \t]+/, "", $2); print $2; exit }' /proc/cpuinfo 2>/dev/null || true)
+fi
+if [ "$cpu_part" = "0xd04" ]; then
+  export DW3_DEFAULT_RENDERER=gles
+  echo "renderer: gles (CPU part 0xd04)"
 else
-  "$BIN" --disc "$DISC" --window --fullscreen --watchdog 0
+  echo "renderer: software (CPU part ${cpu_part:-unknown})"
 fi
+
+menu_rc=0
+if [ "$menu" = "fb" ]; then
+  python3 ./dw3-menu.py > ./menu.log 2>&1
+  menu_rc=$?
+  if [ "$menu_rc" -eq 3 ]; then
+    echo "menu: framebuffer unavailable (exit 3); continuing with settings.json" >> ./menu.log
+  elif [ "$menu_rc" -ne 0 ]; then
+    echo "menu failed with status $menu_rc" >> ./menu.log
+    pm_show_error "The menu failed (status $menu_rc). See ports/dw3/menu.log." --title "Digimon World 3"
+    exit "$menu_rc"
+  fi
+else
+  echo "menu skipped: $menu" >> ./menu.log
+fi
+
+# Unset DW3_LOG is soft, not off. The menu's debug.logs is the player's choice.
+DW3_LOG_LEVEL=$(python3 -c 'import json;print(json.load(open("settings.json")).get("debug",{}).get("logs","off"))' 2>/dev/null || echo off)
+case "$DW3_LOG_LEVEL" in
+  soft|heavy) export DW3_LOG="$DW3_LOG_LEVEL" ;;
+  *) export DW3_LOG=off ;;
+esac
+
+# Tester diagnostic. Off unless the player asked for heavy logs.
+if [ "$DW3_LOG_LEVEL" = "heavy" ]; then
+  sh "$GAMEDIR/probe.sh" || true
+fi
+
+# SDL2 build ignores settings.json's pad map unless this is set.
+export DW3_PAD_REMAP=1
+
+# One-off meters. Off: the GPU log costs 1-2 ms a battle frame, DW3_PHASE about 23 ms.
+#export DW3_PRESENT_LOG=./logs/present.log
+#export DW3_GPU_LOG=./logs/gpu.log
+#export DW3_PHASE=./logs/phase.log
+
+# Kill switch only. The game reads the pad; no .ini. Backgrounded, or this script blocks.
+$GPTOKEYB2 "$BINARY" > /dev/null 2>&1 &
+
+pm_platform_helper "$GAMEDIR/$BINARY"
+
+set -- --window --fullscreen --watchdog 0
+if [ -f ./settings.json ]; then
+  set -- --config ./settings.json "$@"
+fi
+# Menu exit 0 is the only path that wrote disc.path. Its name order differs.
+if [ "$menu" != "fb" ] || [ "$menu_rc" != 0 ]; then
+  set -- --disc "$DISC" "$@"
+fi
+if [ -n "${DW3_FORCE_RENDERER:-}" ]; then
+  set -- "$@" --renderer "$DW3_FORCE_RENDERER"
+elif [ "${DW3_DEFAULT_RENDERER:-}" = "gles" ] && [ ! -f ./settings.json ]; then
+  set -- "$@" --renderer gles
+fi
+
+./dw2003 "$@" >> ./logs/game.log 2>&1
+
+pm_finish

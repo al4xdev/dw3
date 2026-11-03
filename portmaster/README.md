@@ -14,8 +14,9 @@ If the game does not start after an update, the two files worth deleting are `se
 `ports/dw3/` (they are rebuilt on the next launch).
 
 On a handheld with no writable `/dev/fb0`, or where Wayland is the display (ROCKNIX on some devices), the
-framebuffer menu is skipped. Mods and the renderer are then whatever is already in `ports/dw3/settings.json`
-(`"video": { "renderer": "software" }` or `"gles"`). `DW3_FORCE_RENDERER` and `DW3_FORCE_VIDEO` override detection.
+framebuffer menu is skipped. The renderer default is software. The launcher passes GLES only when the CPU
+part is `0xd04` (the same chip as this handheld) and `settings.json` has not already chosen. `DW3_FORCE_RENDERER`
+and `DW3_FORCE_VIDEO` still override.
 
 ## Notes
 

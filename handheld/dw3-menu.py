@@ -217,11 +217,11 @@ def write_settings(s, disc):
     try:
         import json
 
-        renderer = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+        renderer = json.load(open(CFG)).get("video", {}).get("renderer", renderer_default())
     except (OSError, ValueError):
-        renderer = "gles"
+        renderer = renderer_default()
     if renderer not in ("gles", "software", "gpu"):
-        renderer = "gles"
+        renderer = renderer_default()
     xb_on = bool(s["xp"] or s.get("form_xp", 1))
     xb_exp = s["xp_mul"] if s["xp"] else 1
     xb_bits = s["xp_mul"] if s["xp"] else 1
@@ -576,17 +576,23 @@ def led_state():
     return _led_seen[1]
 
 
+def renderer_default():
+    """software unless the launcher saw this chip and set DW3_DEFAULT_RENDERER=gles."""
+    name = os.environ.get("DW3_DEFAULT_RENDERER", "software")
+    return name if name in ("gles", "software", "gpu") else "software"
+
+
 def renderer_get():
-    """Which renderer settings.json asks for. gles is the default (that is what the file ships with); software is the one
-    a player picks here for the 2D-heavy sessions, where it measures faster than the GPU (57.7 against 43.5 fps on the
-    scripted boot, because a light frame pays the same ~3.2 ms present either way)."""
+    """Which renderer settings.json asks for. software is the default; gles only when the launcher
+    set it for this chip, or the player already chose it. software is faster in 2D-heavy sessions
+    (57.7 against 43.5 fps on the scripted boot: a light frame pays the same ~3.2 ms present)."""
     import json
 
     try:
-        name = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+        name = json.load(open(CFG)).get("video", {}).get("renderer", renderer_default())
     except (OSError, ValueError):
-        return "gles"
-    return name if name in ("gles", "software", "gpu") else "gles"
+        return renderer_default()
+    return name if name in ("gles", "software", "gpu") else renderer_default()
 
 
 def renderer_set(name):
@@ -755,7 +761,7 @@ def save_logs():
         try:
             import json
 
-            renderer = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+            renderer = json.load(open(CFG)).get("video", {}).get("renderer", renderer_default())
         except (OSError, ValueError):
             renderer = "?"
         note = "renderer: %s\nsettings: %s\n" % (renderer, CFG)

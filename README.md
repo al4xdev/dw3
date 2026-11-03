@@ -118,7 +118,7 @@ such call sites, and the rasteriser divides once per span row.
 that read at 6–15 cycles (the counter lives in the 24 MHz clock domain and is synchronised into the core). At ~8000
 spans per battle frame that is **1–2 ms of the 20 ms budget**, plus a write to the SD card every second.
 
-**Solution.** The meters are off in `dw3.sh` (left as commented lines); a measurement run turns them on by hand. Inside
+**Solution.** The meters are off in `handheld/Digimon World 3.sh` (left as commented lines); a measurement run turns them on by hand. Inside
 the meter, the counters accumulate raw cycles and convert once per second, and the order-list walk uses the same
 counter instead of two `clock_gettime` calls per list.
 
@@ -232,13 +232,11 @@ This is as important as what was done — each of these looked like a win and is
 
 ## Running it
 
-EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, which calls
-`/storage/roms/ports/dw3/dw3.sh`. That script shows the gamepad menu and then runs the game on `/dev/fb0`.
+EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`. That script shows the gamepad menu and then runs the game on `/dev/fb0`.
 
 ```
 /storage/roms/ports/dw3/
   dw2003          the port binary (ARM 32-bit)
-  dw3.sh          menu + game            (from handheld/)
   dw3-menu.py     the framebuffer menu    (from handheld/)
   ledd.py         the LED bar's daemon      (from handheld/)
   README.txt      what each file is, on the device
@@ -270,7 +268,7 @@ card holds. `DW3_PACKAGE_DIR=... tools/build_arm.sh` puts it somewhere else.
 
 ```sh
 rsync -rt -e ssh portmaster/dw3/dw2003 root@<console>:/storage/roms/ports/dw3/
-rsync -rt -e ssh portmaster/dw3/dw3.sh  root@<console>:/storage/roms/ports/dw3/
+rsync -rt -e ssh "portmaster/Digimon World 3.sh" root@<console>:"/storage/roms/ports/Digimon World 3.sh"
 ```
 
 The card's filesystem refuses Unix sockets, so debug sockets must live in `/tmp`.
@@ -314,7 +312,7 @@ On the map, the `CONFIRM` button on a visited area starts a fast travel.
 
 ## Measuring performance
 
-The meters cost real frames, so `dw3.sh` leaves them off. To measure one run, uncomment the two exports (or set them by
+The meters cost real frames, so `handheld/Digimon World 3.sh` leaves them off. To measure one run, uncomment the two exports (or set them by
 hand) and read `logs/gpu.log` while the scene you care about is on screen. One line a second:
 
 ```
