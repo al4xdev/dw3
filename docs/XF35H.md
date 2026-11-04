@@ -3,19 +3,14 @@
 Everything here is this one console - the XF35H (RK3326, 640x480) this port was tuned on and whose LED bar the `led_bar`
 mod drives. Nothing in this document generalises to another device.
 
-The second machine this port runs on: hostname `alex_retro`, EmuELEC 4.7-Nexus nightly 20250820, board
-`Rockchip rk3326 evb lpddr3 v12 board for linux`, kernel `5.10.160`, aarch64, panel on DSI-1. Access: `ssh
-root@<ip>` (dropbear, port 22, password `emuelec`). The address is DHCP — it moved from `192.168.0.103` to
-`192.168.0.106` between sessions; reserve it before scripting anything against it.
+The reference console this port was tuned on: EmuELEC 4.7-Nexus nightly, board
+`Rockchip rk3326 evb lpddr3 v12 board for linux`, kernel `5.10.160`, aarch64, panel on DSI-1.
+Access is standard dropbear ssh (`ssh root@<device-ip>`, port 22, default firmware credentials).
 
-The sshd is not part of the image's boot: it comes from a PortMaster port (`/storage/roms/ports_scripts/
-server_ssh_enable.sh`) started from inside `emustation.service`'s cgroup. It survives `systemctl stop
-emustation` (the unit is `KillMode=process`) but a reboot does not bring it back on its own — physical access
-is the fallback.
-
-Everything below was established by read-only inspection (sysfs/`/proc` reads, `cat` of the script and of the
-binary) plus two reversible writes: the backlight and `systemctl stop emustation`. Nothing else on the
-machine was modified.
+The sshd is not part of the image's stock boot: it comes from a PortMaster helper script
+(`server_ssh_enable.sh`) started from inside `emustation.service`'s cgroup. It survives
+`systemctl stop emustation` (the unit is `KillMode=process`), but a reboot does not bring it
+back automatically — physical access to the device menu is the fallback.
 
 ## Blanking the panel (backlight)
 
@@ -155,12 +150,8 @@ bar"): one message per change of reading.
   captured (`cat -v /dev/ttyS2` while ES switches mode, or `strace -e write /usr/bin/mcu_led`).
 - The `times` argument: the binary repeats the byte (1..9) and whether the MCU does anything with a repeat is untested.
 
-## Reproducing the inspection
+## Inspecting the vendor binary
 
-```fish
-sshpass -p emuelec ssh root@192.168.0.106 'cat /usr/bin/mcu_led_ctrl.sh' > .dumps/emuelec/mcu_led_ctrl.sh
-sshpass -p emuelec ssh root@192.168.0.106 'cat /usr/bin/mcu_led'        > .dumps/emuelec/mcu_led.bin
-cd .dumps/emuelec && uv run --with capstone python mcu_dis.py   # writes mcu_led.dis and mcu_led.rodata.txt
-```
-
-`mcu_dis.py` needs `capstone` (the host's binutils has no aarch64 support).
+The vendor scripts and binaries on the device are `/usr/bin/mcu_led_ctrl.sh` and `/usr/bin/mcu_led`.
+To inspect them offline: copy them via ssh, then disassemble `mcu_led` with `capstone` (the host
+binutils may lack aarch64 support).

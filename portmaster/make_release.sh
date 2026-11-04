@@ -8,8 +8,10 @@
 #     README.md               the wiki page's notes (this directory)
 #     gameinfo.xml            EmulationStation's entry (this directory)
 #     screenshot.png          640x480, gameplay (this directory; capture it on the device)
-#     dw3/                    the port: the binary, the menu and the scripts (handheld/)
-#       licenses/             what the port borrows and its licences
+#     cover.png               the box art (this directory; optional)
+#     dw3/                    the port: the binary plus everything in handheld/ except the launcher and README.md
+#                             (dw3-menu.py, ledd.py, probe.sh, README.txt)
+#       licenses/             what the port borrows and its licences (portmaster/licenses/)
 #
 # It refuses to build when one of those is missing, when the port directory's name differs from the port's, or when the
 # binary is not the ARM 32-bit build the package ships. Nothing of the game's data is ever included: the user supplies
@@ -106,4 +108,4 @@ PY
 
 md5sum "$DIST/$NAME.zip"
 du -h "$DIST/$NAME.zip"
-echo "=== $NAME ready: publish it as ports/$NAME/ in PortMaster-MV-New (a decomp port) — see README.md"
+echo "=== $NAME ready: publish it as ports/$NAME/ in PortMaster-MV-New (a decomp port) — see portmaster/PUBLISHING.md"

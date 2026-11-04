@@ -1,7 +1,7 @@
-# 14 — The 2D artefacts: what the owner saw, what the check said
+# 14 — The 2D artefacts: what the reporter saw, what the check said
 
-The owner played with `--renderer gles` and reported broken dialogue text and white boxes in 2D. The question that
-matters for the method: could the VRAM check have found it without them playing? It did, and in one line.
+A user played with `--renderer gles` and reported broken dialogue text and white boxes in 2D. The question that
+matters for the method: could the VRAM check have found it without anyone playing? It did, and in one line.
 
 ## What the check said
 

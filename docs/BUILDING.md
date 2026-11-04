@@ -10,7 +10,10 @@ Contributors: read [`CONTRIBUTING.md`](CONTRIBUTING.md) too.
 
 Linux with git, Python 3.10+, make, gcc/g++, cmake, ninja, curl, xz, unzip (and `dpkg-deb` on hosts with glibc older
 than 2.43, for the emulator's runtime sysroot). Everything else is built or unpacked into `tools/` by the setup script,
-with no root access needed. You need the same disc image as for playing ([the README](../README.md#provide-your-disc-image)).
+with no root access needed.
+
+You need your own disc image: the unpatched EU disc (SLES-03936) as a raw `.bin` with its `.cue`. The repository
+contains no game data.
 
 ## Setup
 
@@ -19,18 +22,19 @@ cp tools/local.env.example tools/local.env   # set DW3_DISC_BIN to your disc ima
 scripts/setup.sh                             # mipsel binutils, mkpsxiso, Python venv, old GCCs, objdiff, decomp tools; links the disc into iso/
 ```
 
-**The psxstack submodule.** The PC port's runtime, Psy-Q shim and launcher are
-[psxstack](https://github.com/gascarcella/psxstack), pinned as the `psxstack` submodule: clone with `--recursive`, or
-run `git submodule update --init psxstack` (until psxstack is public, that needs access to it; the PS1 build needs no
-submodule). `scripts/worktree_init.sh` does it in a worktree.
+**The psxstack submodule.** The PC port's runtime, Psy-Q shim and launcher live in the `psxstack` submodule (URL and
+branch in `.gitmodules`), pinned by commit. Clone with `--recursive`, or run `git submodule update --init psxstack`.
+The PS1 build (extract and build below) needs no submodule.
 
 **Git worktrees.** A worktree has only tracked files. Run `scripts/worktree_init.sh` in a new worktree: it links the
 main checkout's built tools and `tools/local.env`, links the disc and extracts it, and checks the submodule out (about
-a second, no rebuild). `scripts/setup.sh` always installs tools into the main checkout and links them into worktrees.
+a second, no rebuild). `scripts/setup.sh` always installs tools into the main checkout and links them into worktrees,
+so changing a pinned tool version affects every worktree.
 
 **Optional data checkout.** Maintainers may keep a separate, private checkout (`DW3_GAMEDATA` in `tools/local.env`,
 default `../dw2003-gamedata`; `scripts/gamedata_dir.sh`) from which `setup.sh gamedata` and `setup.sh redux` take
-their inputs when no disc or download is available (cloud sessions, CI). Nothing in this repository depends on it.
+their inputs on machines with no disc or no download access, such as CI. Nothing in this repository depends on it, and
+nothing from it may be copied into the repository.
 
 ## Extract and build
 
@@ -40,6 +44,7 @@ scripts/rebuild_iso.sh      # rebuild build/dw2003.bin and check it is bit-ident
 scripts/build.sh            # split with splat, build with ninja, check every SHA-1 against config/*.sha1
 scripts/build.sh --check    # the same from scratch (deletes asm/ and build/ first)
 scripts/check_toolchain.sh  # smoke test of the compilers and diff tools
+tools/venv/bin/python tools/progress.py --readme   # recount the matched functions into docs/PROGRESS.md
 ```
 
 Outputs: `build/SLES_039.36` and every overlay (`build/*.PRO`), each checked byte-identical against the original.
@@ -63,12 +68,15 @@ pad scripts from boot with hashes at checkpoints, and save **round trips**. The 
 
 ```sh
 scripts/setup.sh sdl3 imgui
-cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl
+cmake -S port -B build/port-sdl -G Ninja -DPSXSTACK_SDL=ON && cmake --build build/port-sdl
 build/port-sdl/dw2003 --disc iso/dw2003.cue --window                 # the game in a window
 cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON=$PWD/port/game/game.json -DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools && cmake --build build/launcher
 build/launcher/dw2003-launcher                                        # the launcher
 scripts/setup.sh imgui sdl3-desktop appimage && scripts/package_appimage.sh --test   # the release AppImage
 ```
 
-See [`port/README.md`](../port/README.md), psxstack's `docs/RUNTIME.md` and `launcher/README.md`, and
-[`docs/RELEASE.md`](RELEASE.md).
+Without `-DPSXSTACK_SDL=ON` the port builds headless, which is what the port tests run. The Windows cross-build is
+`scripts/build_windows.sh` (`scripts/setup.sh llvm-mingw sdl3-windows` first).
+
+See [`port/README.md`](../port/README.md), `psxstack/docs/RUNTIME.md`, `psxstack/launcher/README.md` and
+[`docs/RELEASE.md`](RELEASE.md) for the packages.

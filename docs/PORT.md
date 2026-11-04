@@ -1,6 +1,6 @@
 # The PC port
 
-How this game runs as a native program on [psxstack](https://github.com/gascarcella/psxstack): what is this game's
+How this game runs as a native program on [psxstack](../psxstack): what is this game's
 (the hooks in its C, the adapter, the build inputs, the tests) and where the rest is. The architecture of the port
 runtime, the memory arena, the overlays, the pump, the debug channel, the Psy-Q shim, rendering, sound and the crash
 report are psxstack's `docs/PORT.md`; building and running the binary, its options, the per-frame log and the record
@@ -12,7 +12,7 @@ case for a GPU backend - and what the device answered - is in `docs/gpu/`.
 - The game's C (`src/`, all 388 units) is compiled for the host with `-DPC_PORT -DNON_MATCHING` and linked with
   psxstack's runtime, this game's adapter (`port/game/`) and psxstack's Psy-Q shim into one 64-bit executable,
   `dw2003`, by `psxstack_add_game()` (`port/CMakeLists.txt`).
-- psxstack is the sibling clone linked at `psxstack/` (`scripts/worktree_init.sh`), the submodule from phase 4 on.
+- psxstack is a git submodule at `psxstack/` (`.gitmodules`; `scripts/worktree_init.sh` checks it out in a worktree).
   It holds no fact about this game: everything it needs comes from `port/game/game.json` (the description) and the
   files `tools/port_inputs.py` writes at configure time (below).
 - No emulator is linked and no Sony code is used: the game code runs natively, and the PS1 hardware the game reaches
@@ -30,20 +30,19 @@ case for a GPU backend - and what the device answered - is in `docs/gpu/`.
 | `port/CMakeLists.txt` | The port's CMake project: runs `tools/port_inputs.py`, then `psxstack_add_game(dw2003 ...)`; builds out of tree into `build/port*/` |
 | `port/game/game.json` | The game's description (identity, the EU disc, the rate, the two slots, the heap, the BIOS stand-in), generated into `psxstack_game_gen.h` at configure time (psxstack's `tools/game_gen.py`): the runtime's only source of game facts |
 | `port/game/state.c`, `game.c` | The adapter (psxstack's `include/psxstack/game.h`): the probes (`game_state_*`), the checkpoint image, `game_state_read`/`game_state_host` (the layout-identical ranges and the field tables), `game_apply_rate` (the 60 Hz mode) |
-| `port/game/game_mods.c`, `battle_scan.c` | The seven mods that change the game (`PortMod` records for psxstack's engine), the battle scripts' scanner |
+| `port/game/game_mods.c`, `battle_scan.c` | The mods that change the game (`PortMod` records for psxstack's engine), the battle scripts' scanner |
 | `port/game/asmdata.c` | Weak stand-ins for the data the matching build keeps in asm, in FIELDSTG's section |
 | `port/mods/` | The game's mods' manifests (psxstack's `mods/fast_forward` joins them beside the binary) |
 | `tools/port_inputs.py` | The build inputs psxstack takes: the units, the overlays (slot, file ID, symbol file), the known tag sites, the volatile ranges |
 | `tools/port_inventory.py` | psxstack's inventory configured for this tree (`counts`, `probe`, `link`) plus this game's `structs` and `object-sizes` |
 | `tools/mcp_game.py`, `.mcp.json` | The debug tools' configuration: the MCP server's arguments, the Python module the tests use |
-| `psxstack/` | The stack (untracked here: the sibling clone, linked by `scripts/worktree_init.sh`; the submodule from phase 4) |
+| `psxstack/` | The stack, a git submodule (`.gitmodules`) |
 
 ## Compiling the game C for the host
 The flags, the override headers and the host-compile gate are psxstack's (`docs/PORT.md` "Compiling the game C for
 the host"). This game's part:
-- **`INCLUDE_ASM`** is empty on the host. No game function is left in asm (the last 8 holdouts matched on
-  2026-10-07), so the port compiles the same matching C as the PS1 build. `tools/hacks.py --check` keeps it so (no
-  `INCLUDE_ASM` or `NON_MATCHING` in game code).
+- **`INCLUDE_ASM`** is empty on the host. No game function is left in asm, so the port compiles the same matching C
+  as the PS1 build. `tools/hacks.py --check` keeps it so (no `INCLUDE_ASM` or `NON_MATCHING` in game code).
 - **FAKE matches** (`grep -rn "FAKE:" src`) are valid C and compile as they are.
 - **`gte_*` macros** (`include/psyq/gtemac.h`) are translated onto the software GTE at configure time (`GTEMAC`).
 - **The gate:** `tools/port_inventory.py probe` and `link` (in `scripts/test.sh`, CI). The game's remaining host
@@ -63,7 +62,7 @@ needs that path). `tier` is a slot's 1-based index in `port/game/game.json`'s `m
 | `PLATFORM_WAIT()` | The body of the 7 busy-waits that only an interrupt can end (`gfx_end_frame`, `cdload`, `main` and STDWTITL's `CdControl` loops, FIGHTSTG's `IsIdleGPU`) | `port_wait()`: runs the pending vsync/CD/GPU "interrupts" |
 | `PLATFORM_HALT()` | FIELDSTG's deliberate endless loop (no stage for the map) | `port_halt()`: reports the place and exits |
 | `PORT_SCRATCHPAD_STACK_ENTER/LEAVE` | `heap_run_object`'s switch to a 1 KB stack in the scratchpad (the only raw `$sp` asm) | Nothing: the normal stack |
-| `OVERLAY_COPY(tier, file, dst, src, size)` | The two overlay `memcpy`s (`overlay_load_stage`, `overlay_load_file`) | `port_overlay_load()` (see "Overlays") |
+| `OVERLAY_COPY(tier, file, dst, src, size)` | The two overlay `memcpy`s (`overlay_load_stage`, `overlay_load_file`) | `port_overlay_load()` (psxstack's `docs/PORT.md` "Overlays") |
 | `OVERLAY_ENTRY`, `WSTAG_ENTRY`, `SLOT_FUNC` | Functions at fixed addresses in a slot: 20 tier-1 entries, 293 WSTAG entries, 67 other slot functions | A *tag*: the PS1 address kept as an integer in a function pointer (valid in static initializers) |
 | `OVERLAY_FN(tier, fn)` | Every call through a pointer that may hold a tag | `port_overlay_resolve()`: a tag becomes the current overlay's host function; a real pointer passes unchanged |
 | `LATE_FUNC` / `LATE_CALL` | Calls by name into whatever overlay is loaded (`gamestate.c` into FIELDSTG, FIELDSTG into the loaded WSTAG) | Resolved by address through the current overlay's table |
@@ -174,33 +173,34 @@ map, party experience's knocked-out slots, XP boost's tenths). The debug channel
 ## Known limitations
 - **Coverage of the game:** the replays reach 14 of 19 tier-1 overlays and a small share of the WSTAG files; the
   debug overlays (STAGSLCT, SOUNDTST, SHOCKTST) and WFIGHTTS cannot be reached by pad input.
-- **Windows (tested under Wine and Proton, not yet on real Windows):** the Windows cross build (DECISIONS "Windows:
-  cross-built from Linux"): `scripts/setup.sh llvm-mingw sdl3-windows`, psxstack's CMake toolchain file
-  `psxstack/cmake/windows-x86_64.cmake`, `scripts/build_windows.sh [--launcher] [--test]` (the game into `build/port-win`,
-  the launcher into `build/launcher-win`, the launcher's self-test under Wine) and `tools/port_inventory.py probe
-  --target windows` (the units through llvm-mingw's clang). `dw2003.exe` links (the overlay sections need no linker
-  script, see "Overlays") and, run under Wine headless (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`),
-  replays `new_game` and `first_battle_save` with the frame log, the record and the SPU trace byte for byte equal to
-  the Linux build's. CI's `windows` job (the port area, beside `port`) does the same on ubuntu-24.04 with Ubuntu's
-  Wine 9.0: the cross-build, the launcher's self-test under Wine (`DW3_SELFTEST_VIDEO_DRIVER=offscreen`: Wine drops
-  `SDL_VIDEO_DRIVER` from the Windows environment), the crash report under Wine (`tests/port/crash.py --wine`), and
-  with the disc both replays; `build`'s probe step compiles every unit with llvm-mingw's clang too. Locally the same
-  gate is `scripts/build_windows.sh --test`, every Wine run under a timeout. The release carries a Windows zip
-  (`scripts/package_windows.sh`, `docs/RELEASE.md` "The Windows package"). Play-tested on this desktop with the
-  packaged `dw2003.exe` under Wine 11.17 and GE-Proton 10-25 (umu-run): a window at scale 2, WASAPI audio with no
-  refill or drop, 49.97 frames a second, the `new_game` route to the first field map. Nothing has run on real Windows
-  yet (the board's Windows 9); the SDL window is 64-bit only; macOS
-  is not planned. The launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
-  file with a POSIX and a Windows half, `psxstack/runtime/platform.c` (`platform.h`: paths with drive letters
-  and `\`, a replacing rename for the memory cards and the stamp cache, the per-user cache directory, positional
-  reads of the disc image, a monotonic clock and a high-resolution sleep for the pace, the watchdog as a thread), the
-  frame log, the record and the SPU trace are written in binary mode (the same bytes on both), stderr is unbuffered
-  on Windows (UCRT has no line buffering), the console reset's `setjmp` takes no SEH frame on mingw (`port_setjmp`),
-  and `--debug` is refused there (the channel is a Unix socket). The Windows executable is a GUI-subsystem program
-  (no console window behind it when the launcher starts it; stderr still reaches the launcher's pipe) with a manifest
-  (psxstack's `windows/` templates: the UTF-8 code page, long paths, per-monitor DPI). A crash writes the same report as on Linux
-  plus a minidump ("Crash report" above; `tests/port/crash.py --wine` checks both under Wine).
-- **`long` on Windows (LLP64) was audited (2026-10-07):** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
+- **Windows (run under Wine and Proton, not yet on real Windows):**
+  - *Build:* the cross build (DECISIONS "Windows: cross-built from Linux"): `scripts/setup.sh llvm-mingw
+    sdl3-windows`, psxstack's CMake toolchain file `psxstack/cmake/windows-x86_64.cmake`,
+    `scripts/build_windows.sh [--launcher] [--test]` (the game into `build/port-win`, the launcher into
+    `build/launcher-win`, the launcher's self-test under Wine) and `tools/port_inventory.py probe --target windows`
+    (the units through llvm-mingw's clang). The overlay sections need no linker script (psxstack's `docs/PORT.md`
+    "Overlays"). The SDL window is 64-bit only; macOS is not planned.
+  - *Tests:* run under Wine headless (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`), `dw2003.exe`
+    replays `new_game` and `first_battle_save` with the frame log, the record and the SPU trace byte for byte equal to
+    the Linux build's. CI's `windows` job (the port area, beside `port`) runs on ubuntu-24.04 with Ubuntu's Wine 9.0:
+    the cross-build, the launcher's self-test (`DW3_SELFTEST_VIDEO_DRIVER=offscreen`: Wine drops `SDL_VIDEO_DRIVER`
+    from the Windows environment), the crash report (`tests/port/crash.py --wine`) and, with the disc, both replays;
+    `build`'s probe step compiles every unit with llvm-mingw's clang too. Locally the same gate is
+    `scripts/build_windows.sh --test`, every Wine run under a timeout.
+  - *Package:* the release carries a Windows zip (`scripts/package_windows.sh`, `docs/RELEASE.md` "The Windows
+    package"). The packaged `dw2003.exe` has run under Wine 11.17 and GE-Proton 10-25 (umu-run): a window at scale 2,
+    WASAPI audio with no refill or drop, 49.97 frames a second, the `new_game` route to the first field map.
+  - *Runtime:* the operating-system calls are in one file with a POSIX and a Windows half,
+    `psxstack/runtime/platform.c` (`platform.h`: paths with drive letters and `\`, a replacing rename for the memory
+    cards and the stamp cache, the per-user cache directory, positional reads of the disc image, a monotonic clock and
+    a high-resolution sleep for the pace, the watchdog as a thread). The frame log, the record and the SPU trace are
+    written in binary mode (the same bytes on both), stderr is unbuffered on Windows (UCRT has no line buffering), the
+    console reset's `setjmp` takes no SEH frame on mingw (`port_setjmp`), and `--debug` is refused there (the channel
+    is a Unix socket). The executable is a GUI-subsystem program (no console window behind it when the launcher
+    starts it; stderr still reaches the launcher's pipe) with a manifest (psxstack's `windows/` templates: the UTF-8
+    code page, long paths, per-monitor DPI). A crash writes the same report as on Linux plus a minidump (psxstack's
+    `docs/PORT.md` "Crash report"; `tests/port/crash.py --wine` checks both under Wine).
+- **`long` on Windows (LLP64) was audited:** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
   structs and headers use the sized types (`s32`, `u32`, `s64`); the `long`s left are Psy-Q prototypes (`CdRead2`,
   `MemCardInit`) and counters and option values in `port/runtime` (`port_frames`, `port_max_frames`, the pace, the step
   counts), none of which holds a pointer or a byte count over 2 GB. The pointer-to-`unsigned long` casts went: the

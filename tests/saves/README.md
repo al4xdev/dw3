@@ -62,10 +62,10 @@ slots and the file's unused end, blocks 5-15) except these, each masked by name 
 | slot `playtime_frames`, `playtime[4]` | `0x2348..0x2353` | the play time (`VOLATILE_RANGES`) |
 | slot tail | `0x49C4..0x49FF` | written from a 0x2780-byte heap buffer, never cleared: stale RAM |
 
-The slot's masks are `VOLATILE_RANGES` inside the saved 0x26C4 bytes (an assertion keeps them in step). In the session-16
-run every masked field differs (frame 63 in 5 bytes, the play time in 3, the encounter timer in 1, the tails in 15 and
-60) and nothing else does. The tails are host memory in the port: its ASan build's card differs from the plain build's
-in the header tail alone (15 bytes), so the port's card is byte-identical run to run, not build to build.
+The slot's masks are `VOLATILE_RANGES` inside the saved 0x26C4 bytes (an assertion keeps them in step). In a run every
+masked field differs (frame 63 in 5 bytes, the play time in 3, the encounter timer in 1, the tails in 15 and 60) and
+nothing else does. The tails are host memory in the port: its ASan build's card differs from the plain build's in the
+header tail alone (15 bytes), so the port's card is byte-identical run to run, not build to build.
 
 ## What a failure looks like
 A corrupted byte fails with the field it is in (scratch copies of the cards):

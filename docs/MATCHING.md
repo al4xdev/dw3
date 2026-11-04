@@ -40,6 +40,9 @@ scripts/build.sh                  # splat + ninja; must end "build passed" (also
 | `tools/wstag_groups.py --funcs/--add/--propagate/--rename` | Functions shared by WSTAG stage files: match one, copy to the rest |
 | cc1 dump flags | `-dL` (loop.c hoisting decisions), `-dl`/`-dg` (local/global allocation priorities) |
 
+`tools/ext/*` (m2c, asm-differ, decomp-permuter) and `tools/bin/objdiff-cli` are not in a fresh checkout: they are
+installed by `scripts/setup.sh` (pinned clones and a checksum-pinned binary).
+
 GCC 2.8.1's sources, for reading why the compiler chose something:
 `https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-2.8.1/gcc/<file>.c` (`sched.c`, `loop.c`, `local-alloc.c`,
 `global.c`, `jump.c`, `reorg.c`, `cse.c`).
@@ -274,7 +277,7 @@ copy of a parameter), mixed spellings of one access (`(p + i)->f` and `p[i].f`),
 two jobs (a remainder then a sum, a step through a local shared with another case, one pointer over unrelated arrays, a
 counter shared by loops or set inside another loop), a pointer computed from an index instead of stepped. Before forcing
 one, check the US decomp's C for the same function (by EU address through its link maps; `docs/THIRD_PARTY.md`): its
-shapes matched the last 8 holdouts and replaced 5 FAKEs with natural or milder forms.
+shapes often replace a FAKE with a natural or milder form (`docs/THIRD_PARTY.md` has the history).
 
 ### The census: `tools/hacks.py`
 `tools/hacks.py --list` prints every workaround with file:line and function: the `FAKE:` comments, the `LOOP_BLOCK`/
@@ -283,8 +286,8 @@ macros that wrap inline asm. `--check` (CI's `check` job, `scripts/test.sh`, <1 
 without its reason, a `LOOP_BLOCK`/`LOOP_BARRIER` without a comment naming its class (or a `FAKE:`) within 12 lines
 above it, an `INCLUDE_ASM` not in the tool's `HOLDOUTS`, a `NON_MATCHING` block beside none, inline asm in game code
 (the macros only in `heap_run_object`), `#if 0`, a game code segment left as split asm, and on counts that differ from
-those `docs/STATUS.md` quotes. A change that adds or removes a workaround runs `tools/hacks.py --update` (it rewrites
-those counts) and commits the docs with it.
+those `docs/STATUS.md` quotes (STATUS owns the numbers). A change that adds or removes a workaround runs
+`tools/hacks.py --update` (it rewrites those counts) and commits the docs with it.
 
 ## Search techniques
 

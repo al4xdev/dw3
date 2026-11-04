@@ -517,7 +517,7 @@ Battle item cures (`fightstg_item_cure_*`) are small `{id, status mask, text}` t
   **The sell price is its own field**: for all 234 items with a price it is `price / 2` (truncated; 5 odd prices), 60
   unbuyable items can still be sold (price 0, sell price > 0), 108 can be neither (`src/main/records.c`). Cards are bought
   one at a time: refused below the price or when 9 are owned (`gamestate_data.cards[id] == 9`), else `add_card(id, 1)` and
-  `money -= price`. A booster pack (`stcrdshp_run_booster`, still asm) draws six cards, card i =
+  `money -= price`. A booster pack (`stcrdshp_run_booster`, `src/stcrdshp/stcrdshp_8008300C.c`) draws six cards, card i =
   `stcrdshp_booster_contents[k].choices[i][next() % 16]` (k the last entry for that item, 0 if none), adds each, and uses one pack.
 - [C] **Battle items** (`fightstg_item_update`, a message-driven object; not callable as a pure function, so not in layer 1):
   43-46 heal the acting member by `amount`, capped ("no effect" at full HP); 66-69 clear status bits 1/2/4/63 (poison,
@@ -529,21 +529,21 @@ Battle item cures (`fightstg_item_cure_*`) are small `{id, status mask, text}` t
   element at 0x7F; 85 Crimson Cable drains 1/5 of the enemy's max HP into the user (capped; blocked by `records_state.blocked[5]`); 86 Chaos Wave
   confuses the enemy on an odd draw, then the user too one draw in four; 87 Charm Gas raises the enemy's Power by 30% and
   halves its Guard; 88 Cursed Puppet lowers its Power or Guard (`obj->lowered`, set in `fightstg_item_run_script`); 89 Spider Web lowers its Boost by `amount / 128`; 90 TNT Ball deals technique 0x89's special damage.
-  The bag loses one after the effect. A replay through a battle that uses items is the place to pin these.
+  The bag loses one after the effect.
 Code map: `records_get_item`, `records_is_item_category`, `gamestate_change_item`, `gamestate_unequip_item`, `gamestate_get_stats` (`src/main/*.c`),
 `ststatus_items_use` (`src/ststatus/ststatus_8008E94C.c`), `fightstg_item_cure_*`, STITSHOP (price/sell/equip rules: `stitshop_can_equip`).
 
 Shops [C]: a talk that sets flag `0x7A00 + n` (n < 30) opens STITSHOP (map 0xF00, `map_entry` n = `stitshop_shops[n]`); the first shop
 reachable from boot is the Asuka Item Shop (map 0x20D, WSTAG245, after the first battle): counters for shops 0 (weapons and armour), 1
 (accessories) and 2 (usable items), each opened by the shopkeeper's second talk (the first sets a `0x1Axx` greeting flag). Buying
-(`stitshop_buy_run`): refused with "Not enough BIT." when `money < price` and with a message at 99 owned; the quantity starts at 1 and is capped
-at `min(money / price, 99 - owned)`; Yes adds the quantity to `items[id]` (capped 99) and takes `price * quantity` from `money`.
+works as described under "Buying and selling" above; at the counter the quantity starts at 1, and a refusal shows "Not enough BIT."
+(`money < price`) or a message at 99 owned.
 - [T] `first_battle_save`, checkpoints `shop_open`, `shop_bought`, `shop_left` (after the load): shop 2, Power Charge (item 43, 12 BIT) with 50 BIT:
   the quantity stops at 4 = 50 / 12, so `money` (`gamestate_data` + 0x6C) 50 -> 2 and `items[43]` (+ 0xA7) 0 -> 4; asking again with 2 BIT is refused
   and changes nothing.
 
-What a test should check: record counts and table hashes; `get_stats` fixtures per item type (a weapon with power 30 on Power 40 gives 70, capped 999; charisma sums across six
-slots); two set items; set bonus only when slots 0-3 match exactly; `gamestate_change_money` clamps (add past 9,999,999; subtract below 0); `ststatus_items_use` heal clamps via `gamestate_add_stat` (HP above max HP is not clamped to max HP in that code path; verify).
+Worked examples [C] (`gamestate_get_stats`): a weapon with power 30 on Power 40 gives 70 (capped 999); the charisma bonus sums across
+the six equipment slots; the set bonus applies only when slots 0-3 match the set exactly. `ststatus_items_use` leaves HP above max HP alone (see above).
 
 ## 10. Card game (CARDGAME, `card.c`)
 
@@ -555,13 +555,9 @@ Facts [C]:
 - CPU score `cardgame_cpu_get_score(game, side, mask)`: sort the side's slot cards by card ID; sum `attack + hp` of cards **not** in `mask` (bit i = slot i excluded);
   plus a combination term: runs of the same card ID count when the card's record field at +10 (s16) is non-zero ("combinable"); a pair alone adds nothing; a triple adds the three
   cards' attack+hp **again**; a run of four or more adds 20 to both attack and hp sums (so +40 total). Result `rest_a + rest_b + sum_a + sum_b`.
-  The combination logic has an `i`/`skip` quirk for masked cards (read before asserting masked cases).
-- CPU choice `cardgame_cpu_choose_card(game, board)` marks at most one hand card (`game->marked[i] = 1`) and returns 1/0:
-  - Own turn (turn 0), phase 5: first hand card of CPU "kind" 1 that is playable (`cardgame_is_card_playable`), usable (`cardgame_cpu_can_use_effect`) and has a target
-    (`cardgame_cpu_choose_target`). Phase 7: kind 3 cards only, and only if `swap_count` is even and the player's score (side 0) >= the CPU's (side 1) (the CPU does not use a
-    swap card while it is ahead).
-  - Reply turn: if the player's card ID is in `cpu_counter_ids` (0xFF ends the list), try kind-4 cards; else if the player's card record kind (byte 3) is 3 or 9, answer with a
-    CPU card whose record kind is the opposite (3 vs 9), via `cardgame_cpu_choose_counter_target`.
+  The combination logic has an `i`/`skip` quirk for masked cards.
+- CPU choice `cardgame_cpu_choose_card(game, board)` marks at most one hand card (`game->marked[i] = 1`) and returns 1/0; the
+  rules (own turn, reply turn, counters) are under "The CPU's play" below. The CPU does not use a swap card (phase 7, kind 3) while it is ahead.
   - `cardgame_cpu_get_card_damage`: card IDs 0x12 -> 60, 0x14 -> 15, 0x38 -> 10, 0x15 and 0x2E -> 30, else 0; `cardgame_cpu_get_card_heal`: 0x2 -> 15, 0xC -> 50, 0xF -> 20,
     0x3 and 0x28 -> 30, 0x3A -> 10, else 0.
   - Targeting helpers: `cardgame_cpu_set_target`, `_set_target_kind_3/_4`, `_keep_best_target`, `_filter_targets`, `_set_cheapest_target`, `_is_target_within`, `_find_kind`.
@@ -580,7 +576,7 @@ Facts [C]:
   (flags `0x8192` and condition 9 = progress 4..99), whose second talk sets `0x7A31` (STCRDSHP shop 0x31). Actors are placed when
   a map is entered: the shop form appears only after leaving and re-entering the arena.
 
-Tested [T] (layer 1: the `cardgame_cpu_choice` and `cardgame_rules` goldens, 2026-10-05; every case is replayed on the host
+Tested [T] (layer 1: the `cardgame_cpu_choice` and `cardgame_rules` goldens; every case is replayed on the host
 and matches). "Colour" is card record byte 0 (1-6, `kind` in the C), "record kind" byte 3 (0x10 Digimon, 1-14 options),
 "class" `card_classes[record kind]`; card indexes 0..39 are the player's cards, 40..79 the CPU's (`card_ids[index]` = card ID).
 - **Classes and playability:** class 0 for Digimon (record kind 0x10) and record kind 0/15, 2 for record kinds 4, 7, 8, 11, 14,
@@ -588,7 +584,7 @@ and matches). "Colour" is card record byte 0 (1-6, `kind` in the C), "record kin
   only Digimon with `points[colour - 1] >= level` (byte 5), any other phase nothing.
 - **Points** (after the deal, `cardgame_player_add_card_point` for hand cards 0..5 of each side): a card of colour 1-5 (option
   cards too) gives its owner one point of that colour, `points[colour - 1]`, capped at 99; a colour-6 card gives none (no
-  card has colour 0) [T] (`cardgame_rules`, appended 2026-10-05).
+  card has colour 0) [T] (`cardgame_rules`).
 - **Slot cards go back to their owner** (`cardgame_slot_to_discard`, `_to_hand`, under the discard/return effects): a slot
   card goes onto the discard pile or into the hand of `CardgameSlot.owner`, which can differ from the side it sits on [T]
   (`cardgame_rules`).
@@ -655,13 +651,12 @@ and matches). "Colour" is card record byte 0 (1-6, `kind` in the C), "record kin
 - `cardgame_cpu_get_score` of an empty side is 0; the sort is skipped and the uninitialised `list[0]` indexes the slots once
   (the value is discarded). The CPU calls it so whenever a side placed nothing; a port may guard that read.
 
-Code map: `src/cardgame/cardgame_cpu.c` (`cardgame_cpu_get_score` 145, `_choose_card` 594, `_get_card_damage` 399, `_get_card_heal` 420); `include/cardgame.h`
+Code map: `src/cardgame/cardgame_cpu.c` (`cardgame_cpu_get_score`, `_choose_card`, `_get_card_damage`, `_get_card_heal`); `include/cardgame.h`
 (`CardgameGame`, `CardgameOpponent`); `card.c` (`card_select`, `card_get_class`); FORMATS "Card game".
 
-What a test should check: score fixtures on a 4-slot board: attack/hp (5,5), (4,6), (3,3), (2,2) no mask -> 30 (no combos); masking slot 0 removes 10; three equal combinable cards (3,3) each:
-rest 18 + sum 18 = 36 (+ the triple counted again); four equal: `4*6 + 24 + 20 + 20`. Cases: empty slots (`count = 0` reads `list[0]`, an edge to document); `mask` all ones;
-`get_card_damage/heal` tables verbatim; choose_card golden: a board/hand/seed table -> marked index (the function has no RNG, so it is a pure function of the `CardgameGame`).
-Whole-game RNG: the dealing/shuffling in `cardgame_game_*` uses `pad_random`; record/replay is the right layer for that.
+Score examples [C] (`cardgame_cpu_get_score`, a 4-slot board, attack/hp): (5,5), (4,6), (3,3), (2,2) with no mask score 30
+(no combos), and masking slot 0 removes 10; three equal combinable cards of (3,3) score rest 18 + sum 18 = 36 (the triple counted
+again); four equal score `4*6 + 24 + 20 + 20`. `cardgame_cpu_choose_card` has no RNG: it is a pure function of the `CardgameGame`.
 
 ## 11. Gamestate flags, conditions and progress
 
@@ -706,25 +701,24 @@ writing side by `gamestate_actions` (marked below):
 Code map: functions above, `gamestate_data` (`GamestateData`), `gamestate_flags` (`GamestateFlags`), tables `gamestate_conditions`, `gamestate_progress_ranges`, `gamestate_money_*`,
 `gamestate_party_stat_levels`, `gamestate_item_sets`.
 
-What a test should check:
-- Bit math: flag `0x0213`: type 0x02, index 0x13 -> byte 2, mask 8; `set_flag(0x0213, 1)` then `get_flag(0x0213, 1) == 1`, `get_flag(0x0213, 0) == 0`; neighbours untouched; flag 0x0113 maps to
-  type 0x00 (the odd type bit is masked).
-- `check_flags` on `{0x0201, 1, 0x0202, 0, 0xFFFF}` with bit1 set and bit2 clear -> 1; flip either -> 0; list `{0xFFFF}` -> 1.
-- Progress ranges: progress 2 -> condition 0x06 (`{2,18}`) true, 1 and 19 false; 99 and 100 for `{4,99}`.
-- `check_progress(7, 1)` iff `progress == 7`; `(7, 0)` iff `!= 7`. Unknown flag type 0x30 or 0x66 returns 1.
-- Money: `change_money(1, i)` with money 9,999,000 and add 3000 -> 9,999,999; `change_money(2, i)` with money 100 and sub 800 -> 0; check (type 0, arg 0) true at 800, false at 799.
-- Item cond 0 true only when items 7, 89 and 167 are each owned or equipped; party level sum rule at `arg = 0`: >= 30, `arg = 3`: >= 75.
-- Route flag 0x7E: `route = 5`: index 4 true, index 29 uses room.
+Worked examples [C]:
+- Bit math: flag `0x0213` is type 0x02, index 0x13 (byte 2, mask 8); flag `0x0113` is type 0x00 (the odd type bit is masked).
+- `gamestate_check_flags` on `{0x0201, 1, 0x0202, 0, 0xFFFF}` is 1 only with bit 1 set and bit 2 clear; the list `{0xFFFF}` is 1.
+- Progress ranges: condition 0x06 (`{2,18}`) is true for progress 2..18; `{4,99}` for 4..99.
+- Money: `change_money(1, i)` adds and clamps at 9,999,999 (9,999,000 + 3000); `change_money(2, i)` subtracts and clamps at 0
+  (100 - 800); the check (type 0, arg 0) is true at 800 and false at 799.
+- Item condition 0 is true only when items 7, 89 and 167 are each owned or equipped; the party level sum rule is >= 30 at
+  `arg = 0` and >= 75 at `arg = 3`.
+- Route flag 0x7E with `route = 5`: index 4 is true; index 29 and up uses the room.
 
 ## 12. Save data and checksum
 
-Facts [C] (`src/main/memcard.c` 451-470, `docs/FORMATS.md` "Save data"); the two checksum functions [T] (`memcard_checksum`: 9 byte
-patterns x the right sum, sum ^ 1, 0, 0xFF):
+Facts [C] (`src/main/memcard.c`); the file, header and slot layout is in `docs/FORMATS.md` "Save data". The two checksum
+functions are [T] (`memcard_checksum`: 9 byte patterns x the right sum, sum ^ 1, 0, 0xFF):
 - `memcard_get_checksum(data, size)` = XOR of the bytes (u8). `memcard_check_checksum(data, size, sum)` = `XOR == sum` (exact). **STGMCARD does not call the exact check**: loads use
-  `checksum & ~stored == 0` (lenient: a stored byte with extra bits set passes).
-- Slot = first 0x26C4 bytes of `gamestate_data` (byte 0 = checksum of bytes 4..0x26C3, byte 2 = version 4, name at 0x54, money 0x6C, Digimon records from 0x75C, progress 0x263C, flags 0x2644).
-  Header (0xD4 bytes at file 0x200): checksum of bytes 4..0xD3, `"DMW3"` at 4, three slot summaries. File `BESLES-03936DMW3-EUR`, 4 blocks (0x8000), slot offsets `0x300`, `0x2A00`, `0x5100`.
-- Load rejects a slot whose version byte is not 4.
+  `checksum & ~stored == 0` (lenient: a stored byte with extra bits set passes; a stored `0xFF` accepts any computed sum, a stored 0 only 0).
+- A slot is the first 0x26C4 bytes of `gamestate_data`: byte 0 is the checksum of bytes 4..0x26C3, byte 2 the version (4).
+  Load rejects a slot whose version byte is not 4.
 - [T] Round trip in the game (`tests/replay/scripts/first_battle_save.json`, checkpoints `saved` and `loaded`): a save at
   the Asuka Inn (STGMCARD map 0xC01) then a reboot and Continue (map 0xC00) gives back bytes 4..0x26C3 of `gamestate_data`
   exactly, except the playtime, which goes on counting; the load writes the slot's checksum and version into bytes 0 and 2
@@ -740,26 +734,16 @@ patterns x the right sum, sum ^ 1, 0, 0xFF):
 Code map: `memcard_get_checksum`, `memcard_check_checksum`, `memcard_funcs`, `memcard_read/_write`, STGMCARD (`src/stgmcard/stgmcard_80082CD0.c` `StgmcardSaveData`, `StgmcardSaveHeader`),
 `GamestateData` first 0x26C4 bytes.
 
-What a test should check: checksum of all-zero data = 0; `{0x01}` -> 1; `{0xAA, 0xAA}` -> 0; size 0 -> 0; XOR of a repeated byte depends on parity; order independence; single bit flip changes the sum.
-`check_checksum(data, n, sum)` exact. Lenient rule: stored `0xFF` accepts any computed sum; stored 0 accepts only 0. Round trip: pack `gamestate_data` (0x26C4 bytes) -> write byte 0 =
-`get_checksum(buf + 4, 0x26C0)` -> `.mcd` -> reload -> byte equality and `gamestate_data` hash equality; version byte != 4 rejected; a corrupted flag bit changes the checksum. Cross-check
-with emulator-written cards and with the port.
+## 13. Known only from the C
 
-## 13. Open questions
-
-Answered and removed (2026-10-05): the goldens' validity while `fightstg_rules_get_stats` was NON_MATCHING (they run the
-original's code; the WIP C reproduced every `fightstg_rules` case on the host and the battle replay; it is matching C since #55);
-`values[1]` (the TP, section 6); division by zero (no trap, and no zero divisor in the game's data: section 4); where the
-digivolution and training rules are (sections 6, 7); the card rules (section 10); the menu item effects and the shops' helpers
-(section 9); the exact fields of the status rolls (section 5); which training menus and shops the field opens (sections 6 and 9,
-FINDINGS 3 and 4: never menu 14 nor shop 31); the special enemies' prize item and the battle-end drop (section 5, `wfightmn_spoils`, sweep5).
+What no golden or replay pins down, and why. Everything here is `[C]`.
 
 - DNA digivolution: no code found under that idea in the units read.
 - Card game: the animated effects' exact results (points, attacks, stat changes, the combo's sums) are read from the C only;
   they need the board display and belong to a layer-2 card-game script, which needs party Charisma >= 60 (section 10).
 - Battle item effects, buying/selling counts and the booster draw (section 9) and the encounter step (section 1; its redraw is
   `[T]`) are `[C]`: UI or field objects, and any outcome drawn from `pad_random` after the first battle is core-dependent in layer 2.
-- Field and card-game flow left `[C]` by sweep5 (each a first-match walk or a one-line rule inside an object's update, over
+- Field and card-game flow (each a first-match walk or a one-line rule inside an object's update, over
   functions that are `[T]`): the talk chosen (`placed->talks`, the first with no `flags_required` or `check_flags == 1`), the
   placed actors shown and the player's look (ids 1/0x6A/0x146/0x147 by flags, else 2 with the party followers from progress 3),
   map events (`fieldstg_map_events_enter`: two `get_flag` gates, then the type's action; transitions are in layer 2's map
@@ -769,17 +753,4 @@ FINDINGS 3 and 4: never menu 14 nor shop 31); the special enemies' prize item an
   the opponent's load (`cardgame_game_load_opponent`: kinds 6/4/2/1/3/5/7 sort at 100..700 + the deck index, the counter IDs - 1 followed
   by a fixed default list of 15 bytes ending in 0xFF; the data's longest list is 11, so the 27-byte array is never overrun).
 - Playtime at 50 Hz (`+0x133` per vsync) is read from the vsync handler, not tested (`gamestate_tick_playtime`'s carries are).
-- Guide-versus-C differences: none known (no guide was reachable).
 
-## 14. Sources wanted (blocked this run) and sources used
-
-Used: none outside the repo. Blocked by the proxy (EGRESS_BLOCKED): `gamefaqs.gamespot.com`, `strategywiki.org`. Not tried (budget rule: stop after two blocked hosts).
-URLs to fetch from an unblocked machine, in priority order:
-1. https://gamefaqs.gamespot.com/ps/562335-digimon-world-3/faqs (index; pick the longest battle/stats guide; append `?print=1`)
-2. https://gamefaqs.gamespot.com/ps/562335-digimon-world-3/faqs/ (the "Digimon World 3 Battle Mechanics / Damage Formula" and "Stat Growth" FAQs listed there)
-3. GameFAQs "Digimon World 3 Card Game Guide" and "Digivolution Guide" from the same index
-4. https://strategywiki.org/wiki/Digimon_World_3 (and its Battle, Stats, Digivolution subpages if present)
-5. https://digimon.fandom.com/wiki/Digimon_World_3 and its "Battle", "Card Battle" pages
-6. https://www.neoseeker.com/digimon-world-3/ (FAQs tab) and an IGN "Digimon World 3" guide
-What to extract: the damage formula and the order of modifiers (compare with section 2), critical and hit chances (section 3), level-up/EXP table (section 6, the formula
-`(lv^3 + 5lv - 6) * curve / 10 + bonus`), element wheel (section 4), digivolution conditions (section 7), card game rules (section 10), item effect values (section 9).

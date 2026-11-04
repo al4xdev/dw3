@@ -1,9 +1,9 @@
 # File formats
 
-Status: **read off the matching C and checked against the disc** (2026-10-04, session 7). Each section names the C
-functions that read the format. "Verified" means a script parsed every file of that kind on the user's disc the way
-the C does, with no mismatch. The scripts are listed in the last section. Field names in the tables are ours and
-describe the C's use; where the C still says `unk_XX`, the table gives the source name as well.
+Read off the matching C and checked against the disc. Each section names the C functions that read the format.
+"Verified" means a script parsed every file of that kind on the user's disc the way the C does, with no mismatch; the
+scripts are listed in the last section. Field names in the tables are ours and describe the C's use; where the C still
+says `unk_XX`, the table gives the source name as well.
 
 The overlays' code and the memory map are in `docs/DISC_LAYOUT.md`. This file covers the data the code reads.
 
@@ -76,13 +76,8 @@ one byte, repeated `n & 0x7F` times. A 0 byte ends the stream. `tim_load_all` un
 `unk_70` bytes per frame. Where the data has no `"RLEN"` magic, `message_rlen_get_data` returns it as is.
 
 ## Code overlays (`AAA/PRO/*.PRO`)
-The overlays are raw code and data with no header. The full layout is in `docs/DISC_LAYOUT.md`.
-- **Tier 1** (19 files, at `0x80082CB0`): `overlay_load_stage` copies the stage's file (`overlay_files[stage]`,
-  indexed by `gamestate_data.funcs.get_map() >> 8`) to `0x80082CB0`. `overlay_run_object` then calls
-  `overlay_entries[stage]`, a fixed address inside the overlay.
-- **Tier 2** (`WFIGHTMN`, `WFIGHTTS`, 293 `WSTAG###`, at `0x800A5DE0`): `overlay_load_file(id)` copies a file
-  already loaded by cdload. The parent overlay calls its entry: a fixed address for WFIGHT*, or the entry of
-  FIELDSTG's stage tables for WSTAG (`fieldstg_find_stage`; `config/wstag.txt`).
+The overlays are raw code and data with no header. Their load addresses, how tier 1 and tier 2 are loaded and
+their layout are in `docs/DISC_LAYOUT.md` "Overlays". The data-only ones:
 - **Data-only**: `SFSTDATA` (ID `0x1CB`, battle stages), `SMDLDATA` (`0x1CC`, battle models), and `SDIGIEDT`
   (`0x1CF`, enemy Digimon) are plain data that FIGHTSTG reads with `cdload_get_file` (see Battle). `WSTAG260` is a
   WSTAG with no code that no table names.
@@ -318,9 +313,7 @@ sequences with these rules:
 - The NRPN pairs are LIBSND's sequence controls (meanings from Sony's LIBSND documentation, assumed, except where the
   trace shows them): CC 99 = 20 / CC 99 = 30 bracket a loop, its count in the data entry (CC 6 = 127: endless; 78
   sequences, the BGMs); CC 99 = 16 with CC 98 = 15 or 16 then CC 6 sets a VAB attribute through LIBSND's NRPN attribute
-  table: attribute 15 = reverb type, 16 = reverb depth (**verified** on the emulator: those entries call
-  `SsUtSetReverbType(3)` and `SsUtSetReverbDepth(0x38, 0x38)` from inside `_SsSetNrpnVabAttr15`/`16` when CNTY_SEL's
-  music starts, `docs/SOUND.md`).
+  table: attribute 15 = reverb type, 16 = reverb depth (**verified** on the emulator; `docs/SOUND.md` sections 3 and 7).
 
 ## Game records in the EXE (`records.c`, `gamestate.c`)
 The Digimon, item and technique tables are EXE `.data`, not disc files, and are in C in `src/main/records.c`.
@@ -582,8 +575,8 @@ all 62 animations of each model end with `0x7FFF`. `SDIGIEDT`'s 193 records end 
 
 ## Movies (`AAA/STR/MOVIE*.STR`)
 14 files of mixed-mode sectors (MDEC video, XA audio), stored by dumpsxiso as 2336-byte sectors. Video sectors
-carry the MDEC frame magic `0x80010160`. The player is the title overlay's LIBPRESS (`STDWTITL`). Not traced
-further: no game code that reads them has been read for this document.
+carry the MDEC frame magic `0x80010160`. The player is the title overlay's LIBPRESS (`STDWTITL`). The XA audio (one
+channel per movie, in every eighth sector) is documented in `docs/SOUND.md` section 8.
 
 ## Not yet traced
 - `TRAINING/TRANIN##.BIN` (12 files, offset tables of 9 sub-files; STGTRAIN), `SCREEN/TLOGO*`, `TTCOMMPK`,
@@ -607,6 +600,6 @@ further: no game code that reads them has been read for this document.
   `dump_text.py --check`, `overlay_layout.py --wstag-table` (WSTAG stage table), `flag_census.py --check` and
   `tests/sound/sound_formats.py --check` (the sound banks: VAB headers and bodies, SEPs; `--events` prints the SEPs'
   event census).
-- The other checks in this document were one-off scripts (kept out of the repo). Each parses every file of one
-  kind the way the cited C does: sound banks, `Z_STAGE` backgrounds, attribute maps, actor sprites, sprite banks,
-  battle models, card files.
+- The other "Verified" claims in this document (`Z_STAGE` backgrounds, attribute maps, actor sprites, sprite banks,
+  battle models, card files) come from scripts that parse every file of one kind the way the cited C does; those
+  scripts are not in the repo.

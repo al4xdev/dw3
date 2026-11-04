@@ -5,7 +5,10 @@ Windows x86_64 zip** for players (each the launcher, the game and the mods' mani
 the launcher and never compiles anything), both built on CI's `ubuntu-24.04` runner (the AppImage against glibc 2.39,
 the Windows programs cross-compiled with llvm-mingw: DECISIONS "Windows: cross-built from Linux"), **only for a pushed
 tag `vX.Y.Z`**, and only as a **draft** GitHub Release: the maintainer downloads them, tests them and presses Publish.
-The Windows build is tested on Linux under Wine and Proton; real Windows comes from testers (the board's Windows 9).
+The Windows build is tested on Linux under Wine and Proton; real Windows comes from testers.
+
+The handheld (PortMaster) zip is not part of this flow; `portmaster/make_release.sh` builds it and
+[`portmaster/PUBLISHING.md`](../portmaster/PUBLISHING.md) is its publishing checklist.
 
 ## Making a release
 
@@ -91,7 +94,7 @@ LICENSES/                                ours, SDL3, Dear ImGui, its two fonts, 
 
 Both programs are stripped, link SDL3 statically (`tools/sdl3-desktop`: X11, Wayland, PipeWire, PulseAudio and ALSA
 compiled in, each opened with `dlopen` at run time), and need only the C library (`libc`, `libm`, the loader): the
-launcher links `libstdc++`/`libgcc` statically (`-DDW3_LAUNCHER_STATIC_RUNTIME=ON`). `package_appimage.sh` fails when
+launcher links `libstdc++`/`libgcc` statically (`-DPSXSTACK_LAUNCHER_STATIC_RUNTIME=ON`). `package_appimage.sh` fails when
 `ldd` shows anything else. The runtime is AppImage's static type-2 runtime: no `libfuse2` is needed (it mounts with
 `fusermount`/`fusermount3`; without FUSE, `--appimage-extract-and-run` or `APPIMAGE_EXTRACT_AND_RUN=1` works).
 

@@ -77,10 +77,10 @@ __pycache__
 /gamedata
 /tools/prebuilt
 
-# The stack, a symlink to the sibling clone until the submodule (phase 4; scripts/worktree_init.sh)
-
 # Ephemeral scratch (benchmarks, replays, dumps)
 .dumps/
+# Local Claude Code state
+.claude/
 # The .plan task files are versioned with the project: they say why each change was made. Only the tool's own database
 # is machine state, not history.
 .plan/.state/

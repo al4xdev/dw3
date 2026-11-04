@@ -1,4 +1,4 @@
-<!-- Thanks for contributing! Please read docs/CONTRIBUTING.md first. Keep the pull request to one topic. -->
+<!-- Please read docs/CONTRIBUTING.md first. Keep the pull request to one topic. -->
 
 ## What changed
 
@@ -8,7 +8,7 @@
 
 - [ ] Decompilation (matching C, names, types, config)
 - [ ] PC port (`port/`)
-- [ ] Launcher (`launcher/`)
+- [ ] Launcher (`psxstack/launcher/`; a psxstack change is a pull request there, then a pin bump here)
 - [ ] Tests or tools
 - [ ] Documentation
 
@@ -26,6 +26,6 @@ the reference tests have to be run by you. -->
 
 - [ ] No game data: no disc image, extracted files, `asm/`, assets, BIOS or SDK files
 - [ ] Anything borrowed from another project is recorded in `docs/THIRD_PARTY.md`
-- [ ] New names follow the conventions (`docs/MATCHING.md`) and are in `config/*symbol*.txt`
+- [ ] New names follow the conventions (`docs/CONTRIBUTING.md` "Decompilation") and are in `config/*symbol*.txt`
 - [ ] Docs updated if behaviour or a decision changed
 - [ ] AI-generated parts, if any, are said here and I have checked them

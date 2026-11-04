@@ -9,7 +9,7 @@ Reproduce with `scripts/extract.sh` and `tools/venv/bin/python tools/disc_survey
 | Serial | SLES-03936 (Volume ID `DMW3`, publisher BANDAI, PVD date 2002-10-01) |
 | Image | 1 track, MODE2/2352, 294,280 sectors, 692,146,560 bytes |
 | Hashes | SHA-1 `457cb233349ba841e03b33d8060f8fbcadd45cb3`, MD5 `da76a5685b875c353343102b7587fded`, CRC-32 `007df18e` (all match Redump) |
-| Rebuild | `scripts/rebuild_iso.sh` produces a **bit-identical** image (checked 2026-09-30) |
+| Rebuild | `scripts/rebuild_iso.sh` produces a **bit-identical** image |
 
 **Obfuscated directory records.** A normal ISO 9660 directory walk sees only `SYSTEM.CNF`,
 `SLES_039.36` and `DUMMY.`. Everything under `AAA/` can only be reached through the path table,
@@ -42,12 +42,9 @@ The header has no bss fields: the whole range up to `0x800F1000` is file content
 
 ## File table in the EXE
 The game addresses disc files by **file ID**, not by name. Two parallel tables in `.data`, checked against
-dumpsxiso's LBAs for all entries:
-
-| Table | Type | Contents |
-|---|---|---|
-| `filetable_lba` (`0x80044F6C`) | `u32[2382]` | Start sector (LBA) of each file |
-| `filetable_sectors` (`0x800474A4`) | `u16[2382]` | Size in sectors (2048 B; 2336 B for `.STR`) |
+dumpsxiso's LBAs for all entries: `filetable_lba` (`0x80044F6C`, `u32[2382]`, start sector of each file) and
+`filetable_sectors` (`0x800474A4`, `u16[2382]`, size in sectors of 2048 B; 2336 B for `.STR`). The tables and how
+cdload reads through them are in `docs/FORMATS.md` "Disc access: the file table and cdload".
 
 The 2,382 entries are every file under `AAA/` (the disc's 2,385 files minus `SYSTEM.CNF`, `SLES_039.36`,
 `DUMMY.`). ID 0 = `AAA/DAT/NONE____.BIN`, ID 1 = `AAA/DAT/COUNTRY/JPN/MSAMTMAP.BIN` (LBA `0xE2E`), followed
@@ -91,36 +88,39 @@ against candidate bases. `tools/disc_survey.py` checks every overlay.
 
 `0x800A5DE0 = 0x80082CB0 + 0x23130`, the size of the largest tier-1 overlay (`CARDGAME`).
 
+Tier-1 overlays are loaded by `overlay_load_stage`, which copies the stage's file (`overlay_files[stage]`, indexed
+by `gamestate_data.funcs.get_map() >> 8`) to `0x80082CB0`; `overlay_run_object` then calls `overlay_entries[stage]`,
+a fixed address inside the overlay.
+
 Inside a tier-1 overlay, psylink's layout is the same as the EXE's: `.rodata` first (jump tables, constants),
-then `.text`, then `.data`, then `.bss`, **written into the file as zeros** like the EXE's (session 5: FIELDSTG's
+then `.text`, then `.data`, then `.bss`, **written into the file as zeros** like the EXE's (FIELDSTG's
 `0x8009B8EC`–`0x8009BB48` and FIGHTSTG's `0x800A46D0`–`0x800A47A0` are zero variables in code order, not `.data`
 order, and nothing is referenced past the file's end). Every tier-1 overlay builds byte-identical
-(`config/<overlay>.yaml`; boundaries from `tools/overlay_layout.py`). Functions = splat's count (game code only).
-Every tier-1 overlay's code is split into C files (session 6; evidence in each config and in docs/MATCHING.md "C patterns"); each overlay's `.data`/`.bss` is still one asm unit. Matching = functions objdiff scores 100%
-(2026-10-02, `objdiff-cli report generate`); the others are `INCLUDE_ASM` or WIP C. `STGTRAIN`'s `.text` starts
-0x1CC bytes before where `overlay_layout.py` put it (11 frameless setters), hence 94 functions rather than 85.
+(`config/<overlay>.yaml`; boundaries from `tools/overlay_layout.py`). How much of each is matching C is in
+`docs/STATUS.md` and `docs/PROGRESS.md`. `STGTRAIN`'s `.text` starts 0x1CC bytes before where
+`overlay_layout.py` put it (11 frameless setters).
 
-| Overlay | Size | `.text` | `.data`+`.bss` | Functions | C files | Matching | Psy-Q |
-|---|---|---|---|---|---|---|---|
-| `FIELDSTG` | `0x18E98` | `0x80083784`–`0x80092DFC` | to `0x8009BB48` | 222 | 5 | 207 | none |
-| `FIGHTSTG` | `0x21AF0` | `0x800832D0`–`0x800A2498` | to `0x800A47A0` | 301 | 7 | 274 | none |
-| `CARDGAME` | `0x23130` | `0x80083E34`–`0x800A4DF4` | to `0x800A5DE0` | 306 | 7 | 180 | none |
-| `CNTY_SEL` | `0x0177B` | `0x80082CE8`–`0x800843C0` | to `0x8008442B` | 26 | 1 | 26 | none |
-| `SHOCKTST` | `0x01E44` | `0x80082DA0`–`0x800849C8` | to `0x80084AF4` | 17 | 1 | 15 | none |
-| `SOUNDTST` | `0x02D98` | `0x80084370`–`0x80084D74` | to `0x80085A48` | 8 | 1 | 6 | none |
-| `STAGSLCT` | `0x044FC` | `0x800849CC`–`0x80085ED0` | to `0x800871AC` | 8 | 1 | 6 | none |
-| `STCRDABM` | `0x02DCC` | `0x80082D88`–`0x80085A4C` | to `0x80085A7C` | 29 | 1 | 29 | none |
-| `STCRDDEK` | `0x08BA4` | `0x800831F0`–`0x8008A484` | to `0x8008B854` | 55 | 4 | 50 | none |
-| `STCRDSHP` | `0x0A250` | `0x8008300C`–`0x80089288` | to `0x8008CF00` | 45 | 3 | 40 | none |
-| `STDGNAME` | `0x06190` | `0x80082F8C`–`0x80086830` | to `0x80088E40` | 32 | 2 | 31 | none |
-| `STDWTITL` | `0x065C0` | `0x80082D70`–`0x80087C4C` | to `0x80089270` | 74 | 7 | 74 | LIBPRESS (3 objects, `0x8008714C`–`0x80087C4C`) |
-| `STFGTREP` | `0x065F8` | `0x80082E70`–`0x80086A88` | to `0x800892A8` | 36 | 1 | 33 | none |
-| `STGDGLAB` | `0x0D100` | `0x80082F48`–`0x8008F470` | to `0x8008FDB0` | 71 | 9 | 59 | none |
-| `STGMCARD` | `0x05CA0` | `0x80082CD0`–`0x80088088` | to `0x80088950` | 45 | 2 | 43 | none |
-| `STGTRAIN` | `0x0A658` | `0x80083058`–`0x8008C224` | to `0x8008D308` | 94 | 3 | 85 | none |
-| `STITSHOP` | `0x0A528` | `0x8008321C`–`0x8008CAA8` | to `0x8008D1D8` | 69 | 2 | 67 | none |
-| `STPLNMET` | `0x06F0C` | `0x80082F58`–`0x800885E4` | to `0x80089BBC` | 53 | 3 | 52 | none |
-| `STSTATUS` | `0x18A48` | `0x80083558`–`0x8009A784` | to `0x8009B6F8` | 123 | 7 | 107 | none |
+| Overlay | Size | `.text` | `.data`+`.bss` | Psy-Q |
+|---|---|---|---|---|
+| `FIELDSTG` | `0x18E98` | `0x80083784`–`0x80092DFC` | to `0x8009BB48` | none |
+| `FIGHTSTG` | `0x21AF0` | `0x800832D0`–`0x800A2498` | to `0x800A47A0` | none |
+| `CARDGAME` | `0x23130` | `0x80083E34`–`0x800A4DF4` | to `0x800A5DE0` | none |
+| `CNTY_SEL` | `0x0177B` | `0x80082CE8`–`0x800843C0` | to `0x8008442B` | none |
+| `SHOCKTST` | `0x01E44` | `0x80082DA0`–`0x800849C8` | to `0x80084AF4` | none |
+| `SOUNDTST` | `0x02D98` | `0x80084370`–`0x80084D74` | to `0x80085A48` | none |
+| `STAGSLCT` | `0x044FC` | `0x800849CC`–`0x80085ED0` | to `0x800871AC` | none |
+| `STCRDABM` | `0x02DCC` | `0x80082D88`–`0x80085A4C` | to `0x80085A7C` | none |
+| `STCRDDEK` | `0x08BA4` | `0x800831F0`–`0x8008A484` | to `0x8008B854` | none |
+| `STCRDSHP` | `0x0A250` | `0x8008300C`–`0x80089288` | to `0x8008CF00` | none |
+| `STDGNAME` | `0x06190` | `0x80082F8C`–`0x80086830` | to `0x80088E40` | none |
+| `STDWTITL` | `0x065C0` | `0x80082D70`–`0x80087C4C` | to `0x80089270` | LIBPRESS (3 objects, `0x8008714C`–`0x80087C4C`) |
+| `STFGTREP` | `0x065F8` | `0x80082E70`–`0x80086A88` | to `0x800892A8` | none |
+| `STGDGLAB` | `0x0D100` | `0x80082F48`–`0x8008F470` | to `0x8008FDB0` | none |
+| `STGMCARD` | `0x05CA0` | `0x80082CD0`–`0x80088088` | to `0x80088950` | none |
+| `STGTRAIN` | `0x0A658` | `0x80083058`–`0x8008C224` | to `0x8008D308` | none |
+| `STITSHOP` | `0x0A528` | `0x8008321C`–`0x8008CAA8` | to `0x8008D1D8` | none |
+| `STPLNMET` | `0x06F0C` | `0x80082F58`–`0x800885E4` | to `0x80089BBC` | none |
+| `STSTATUS` | `0x18A48` | `0x80083558`–`0x8009A784` | to `0x8009B6F8` | none |
 
 `CNTY_SEL` ends 3 bytes into a word: its last 7-byte table is a `bin` subsegment (splat drops a data section's
 partial last word), and `configure.py` truncates every output to its config's size.
@@ -144,8 +144,7 @@ References (`jal` + `lui`/`lo` pairs) by target: WFIGHTMN 90 into the EXE, 187 i
 (`0x80082CB0`–`0x800A47A0`), 42 into itself; WFIGHTTS 51 / 26 / 88. None reaches past either file's end (no
 `.bss`) or into another tier-1 overlay's range beyond FIGHTSTG's. Both build byte-identical. WFIGHTMN is two C files
 (`wfightmn_800A5ECC`, `wfightmn_800A6440`: jump-table parity proves a break before `800A6C44`; the position
-follows an update/create pair and helpers that only `800A6C44` calls), WFIGHTTS one (`wfightts_800A67B8`). First C:
-4 of 42 WFIGHTMN functions, 6 of 14 WFIGHTTS functions (creators and the two entries; `compiler_id.py --target`).
+follows an update/create pair and helpers that only `800A6C44` calls), WFIGHTTS one (`wfightts_800A67B8`).
 
 **`WSTAG###` (293 stage overlays, parent `FIELDSTG`).** Each is a field stage's own code and data. FIELDSTG's
 `func_FIELDSTG_800920F8` looks the current stage up in one of two tables of 12-byte records (stage, file ID,
@@ -177,7 +176,7 @@ The EXE contains the save IDs of all three releases, so they likely share one co
 | Release | Serial | Notes |
 |---|---|---|
 | Japan | SLPS-03446 | Original; has the post-game |
-| USA | SLUS-01436 | No post-game. **Active matching decomp: [juandav/dw3_decomp](https://github.com/juandav/dw3_decomp)** (MIT) |
+| USA | SLUS-01436 | No post-game. Has a matching decomp, ReGame-Labs/dw3_decomp (formerly juandav/dw3_decomp; MIT), used here as a reference only (`docs/THIRD_PARTY.md`) |
 | Europe | SLES-03936 | This project; JP post-game + 5 languages |
 
 The US decomp's layout matches ours, shifted: US `.bss` ends and overlays load at `0x80082448`,

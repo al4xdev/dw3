@@ -21,7 +21,7 @@ _Decided: 2026-10-05_
 
 The repository holds only code we wrote. Users supply their own disc; `asm/`, `assets/`, `extracted/` and `build/` are
 regenerated from it and never tracked; `config/*.sha1` holds the hashes builds must reproduce, never the files. The
-owner's private data checkout (`scripts/gamedata_dir.sh`: `$DW3_GAMEDATA`, `tools/local.env` or `../dw2003-gamedata`)
+private data checkout (`scripts/gamedata_dir.sh`: `$DW3_GAMEDATA`, `tools/local.env` or `../dw2003-gamedata`)
 holds the disc, a PAL BIOS for cross-checks only and the pinned emulator build, for cloud sessions and CI; nothing from
 it is copied here. Game data as C initializers is accepted, as in every decomp.
 
@@ -37,8 +37,8 @@ takedown risk is accepted with these mitigations: no assets, a user-supplied dis
 ## Pull requests, ours and from forks
 _Decided: 2026-10-06_
 
-Our own work lands on `main` through a pull request: a branch (usually a worktree), `gh pr create`, CI green, and the
-owner reviews and merges. Direct commits to `main` only when the owner asks for that change. Pull requests from forks
+Our own work lands on `main` through a pull request: a branch (usually a worktree), `gh pr create`, CI green, and a
+maintainer reviews and merges. Direct commits to `main` only when a maintainer asks for that change. Pull requests from forks
 are **open** (this replaces "closed by policy until the port exists"); CI gives them the disc-free checks only, since
 forks get no secrets, and a maintainer re-runs the full checks on a branch when needed.
 
@@ -124,8 +124,8 @@ _Decided: 2026-10-03_
 Some functions match only with a block wrapped in a loop construct: the original very likely used a macro expanding to
 `do { } while (0)`, whose loop notes are scheduling barriers and move exits out of line. This is allowed only through
 `LOOP_BLOCK(body)` and `LOOP_BARRIER()` in `include/common.h`, each use with a comment naming its evidence class
-(`docs/MATCHING.md` "LOOP_BLOCK and LOOP_BARRIER"). The weaker class B uses (register priority only) are kept by the
-owner's decision; all are found with `grep -rn LOOP_ src`.
+(`docs/MATCHING.md` "LOOP_BLOCK and LOOP_BARRIER"). The weaker class B uses (register priority only) are kept as a
+project decision; all are found with `grep -rn LOOP_ src`.
 
 ## Psy-Q libraries are identified, never decompiled
 _Decided: 2026-10-01_
@@ -235,50 +235,53 @@ _Decided: 2026-10-06_
 A tool inspects and drives the running port through an in-process channel (`--debug SOCKET`, `psxstack/runtime/debug.c`),
 not through ptrace or gdb: the game thread polls the socket at the vsync boundary, so every read, write and press
 lands between two frames and a driven run stays deterministic, and nothing depends on Yama or a debugger. Without
-`--debug` nothing of it exists. One Python server, `tools/mcp/`, registered by `.mcp.json`, speaks MCP over it;
+`--debug` nothing of it exists. One Python server, `psxstack/tools/mcp/`, registered by `.mcp.json`, speaks MCP over it;
 `game.py` is the dependency-free client for scripts. Memory is raw bytes by address or symbol name (`nm`,
 `config/symbol_addrs.txt`); typed access through DWARF is deferred until a use needs it.
 
 ## The arena assumes no alignment and no link address
 _Decided: 2026-10-07_
 
-The arena was a 16 MB-aligned `.bss` block of a non-PIE binary, with its regions as ld-script symbols, so that a
-pointer's low 24 bits were its ordering-table tag and a truncated host pointer still worked below 4 GB. A PE build can
-do none of that (COFF aligns sections to 8 KB at most, ASLR moves the image, lld takes no linker script). Now the
-regions are macros on `port_arena` (`include/port.h`), a tag is a pointer's word offset in the tag window (the units'
-data regions and the arena, measured at startup, up to 64 MB so that ASan's redzones fit; `port_ptr_to_u32`, resolved
-against `port_tag_base` by the shim),
-the last `s32` that carried half a host pointer is a pointer. (The ELF link stayed non-PIE one day longer, for the
-ld script alone: its `INSERT BEFORE .data` sections fell inside GNU_RELRO in a PIE link with `-z now`, Ubuntu's
-defaults, and the game's data came out read-only; "Overlay sections by renaming" below replaced the script.) The symbol sizes of `port_gen.py state` come from compiling the units (asm comments printing `sizeof`), not
-from `nm -S`, which COFF cannot give. The Windows track on the project board builds on this. The tag window also
-fixed a silent drop: a static ordering table (FIGHTSTG's cursor) lay outside the old walkable window.
+An earlier design relied on a 16 MB-aligned `.bss` arena in a non-PIE binary, with its regions as ld-script symbols, so
+that a pointer's low 24 bits were its ordering-table tag and a truncated host pointer still worked below 4 GB. A PE
+build can do none of that (COFF aligns sections to 8 KB at most, ASLR moves the image, lld takes no linker script), so
+the port assumes none of it:
+- The regions are macros on `port_arena` (`include/port.h`).
+- A tag is a pointer's word offset in the tag window: the units' data regions and the arena, measured at startup, up to
+  64 MB so that ASan's redzones fit (`port_ptr_to_u32`, resolved against `port_tag_base` by the shim).
+- The one `s32` that carried half a host pointer is a pointer.
+- The symbol sizes of `port_gen.py state` come from compiling the units (asm comments printing `sizeof`), not from
+  `nm -S`, which COFF cannot give.
+
+The tag window also fixed a silent drop: a static ordering table (FIGHTSTG's cursor) lay outside the old walkable
+window. The Windows build (below) rests on this.
 
 ## Overlay sections by renaming, no linker script
 _Decided: 2026-10-07_
 
 The overlay manager needs each overlay's (and the EXE's) writable data in its own bracketed range, to snapshot at
-startup and restore on a load. That was a generated GNU ld script (`-T`, `INSERT BEFORE .data`) collecting the units'
-sections by object path, which lld for PE cannot take, and which put the game's data inside GNU_RELRO in a PIE link
-with `-z now` (CI's Ubuntu). Now each unit's object has its `.data`/`.bss` sections renamed right after the compile
-(`port_gen.py rename`, the units' CMake compiler launcher, with the host's GNU objcopy, which reads COFF too): on ELF
-into `dw3_data_<ovl>`/`dw3_bss_<ovl>`, orphan sections for which GNU ld makes the `__start_`/`__stop_` symbols
-itself and which it places after `.data`/`.bss`, outside RELRO (a PIE link would be fine for them; the ELF link
-stays non-PIE because the debug channel, the MCP server and `tests/port/mods.py` resolve host symbols with `nm`'s
-link-time addresses, which a PIE relocates: CI's Ubuntu GCC links PIE by default); on PE into `$`-sorted chunk
-groups of two output sections, `.dw3data` and `.dw3bss`, between generated
-empty marker chunks that carry the same symbols (one section per overlay would be 600 PE sections). The post-link
-check reads the objects (`objdump -h`), not a link map, so it is the same on both. The PE side moved from objcopy to
-`#pragma clang section` (forced into each unit's compile) the same day: GNU objcopy drops the COMDAT flag of the COFF
-sections it rewrites, and lld then discards the units' `.pdata`/`.xdata`, the x64 unwind tables the Windows crash
-report's stack walk needs. GCC has no such pragma, so ELF keeps the objcopy pass: two paths after all.
+startup and restore on a load. A generated GNU ld script (`-T`, `INSERT BEFORE .data`) that collected the units'
+sections by object path would do it, but lld for PE cannot take a script, and in a PIE link with `-z now` (CI's
+Ubuntu) it put the game's data inside GNU_RELRO. So each unit's object has its `.data`/`.bss` sections renamed right
+after the compile (`port_gen.py rename`, run by the units' CMake compiler launcher):
+- **ELF:** per-overlay orphan sections (`dw2003_data_<ovl>` for the data), for which GNU ld makes the
+  `__start_`/`__stop_` symbols itself and which it places after `.data`/`.bss`, outside RELRO. The renaming is a pass of
+  the host's GNU objcopy. The ELF link stays non-PIE because the debug channel, the MCP server and `tests/port/mods.py`
+  resolve host symbols with `nm`'s link-time addresses, which a PIE relocates (CI's Ubuntu GCC links PIE by default).
+- **PE:** `$`-sorted chunks (`.psxdata$<ovl>`, `.psxbss$<ovl>`) grouped into two output sections, `.psxdata` and
+  `.psxbss`, between generated empty marker chunks that carry the same symbols (one section per overlay would be 600 PE
+  sections). The renaming is `#pragma clang section`, forced into each unit's compile: GNU objcopy drops the COMDAT flag
+  of the COFF sections it rewrites, and lld then discards the units' `.pdata`/`.xdata`, the x64 unwind tables the
+  Windows crash report's stack walk needs. GCC has no such pragma, so ELF keeps the objcopy pass.
+
+The post-link check reads the objects (`objdump -h`), not a link map, so it is the same on both.
 
 # Launcher and mods
 
 ## Launcher and mods
 _Decided: 2026-10-06_
 
-The launcher is its own thin executable in `launcher/` (C++, Dear ImGui on SDL3; C++ only there, the game stays C): it
+The launcher is its own thin executable in `psxstack/launcher/` (C++, Dear ImGui on SDL3; C++ only there, the game stays C): it
 edits one JSON settings file and starts the game with `--config FILE`. Mods in v1 are built-in features compiled into
 the game, switched and configured through a `mod.json` manifest the launcher renders; data overrides come next, no
 third-party code mods. The game never loads a configuration on its own (tests run the bare binary), mods are off under
@@ -383,52 +386,50 @@ Blending is done in the shader from a copy of the target, not by the fixed-funct
 blender gets the PS1's (B+F)/2 wrong for a quarter of the values, stacked halvings drift on every device, and the
 PS1's dither after the blend cannot be expressed at all.
 
-After the play-test (2026-10-08: internal scale 4 through the field and a battle, without a fault) the default stays
-`software` (`video.renderer`, internal scale 1): the GPU renderer is a choice in the launcher, not the default.
+The default stays `software` (`video.renderer`, internal scale 1), although a play-test at internal scale 4 through
+the field and a battle ran without a fault: the GPU renderer is a choice in the launcher, not the default.
 
-## The port is split into runtime and game adapter (phase 1 of psxstack)
+## The port is split into runtime and game adapter
 _Decided: 2026-10-08_
 
-The PC port stack (the runtime, the Psy-Q shim, the launcher, the build and packaging) is being extracted into its own
-repository, [psxstack](https://github.com/gascarcella/psxstack), to be reused by ports of other PS1 decompilations;
-its `docs/GAME_CONTRACT.md` says what a game provides and what the stack provides. Phase 1, here: `port/runtime/` is
-generic (it includes no game header and names no game symbol; its game facts are macros generated from
-`port/game/game.json`), `port/game/` is this game's adapter behind `port/include/psxstack/game.h` (`game_main`,
-`game_apply_rate`, the `game_state_*` probes and checkpoint image, `game_mods`), with a weak default for each function.
-The game's `include/port.h` keeps the PS1 side of every hook macro itself and includes the stack's `psxstack/hooks.h`
-only under `PC_PORT`, so the matching build never needs the stack. The overlay manager and the arena take the slot table
-from the description (N slots; the macros' `tier` is the slot's 1-based index), so the game's C did not change. The
-`DW3_*` CMake names, the `dw3_data_*` section names and `tools/port_gen.py`'s place stay until the move (phase 2).
+The PC port stack (the runtime, the Psy-Q shim, the launcher, the build and packaging) is its own repository,
+[psxstack](../psxstack), so that ports of other PS1 decompilations can reuse it; its `docs/GAME_CONTRACT.md` says what
+a game provides and what the stack provides. The stack includes no game header and names no game symbol: its game
+facts are macros generated from `port/game/game.json`. `port/game/` is this game's adapter behind psxstack's
+`psxstack/game.h` (`game_main`, `game_apply_rate`, the `game_state_*` probes and checkpoint image, `game_mods`), with a
+weak default for each function. The game's `include/port.h` keeps the PS1 side of every hook macro itself and includes
+the stack's `psxstack/hooks.h` only under `PC_PORT`, so the matching build never needs the stack. The overlay manager
+and the arena take the slot table from the description (N slots; the macros' `tier` is the slot's 1-based index), so
+the game's C does not depend on the stack.
 
-## The PC port is built on psxstack (2026-10-08)
-Phase 2 of the extraction (DECISIONS "The port is split into runtime and game adapter"): the runtime, the Psy-Q
-shim, the shaders, the CMake build, the launcher, `tools/port_gen.py`'s generic half, the inventory's generic half and
-the MCP tools moved to gascarcella/psxstack. `port/CMakeLists.txt` finds the stack at `psxstack/` (the sibling clone
-linked by `scripts/worktree_init.sh`; the submodule in phase 4) and calls `psxstack_add_game()` with this game's
-inputs, which `tools/port_inputs.py` writes from the tracked sources (the units, the overlays with their slot, file
-ID and symbol file, the known tag sites, the volatile ranges): the stack reads no game C. Its names won where the two
-had diverged: the generated header is `psxstack_game_gen.h` from psxstack's `game_gen.py` (`PsxstackGameDisc`,
-`PSXSTACK_GAME_ABOUT`), the sections are `dw2003_data_<ovl>` on ELF and `.psxdata$<ovl>` on PE, the CMake options
-`PSXSTACK_*`, the hook `port_file_wait_read`. The `DW3_PORT_*` environment variables keep their names (the
-description's `env_prefix`). The tests that compile the shim or the runtime on their own (`tests/host/*_replay.py`,
-`tests/spu`, `tests/xa`, `tests/port/sound.py`) take them from `psxstack/`; `tests/port/settings.py` reads the
-manifests of both `psxstack/mods/` and `port/mods/`.
+## The PC port is built on psxstack
+_Decided: 2026-10-08_
 
-## The port stack lives in psxstack, consumed as a pinned submodule (2026-10-08)
-Phase 4 of the extraction: `psxstack/` is a git submodule of gascarcella/psxstack pinned by commit (`.gitmodules`), no
-longer a link to a sibling clone. What a pin buys: this repository's `main` always names the exact runtime, shim and
-launcher its tests passed against, a stack change reaches the game as a reviewable pin bump, and other games pin their
-own. `scripts/worktree_init.sh` checks the submodule out in a worktree (from the main checkout's copy when it has one;
-offline it links the sibling clone and says so, so a session without network still builds). The tools are one tree,
-this repository's `tools/` (its `setup.sh` installs SDL3, DXC, ImGui, llvm-mingw, the AppImage tools), handed to the
-stack's CMake as `PSXSTACK_TOOLS_DIR`; psxstack's own `setup.sh` is for its own CI and for a stack developer, and its
-pins must stay equal to ours. The release's version is `DW3_VERSION` in release.yml and `release_local.sh`, exported
-as `PSXSTACK_VERSION` by the packaging scripts for psxstack's `version.cmake`. While psxstack is private, CI and
-release.yml fetch it with a read-only deploy key on psxstack stored as the secret `PSXSTACK_DEPLOY_KEY` here (the data
-checkout's pattern); a fork pull request has no secrets, so the areas job then skips the port and launcher areas with a
-warning and a maintainer's run tests them. **2026-10-08, phase 5:** psxstack is public and tagged `v0.1.0`, the pin
-is on the tag, the key, the secret and that gate are gone: the submodule is a plain HTTPS fetch for everyone, fork
-pull requests included.
+The runtime, the Psy-Q shim, the shaders, the CMake build, the launcher, `tools/port_gen.py`'s generic half, the
+inventory's generic half and the MCP tools live in psxstack. `port/CMakeLists.txt` finds the stack at `psxstack/` (the
+submodule) and calls `psxstack_add_game()` with this game's inputs, which `tools/port_inputs.py` writes from the tracked
+sources (the units, the overlays with their slot, file ID and symbol file, the known tag sites, the volatile ranges):
+the stack reads no game C. The generated header is `psxstack_game_gen.h` from psxstack's `game_gen.py`
+(`PsxstackGameDisc`, `PSXSTACK_GAME_ABOUT`), the sections are `dw2003_data_<ovl>` on ELF and `.psxdata$<ovl>` on PE,
+the CMake options are `PSXSTACK_*`, the hook is `port_file_wait_read`. The `DW3_PORT_*` environment variables keep
+their names (the description's `env_prefix`). The tests that compile the shim or the runtime on their own
+(`tests/host/*_replay.py`, `tests/spu`, `tests/xa`, `tests/port/sound.py`) take them from `psxstack/`;
+`tests/port/settings.py` reads the manifests of both `psxstack/mods/` and `port/mods/`.
+
+## The port stack lives in psxstack, consumed as a pinned submodule
+_Decided: 2026-10-08_
+
+`psxstack/` is a git submodule pinned by commit (`.gitmodules`: the `al4xdev/dw3-psxstack` fork, branch
+`dw3-handheld`, itself a fork of gascarcella/psxstack). What a pin buys: this repository's `main` always names the exact
+runtime, shim and launcher its tests passed against, a stack change reaches the game as a reviewable pin bump, and other
+games pin their own. `scripts/worktree_init.sh` checks the submodule out in a worktree (from the main checkout's copy
+when it has one; offline it links the sibling clone and says so, so a session without network still builds). The tools
+are one tree, this repository's `tools/` (its `setup.sh` installs SDL3, DXC, ImGui, llvm-mingw, the AppImage tools),
+handed to the stack's CMake as `PSXSTACK_TOOLS_DIR`; psxstack's own `setup.sh` is for its own CI and for a stack
+developer, and its pins must stay equal to ours. The release's version is `DW3_VERSION` in release.yml and
+`release_local.sh`, exported as `PSXSTACK_VERSION` by the packaging scripts for psxstack's `version.cmake`. The
+submodule is public, so CI and release.yml fetch it with a plain HTTPS `git submodule update --init`, fork pull
+requests included.
 
 ## Widescreen battles: the renderer widens, the game is unchanged
 _Decided: 2026-10-08_ (issue #71, the measurements there)
@@ -437,4 +438,4 @@ Only FIGHTSTG draws 3D through the GTE, and it already sends the geometry a 16:9
 changes nothing in the game: it names the battle as the scene to widen and psxstack's renderer draws it into a wide
 canvas (psxstack DECISIONS "Widescreen: a wide canvas beside the VRAM"). The HUD stays centred as drawn, the software
 renderer stays 4:3, the window keeps its size (a new one opens 16:9). The field (2D tile map, 12 VRAM tile slots) and
-the menus (2D art cut at 320) stay 4:3 until the owner decides otherwise (#78).
+the menus (2D art cut at 320) stay 4:3 until that is decided otherwise (#78).

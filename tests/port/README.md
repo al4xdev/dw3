@@ -57,8 +57,8 @@ field table). The JSON reader is
 run.lua names its dumps (`run.py` sets it: `build/port-test/run1_checkpoints/`). When a stable hash differs, diff it with
 the emulator's dump (`tests/replay/replay.py run tests/replay/scripts/new_game.json -v --out DIR` keeps
 `DIR/run1/cpNN_*.bin`) and explain every differing byte range against `include/gamestate.h`: a port bug, a field that
-depends on timing (it joins `VOLATILE_RANGES` only by the rule in tests/README.md "The stable hash and the RNG", and
-only with the maintainer's approval), or a real divergence.
+depends on timing (it joins `VOLATILE_RANGES` only by the rule in tests/README.md "The stable hash and the RNG"), or a
+real divergence.
 
 ## The sound (`sound.py`, `sound_replay.c`; M3, docs/SOUND.md section 7)
 ```sh
@@ -171,6 +171,19 @@ internal scales with that binary under Wine (`scripts/build_windows.sh`; the pre
 Vulkan with `SDL_GPU_DRIVER=vulkan`; ~3 min. Skipped without a device (CI's Wine 9.0 has none: issue #67). In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
 family's 715 lists through the rasteriser, the whole target after each; `tests/README.md`).
 
+## The present filters (`render_filters.py`; issue #69)
+`tests/port/render_filters.py [--out DIR] [-j N] [--build DIR] [--lavapipe] [--filter NAME ...]` checks the hardware
+renderer's present filters (`--filter`, `video.filter`; `psxstack/runtime/render_gpu_present.c`). It builds `build/port-sdl`
+if needed. **Everywhere** (CI too): a bad `--filter` exits 64 with the choices, the headless build accepts a filter, and the
+software renderer's window (and the GPU renderer's fallback without a device) logs that the picture stays unfiltered and
+passes the input self-test. **With a GPU device and the disc** (locally; the reason is printed when skipped): `new_game`
+replayed with each filter, its `--gpu-screenshot F@WxH` pictures against a reference computed in the test from the
+unfiltered picture, at internal scales 1, 2 and 3 and several window sizes (integer and non-integer scales, letterboxing,
+a window smaller than the picture). A filter's reference mirrors its shader (`psxstack/shaders/present_<filter>.frag.hlsl`)
+in float64 while the GPU computes in float32, so each filter has a per-channel tolerance. `--lavapipe` uses Mesa's
+software Vulkan driver. Exit 0 pass (parts may be skipped), 1 fail, 2 something missing for the build. In
+`scripts/test.sh --layer port`.
+
 ## Sub-pixel precision (`subpixel_jitter.py`; psxstack docs/PORT.md "Sub-pixel precision", issue #68)
 `tests/port/subpixel_jitter.py run` replays `first_battle_save` to the end of its first battle with
 `DW3_PORT_SUBPIXEL_LOG` (the GTE shadow on from boot, every RTPS vertex of the battle logged) and checks that at least
@@ -211,19 +224,19 @@ llvm-symbolizer and the PDB beside the exe, and the minidump beside it is read b
 exception record (code 0xC0000005, a write at 0, the address equal to the report's pc inside `dw2003.exe`), the module
 list and the crashing thread's context. Needs `wine` and `tools/llvm-mingw` (~15 s).
 
-## What it found (session 16)
+## What it has found
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the
   overlay sequence) and takes the `new_game_field` checkpoint there, before FIELDSTG's start-up writes `map_is_new`,
-  `field_last_map` and `meter_random_count` (`gamestate_data` + 0x26D8, 0x26DC, 0x26F8). The port's copy was instant:
-  no `(2, -1)`, and those three fields already set. `psxstack/runtime/overlay.c` now runs the whole frames a copy takes (12
-  cycles a byte, 677,376 cycles a PAL frame) after it.
+  `field_last_map` and `meter_random_count` (`gamestate_data` + 0x26D8, 0x26DC, 0x26F8). An instant copy in the port
+  would show no `(2, -1)` and those three fields already set, so `psxstack/runtime/overlay.c` runs the whole frames a copy
+  takes (12 cycles a byte, 677,376 cycles a PAL frame) after it.
 - **Primitive padding.** A textured polygon's third and fourth texture words carry padding in their high half, which the
-  game never writes (it holds the packet buffer's previous contents); the -m32 and -m64 builds' heaps differ, so the
-  primitive hash differed from frame 1,649 on. The shim's hash (`psxstack/psyq/libgpu.c`) now hashes that padding as 0.
-- **-m32 build:** `src/main/heap.c`'s `PC_PORT` static assertion required an 8-byte multiple header, which the 12-byte
-  -m32 header is not; it now requires a pointer-aligned one.
+  game never writes (it holds the packet buffer's previous contents). The -m32 and -m64 builds' heaps differ, so hashing
+  the padding makes the primitive hash differ between them; the shim's hash (`psxstack/psyq/libgpu.c`) hashes it as 0.
+- **-m32 build:** the 12-byte -m32 allocator header is not an 8-byte multiple, so `src/main/heap.c`'s `PC_PORT` static
+  assertion requires a pointer-aligned header.
 
-The longer `first_battle_save` script also runs in the port (exit 5, not a test): the stable hashes of `login_movie` and
-`asuka_lobby` match and the overlay and map sequences agree up to the Main Lobby (map 0x203), where its four `walk` steps
-arrive; step 21 (talk to Tamer Service until map 0x204) times out.
+The longer `first_battle_save` script also runs in the port (exit 5, so it is not a test): the stable hashes of
+`login_movie` and `asuka_lobby` match and the overlay and map sequences agree up to the Main Lobby (map 0x203), where its
+four `walk` steps arrive; step 21 (talk to Tamer Service until map 0x204) times out.

@@ -1,12 +1,17 @@
 # The launcher and the mods: this game's part
 
-The launcher is psxstack's (`psxstack/launcher/`), built for this game from `port/game/game.json`
-(`cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON=$PWD/port/game/game.json
--DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools`; `build/launcher/dw2003-launcher`). The contract between
-the launcher and the game, the settings directory and file (schema 1), the mod manifest and runtime, the launcher's
-screens and self-test, and the crash report are psxstack's `docs/LAUNCHER.md` and `launcher/README.md`. This page
-keeps what is this game's: its built-in mods and its 60 Hz mode. The decisions behind the design: DECISIONS
-"Launcher and mods (session 18)".
+This page is mostly the reference for this game's built-in mods (including the LED bar) and its 60 Hz mode. Two
+programs are called "the launcher" in this repository:
+
+- The desktop launcher is psxstack's (`psxstack/launcher/`), built for this game from `port/game/game.json`
+  (`cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON=$PWD/port/game/game.json
+  -DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools`; `build/launcher/dw2003-launcher`). The contract
+  between it and the game, the settings directory and file (schema 1), the mod manifest and runtime, its screens and
+  self-test, and the crash report are psxstack's `docs/LAUNCHER.md` and `launcher/README.md`.
+- The handheld launcher is the shell script `handheld/Digimon World 3.sh`, with the framebuffer menu `handheld/dw3-menu.py`
+  (`handheld/README.md`). Where it touches the mods (the DEBUG group, the LED bar), this page says so.
+
+The decisions behind the design: DECISIONS "Launcher and mods".
 
 Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable.
 

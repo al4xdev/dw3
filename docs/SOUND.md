@@ -7,6 +7,9 @@ Every claim is marked **verified** (with how) or **assumed** (with the source). 
 
 The file formats (VAB header and body, SEP) are in `docs/FORMATS.md` "Sound".
 
+Sections: 1 the game's sound layer · 2 the LIBSND/LIBSPU functions it reaches · 3 what reaches the SPU · 4 the trace
+oracle · 5 one trace per sound key · 6 the SPU core · 7 LIBSND · 8 CD audio (the movies' XA).
+
 ## 1. The game's sound layer (`src/main/sound.c`)
 The game never touches the SPU or LIBSPU itself (**verified**: no `Spu*` call and no SPU address in `src/`). Every SPU
 store of the `new_game` trace (with `--detail`, which records the pc) comes from LIBSND/LIBSPU, except five from
@@ -39,14 +42,13 @@ Three entries hold a bank each (entry 0 = COMMON for the whole game; entries 1 a
 itself) and the low bits the tick rate, here 50 per second (**assumed** from Psy-Q's documentation; consistent with the
 trace: `SsSeqCalledTbyT` runs once per vsync, 1,948 times in `new_game`'s 1,951 ticks after the EXE starts).
 
-The sound keys of `play` (FORMATS "Sound"): a SEP sequence is addressed as (access number of the SEP, sequence). The
+The sound keys of `play` (FORMATS "Sound") address a SEP sequence as (access number of the SEP, sequence). The
 sequence is not range-checked against the SEP's 16: CNTY_SEL and the battle play COMMON's SEP 0 with sequence `0x1C`,
-`0x19`, `0x1A` (**verified** in the trace: `SsSepPlay(0, 0x1c, 1, 1)` at tick 908 of `new_game`). With
-`SsSetTableSize(table, 6, 16)` the score table is one array of 6 × 16 entries, so sequence 28 of access 0 is entry
-`0 × 16 + 28` = sequence 12 of access 1, i.e. COMMON's second SEP (**verified**, section 7: LIBSND's disassembly
-addresses the table as `table[access] + sequence × entry size`, and the port's LIBSND replayed on `new_game`'s timeline
-matches the emulator's stores only with the aliasing: bounded to 16, the effect's notes at tick 910 are missing). A
-faithful LIBSND must keep this aliasing.
+`0x19`, `0x1A` (**verified**: `SsSepPlay(0, 0x1c, 1, 1)` at tick 908 of `new_game`). With `SsSetTableSize(table, 6, 16)`
+the score table is one array of 6 × 16 entries (LIBSND addresses it as `table[access] + sequence × entry size`), so
+sequence 28 of access 0 is entry `0 × 16 + 28` = sequence 12 of access 1, COMMON's second SEP. **Verified**: the port's
+LIBSND replayed on `new_game`'s timeline matches the emulator's stores only with the aliasing (bounded to 16, the
+effect's notes at tick 910 are missing). A faithful LIBSND must keep it.
 
 ## 2. The LIBSND/LIBSPU functions and what they reach
 The EXE links 91 LIBSND objects (119 functions) and 27 LIBSPU objects (43 functions) (docs/TOOLCHAIN.md; names in
@@ -97,7 +99,7 @@ pause, replay, next-SEP and tempo-change paths (`_SsSndCrescendo`, `_SsSndSetDec
 noise (`vmNoiseOn/Off`, `SpuSetNoiseClock`), `_SsVmSeKeyOn/Off`, `_SsVmSetVol`, `_SsVmSetProgVol`, `_SsVmDamperOn`,
 `_SsUtBuildADSR`/`_SsUtResolveADSR`, and LIBSPU's read-back (`_spu_Fr`, `_spu_FgetRXXa`, `_spu_note2pitch`, ...). Some
 of them must still exist in the port (`SsUtKeyOff` and `SsSepSetDecrescendo` are called by the game, CC 7 and CC 10
-occur in the SEPs: FORMATS "SEP"), but they are not covered by these two traces.
+occur in the SEPs: FORMATS "SEP"); section 5 covers them and section 7 lists what stays untraced.
 
 ## 3. What reaches the SPU (from the traces)
 All **verified** on the `new_game` trace unless marked.
@@ -110,12 +112,12 @@ All **verified** on the `new_game` trace unless marked.
   key-on all 24 voices, key-off all 24; SPU control `0xC000` (enabled, unmuted); reverb base `0xFFFE`; then the reverb
   work area cleared by DMA: 96 blocks of 1,024 bytes and one of 64 from one zero buffer, SPU `0x67FC0`-`0x7FFFF`
   (`0x18040` bytes; the largest preset work area, assumed from psx-spx).
-- **`CdInit`** (tick 523, LIBCD, above): `mvol` `0x3FFF`, `cdvol` `0x3FFF`, `spucnt` `0xC001`.
+- **`CdInit`** (tick 523): LIBCD's five stores (section 1).
 - **`sound_init`**: `SsSetMVol(0x7F, 0x7F)` → main volume `0x3FFF`; `SsSetSerialAttr(0, 0, 1)` → SPU control `0xC001`
   (CD audio on); `SsSetSerialVol(0, 0x7F, 0x7F)` → CD volume `0x7FFE`; `SsUtSetReverbType(3)` → the 32 reverb
   registers (`dAPF1` `0x00B1`, `dAPF2` `0x007F`, `vIIR` `0x70F0`, ..., `vLIN`/`vRIN` `0x8000`: **verified**, the trace),
-  and later the base `0xF6F8` (work area `0x7B7C0`-`0x7FFFF`, `0x4840` bytes). Type 3 is Psy-Q's `SS_REV_TYPE_STUDIO_B`
-  and the values are psx-spx's "Studio Medium" preset (**verified** against psx-spx's table, section 6).
+  and later the base `0xF6F8` (work area `0x7B7C0`-`0x7FFFF`, `0x4840` bytes). Type 3 is Psy-Q's `SS_REV_TYPE_STUDIO_B`,
+  psx-spx's "Studio Medium" preset (section 6).
 - **Bank bodies**: one DMA each, 16-word blocks: COMMON's 297,200-byte body as 297,216 bytes at `0x1010` (BCR
   `0x1224_0010`), CNTY_SEL's at `0x49C10`, TTLBGM's at `0x62410` (`spu=` of the DMA lines; the data's SHA-1 is in the
   trace). So SPU RAM is: `0x0000`-`0x0FFF` unused by the game (the hardware's capture buffers, psx-spx), `0x1000` the
@@ -156,14 +158,11 @@ Register writes per run: `new_game` 20,406 SPU stores (koff/kon/eon/non 15,610; 
   tick 511): the port's trace is compared this way (section 7).
 - **Determinism (verified)**: `new_game` twice → identical traces (2,462 ticks, 20,406 stores, 101 DMA blocks), and
   the committed `cnty_sel` case three times (two at `--record`, one `check`).
-- **Cost (measured, 4-core machine)**: `new_game` 54 s a run, 459 KB with `--calls` (812 KB with `--detail`);
-  `first_battle_save` cut at `battle_won` (21,844 ticks) 522 s, 215,174 stores, 109 DMA blocks, 5.4 MB; the committed
-  check case (`new_game` to `cnty_sel` + 300 frames: the boot, COMMON, CNTY_SEL's bank, music and first effect) 23 s,
-  156 KB (15 s without `--calls`). It runs in `scripts/test.sh` layer 2. The interpreter is ~2-3× slower than the
+- **Cost (4-core machine)**: `new_game` 54 s a run; `first_battle_save` cut at `battle_won` (21,844 ticks) 522 s,
+  215,174 stores, 109 DMA blocks; the committed check case (`new_game` to `cnty_sel` + 300 frames: the boot, COMMON,
+  CNTY_SEL's bank, music and first effect) 23 s, in `scripts/test.sh` layer 2. The interpreter is ~2-3× slower than the
   dynarec runs of `replay.py`, and its frame counts differ slightly from them (21,844 vs 21,786 at `battle_won`): the
   trace's ticks are the interpreter's.
-- **The Lua stack leak** (`run.lua`, PCSX-Redux listener leak): the tracer adds a second vsync listener; `run.lua`'s
-  reset every 8,192 frames still keeps the stack below its limit (the 21,844-tick run passed two resets).
 
 **Audio output, for the SPU core (checked):** Redux has no WAV/audio dump option and no Lua access to the SPU's output
 or RAM (its Lua API: memory, registers, breakpoints, GPU dumps, `PCSX.SPU.playAudio` for *playing* sounds). But it
@@ -187,8 +186,6 @@ step's marker). They reach what the two scripts do not: `SsUtKeyOff`, `SsSepSetD
 loops. The driver's details are in the script's docstring. The debug sound test SOUNDTST (`src/soundtst/`) would be the
 game's own driver, but no pad route reaches it.
 
-Not traced: the 60 Hz mode (`SsSetTickMode(0x1000)`, the NTSC patch).
-
 ## 6. The SPU core (`psxstack/runtime/spu.c`, `spu_dsp.c`)
 Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM filter tables, its CD-ROM page
 ("XA-ADPCM", which psx-spx names as the same algorithm). psx-spx's source, where its site is unreachable:
@@ -201,31 +198,24 @@ Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM f
 
 ### What it costs (measured on the handheld)
 
-The mix is the second largest item of a frame after the game's own code: 4.9 ms per vsync in the plan's first
-measurement (the game's 50 Hz rate, 882 samples a vsync) and, at the machine's current **60 Hz** setting (735 samples a
-vsync), 4.7-4.9 ms in the scripted field/menu run. `DW3_GPU_LOG=1` now prints where it goes, per vsync:
+The mix is the second largest item of a frame after the game's own code. Per vsync it was 4.7-4.9 ms (4.9 ms at the
+game's 50 Hz rate, 882 samples; 4.7 at the machine's **60 Hz** setting, 735 samples) and is now 3.1 ms in the scripted
+field/menu run (voices 2.27, of which interpolation 0.31, + reverb 0.71 + rest 0.13) and 3.0-3.3 ms in a battle (`aud`
+in `DW3_GPU_LOG=1`'s output, which prints this breakdown). The rendered WAV is byte for byte what it was before (md5
+`39757ffd…`, 1200 vsyncs of the scripted run). A figure here is only comparable with another measured at the same rate:
+a vsync at 60 Hz carries a sixth fewer samples than one at 50 Hz. Three changes made the difference:
 
-```
-spu: per vsync (735 samples): total 4.72 ms = voices 3.66 (interpolation 0.42) + reverb 1.09 + rest 0.14   (before)
-spu: per vsync (735 samples): total 3.11 ms = voices 2.27 (interpolation 0.31) + reverb 0.71 + rest 0.13   (after)
-```
-
-The second line is after three changes, and the WAV is byte for byte the first line's (md5 `39757ffd…`, 1200 vsyncs of the
-scripted run as the gate the plan set). In a battle the same `aud` figure reads 3.0-3.3 ms where it read 4.9. Note the
-rate: the numbers are per vsync, and a vsync at 60 Hz carries a sixth fewer samples than one at 50 Hz, so a figure here is
-only comparable with another measured at the same rate.
-
-1. `spu_envelope_tick` lives in `spu_internal.h` as a `static inline`. It was in `spu_dsp.c`, i.e. a call per use, and the
-   mix uses it three times per voice per sample - 63 calls a frame.
+1. `spu_envelope_tick` is a `static inline` in `spu_internal.h` (it was a call in `spu_dsp.c`, used three times per
+   voice per sample).
 2. A voice **released with its envelope at 0 is skipped**: its tick would step an internal counter that no register
    exposes and that every transition resets (key-on, key-off, the block end's End+Mute), and the level it would add is
    negative and clamped back to 0. Most voices are in that state most of the time.
 3. The reverb's 39-tap FIR runs on NEON (`vmlal_s16`, 4 taps a step). The lanes are summed in another order, which cannot
-   change an integer sum - and the build wraps on overflow (`-fwrapv`), so the WAV stays exact.
+   change an integer sum, and the build wraps on overflow (`-fwrapv`), so the WAV stays exact.
 
-What is left is the voice loop itself (2.3 ms): the interpolation is only 0.3 of that, the rest is the envelope, the two
-volume sweeps and the pitch counter of 24 voices x 735 samples, which are carried per voice and cannot be vectorised
-across without a rewrite that processes voices in parallel.
+What is left is the voice loop itself (2.3 ms): the envelope, the two volume sweeps and the pitch counter of 24 voices
+× 735 samples are carried per voice and cannot be vectorised without a rewrite that processes voices in parallel. The
+GPU side's costs are in `docs/gpu/README.md` and `docs/bench`.
 
 ### What is modelled
 - **Registers** by offset from `0x1F801C00`, 16-bit: each stores what is written and reads it back, except ENVX
@@ -290,9 +280,8 @@ across without a rewrite that processes voices in parallel.
   on/off orders within a tick, ENVX and repeat-address writes, every volume sweep mode, the clamps with 24 loud voices,
   noise, PMON, the FIFO/DMA/STATX, the CD input and the capture buffers, the reverb's address arithmetic and the
   impulse responses of "Studio Medium" (writes on and off) and "Room". All match at `-m64`, `-m32` and under ASan and
-  UBSan (`run.sh --all`). A mutation check (16 one-token changes to the C, a scratch script) was caught 15 times; the
-  miss is an equivalent change (`step > 4000h` for `step > 3FFFh`). Two models of one reading agree; a reading both get
-  wrong passes, which is what the next two checks are for.
+  UBSan (`run.sh --all`). Two models of one reading agree; a reading both get wrong passes, which is what the next
+  two checks are for.
 - **The envelope against the emulator** (`tests/spu/envelope_oracle.py gen`: the layer-1 oracle's machinery, 35 s; the
   readings are committed as `envelope_oracle.json`, and `check` re-fits them in 3 s): a MIPS routine keys voice 23 on
   with an ADSR word (silent, on a looping sample of COMMON) and reads ENVX at every vsync. For 14 ADSR words (linear and
@@ -449,7 +438,8 @@ compared tick for tick with the emulator's (2 below). The exact check takes the 
 
 ### Not covered by the traces (implemented from the disassembly, untested)
 `SsSepSetDecrescendo` (FIGHTSTG's fade-out), `SsUtKeyOff`, CC 7 and CC 10 (in SEPs the two scripts do not play), the
-slow-tempo frame counter, `SsSetTickMode`'s other codes. Left out (on no SEP on the disc, or never called by the game):
+slow-tempo frame counter, `SsSetTickMode`'s other codes (the 60 Hz mode, `0x1000`, the NTSC patch, included). Left
+out (on no SEP on the disc, or never called by the game):
 noise voices, RPN/VAG attributes and NRPN attributes other than 15 and 16 (a trace line when one occurs), CC
 11/64/91/100/101/121, timer tick modes, the next-SEP chaining, crescendo and tempo changes by call. The first group is
 in section 5's per-key goldens; a port run of that driver, which would check them, is not written yet.

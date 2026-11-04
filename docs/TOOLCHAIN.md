@@ -1,6 +1,6 @@
 # Toolchain: what built the original game
 
-## Evidence from the EU executable (session 1)
+## Evidence from the EU executable
 | Evidence | Where | Meaning |
 |---|---|---|
 | `$Id: sys.c,v 1.140 1998/01/12 07:52:27 noda Exp yos $` | `0x800102D8` | libgpu `SYS.OBJ` |
@@ -16,7 +16,7 @@
 The `$Id` dates bound the SDK from below (libgpu from Jan 1998 means Psy-Q ≥ 4.3-era libraries). Later
 Psy-Q releases kept those object revisions, so the strings alone can't pin the exact version.
 
-## Psy-Q libraries in the EU EXE (session 2, verified)
+## Psy-Q libraries in the EU EXE
 `tools/psyq_match.py` (our matcher, over lab313ru/psx_psyq_signatures for Psy-Q 2.6–4.7) on `SLES_039.36`:
 - **Psy-Q 4.7.** 284 library objects (123 KB) placed, every one consistent with 4.7, and 4.7 is the only
   version consistent with all of them. Four objects exist only in 4.7: LIBPAD `PDRESRES`, LIBGTE `MSC00`,
@@ -26,7 +26,8 @@ Psy-Q releases kept those object revisions, so the strings alone can't pin the e
   middle of `SSSTART.OBJ`, which we match as one 784-byte object).
 - **Layout:** crt0 (`2MBYTE.OBJ`) at `0x80010E88`, game code `0x80010F4C`–`0x80020D8C`, libraries
   `0x80020D8C`–`0x8003EDCC` with no unmatched gaps. Overlays: only `STDWTITL` has library code
-  (LIBPRESS, `0x8008714C`–`0x80087C4C`); the 293 `WSTAG###` were not scanned yet.
+  (LIBPRESS, `0x8008714C`–`0x80087C4C`); no `WSTAG###` config has a `psyq/` segment, so the 293 stage overlays
+  are game C.
 - 4.7 shipped GCC 2.95.2, but games often used an older compiler with newer libraries, so this does
   not settle the game's compiler (see the compiler-ID experiment below).
 
@@ -48,7 +49,7 @@ Psy-Q releases kept those object revisions, so the strings alone can't pin the e
 | crt0 `2MBYTE.OBJ` | 1 | 196 |
 
 **Ambiguous objects:** 20 tiny objects (16–96 B) have identical masked bytes in several library objects. One
-(`_bu_init`, the same name in LIBAPI and LIBCARD) needs no choice. The other 19 were settled in session 3 from
+(`_bu_init`, the same name in LIBAPI and LIBCARD) needs no choice. The other 19 were settled by hand from
 what the masked bytes hide: the call targets, the variables each one shares with uniquely-matched functions, and
 the tables that store them. All are named in `config/symbol_addrs.txt`.
 
@@ -75,7 +76,7 @@ Confidence: all are direct evidence, except `CdPosToInt`/`CdIntToPos` (an argume
 linked only through those callbacks; Ghidra's picks (`CdPosToInt`, `CdIntToPos`, `CdGetSector`, `SpuRead`) were
 just the first candidate, and `SpuRead` was wrong.
 
-## What the US decomp established (not yet verified for EU)
+## What the US decomp established (and the EU result)
 [juandav/dw3_decomp](https://github.com/juandav/dw3_decomp) (USA, SLUS-01436) reports:
 - **SDK: Psy-Q 4.7**, from [psx_psyq_signatures](https://github.com/lab313ru/psx_psyq_signatures).
 - **Game code: GCC 2.8.x `-O2 -G0`**, chosen empirically: m2c output for 342 functions built
@@ -87,16 +88,16 @@ just the first candidate, and `SpuRead` was wrong.
 - ASPSX 2.56–2.86 behave the same. No divide-by-zero checks (maspsx without `--expand-div`). `-fsigned-char`.
 
 EU was built 2002-10-01 (EXE date), a few months after the US release, from the same codebase
-(the save-ID table names all three releases). The same toolchain is the strong prior, but it's
-**unconfirmed for EU** until we compile a function and match it.
+(the save-ID table names all three releases). The same toolchain was the prior, and it holds for EU: every
+game function compiles to the original bytes (see "Outcome" below).
 
-## Smoke test of the matching toolchain (session 2)
+## Smoke test of the matching toolchain
 `scripts/check_toolchain.sh` builds `func_800141E4` (`return D_80044F6C[i] != 0;`) with every old-gcc
 version + maspsx. The EXE's 7 instructions (`lui v0 / addiu v0 / sll / addu a0,a0,v0 / lw / jr / sltu`)
 come out exactly with 2.8.0, 2.8.1 and 2.95.2. 2.7.2 addresses through `$at` (6 instructions), and
 2.91.66 allocates `v1` instead of `v0`. One function proves little, but it fits the 2.8.x prior.
 
-## Compiler-ID experiment (session 2): GCC 2.8.x, mostly `-G0`
+## Compiler-ID experiment: GCC 2.8.x, mostly `-G0`
 `tools/compiler_id.py` (reproducible, ~15 s): 275 game functions (4–139 instructions; no jump tables,
 rodata references or split switch cases). m2c `--valid-syntax` drafts each one with no hand edits, the
 draft is compiled with all 5 GCCs at `-G0` and `-G8` via `tools/cc_psx.sh`, and objdiff scores it against
@@ -126,6 +127,8 @@ the original. 259 functions scored; 16 drafts fail to compile on every compiler 
   symbols into definitions for `-G8`. Without that, 0 of 23 `$gp` functions matched; with it, 11 do.
 - **Not measured:** functions over 139 instructions, jump tables, rodata users.
 
-## Unknowns
-- Exact file boundaries of the `-G8` code (the `$gp` cluster and `main`'s file).
-- Whether EU-only code (the post-game, from the JP build) was compiled differently.
+## Outcome
+The toolchain this page points to is the one that builds the game: GCC 2.8.1 with maspsx, `-O2`, `-G8` for the EXE's
+C and `-G0` for every overlay (`configure.py` `DEFAULT_G`; there are no per-file overrides). All game code, the
+EU-only post-game code included, rebuilds byte-identical (DECISIONS "Compiler: GCC 2.8.1 with maspsx"; progress in
+[`PROGRESS.md`](PROGRESS.md)).
