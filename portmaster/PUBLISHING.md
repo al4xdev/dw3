@@ -14,8 +14,8 @@ A **decompilation** of a commercial game is not accepted by the main catalogue: 
 
 - [x] **The package builds itself and validates itself**: `portmaster/make_release.sh` assembles `dist/dw3.zip` in the
       layout the publishing page asks for and refuses to build when a required file is missing, when `port.json` does not
-      describe the layout, or when a disc image is inside. Last run: **14 files, 2.0 MB, `0cd0aa75…`**, published as the
-      `dw3-port-1` release asset (`sha256:1c103c25…`).
+      describe the layout, or when a disc image is inside. Last run: **14 files, 2.0 MB, `868c14f5…`**, published as the
+      `dw3-port-1` release asset (`sha256:a7acfe01…`).
 - [x] **`port.json`** — version 4, `name: dw3.zip`, `items: ["Digimon World 3.sh", "dw3"]`, `arch: ["armhf"]`, `rtr:
       false`, `exp: false`, `availability: full`, `porter: ["al4xdev"]`, and an `inst` field that names the disc (Europe /
       PAL, `SLES-03936`), says the `.cue` and the `.bin` go in together, gives the folder as `ports/dw3/game/` and as the
