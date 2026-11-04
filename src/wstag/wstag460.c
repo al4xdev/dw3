@@ -485,6 +485,21 @@ void wstag460_fly_update(void *arg0) {
             wstag460_fly_move(obj);
         }
         sprite = obj->sprite.sprite;
+#ifdef PC_PORT
+        /* PC_PORT: WSTAG460 spawns flies with types 1..7 (wstag460_group_update), but
+         * wstag460_sprites has no entry for type 4. On the PS1 without an MMU, the NULL
+         * sprite pointer wrote harmlessly into low RAM at 0x00000000; on the host it faults. */
+        if (sprite != NULL) {
+            if (obj->mode != 0) {
+                sprite->shown = 1;
+                sprite->frame = wstag460_fly_anim_advance(&obj->sprite, D_WSTAG460_800A73DC, 0, 0);
+                sprite->x = obj->x;
+                sprite->y = obj->y;
+            } else {
+                sprite->shown = 0;
+            }
+        }
+#else
         if (obj->mode != 0) {
             sprite->shown = 1;
             sprite->frame = wstag460_fly_anim_advance(&obj->sprite, D_WSTAG460_800A73DC, 0, 0);
@@ -493,6 +508,7 @@ void wstag460_fly_update(void *arg0) {
         } else {
             sprite->shown = 0;
         }
+#endif
         if (obj->mode == 3) {
             obj->speed -= 4;
             if (obj->speed < 0x11) {
@@ -514,6 +530,29 @@ void wstag460_fly_update(void *arg0) {
         wstag460_fly_move(obj);
         spr = obj->sprite.sprite;
         frame = wstag460_fly_anim_advance(&obj->sprite, D_WSTAG460_800A7408, 1, 0);
+#ifdef PC_PORT
+        if (spr != NULL) {
+            switch (frame) {
+            case 0x12C:
+                spr->shown = 0;
+                break;
+            case 0xFF:
+                spr->shown = 0;
+                obj->mode = 0;
+                obj->base.set_state(obj, OBJECT_STATE_RUN);
+                break;
+            default:
+                spr->shown = 1;
+                spr->frame = frame;
+                spr->x = obj->x;
+                spr->y = obj->y;
+                break;
+            }
+        } else if (frame == 0xFF) {
+            obj->mode = 0;
+            obj->base.set_state(obj, OBJECT_STATE_RUN);
+        }
+#else
         switch (frame) {
         case 0x12C:
             spr->shown = 0;
@@ -530,6 +569,7 @@ void wstag460_fly_update(void *arg0) {
             spr->y = obj->y;
             break;
         }
+#endif
         break;
     case OBJECT_STATE_END:
         break;

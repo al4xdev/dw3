@@ -11,6 +11,7 @@ for this tree, plus the game's own commands (docs/PORT.md "Compiling the game C 
   tools/venv/bin/python tools/port_inventory.py link                   # probe, then nm: duplicate / undefined globals
   tools/venv/bin/python tools/port_inventory.py structs                # sizeof every typedef'd struct, -m32 and -m64
   tools/venv/bin/python tools/port_inventory.py object-sizes           # literal object/data sizes (exit 0 = none)
+  tools/venv/bin/python tools/port_inventory.py stage-sprites          # stage sprite tables vs spawned sprite types (exit 0 = clean)
 
 The probe's objects go to build/port_inventory/<width>/ (its override headers to build/port_inventory/include/);
 psxstack/tools/port_inventory.py's docstring describes the commands and the site kinds. `structs` (sizeof of every
@@ -220,6 +221,52 @@ def cmd_object_sizes(args):
     return 1 if bad else 0
 
 
+def cmd_stage_sprites(args):
+    """Scan all stage overlays (src/wstag/wstag*.c) and ensure any spawned or referenced sprite
+    type actually exists in that stage's sprite table (FieldstgSprite wstag*_sprites[]), guarding
+    against missing-asset NULL pointer faults on modern OSes."""
+    bad, total = [], 0
+    wstag_files = sorted((ROOT / "src/wstag").glob("wstag*.c"))
+    for path in wstag_files:
+        text = path.read_text(encoding="utf-8")
+        sprites_match = re.search(r"FieldstgSprite\s+\w+_sprites\[\d*\]\s*=\s*\{([^;]+)\};", text)
+        if not sprites_match:
+            continue
+        total += 1
+        found_types = set()
+        for entry in re.findall(r"\{\s*([^}]+)\s*\}", sprites_match.group(1)):
+            parts = [p.strip() for p in entry.split(",")]
+            if len(parts) >= 3:
+                try:
+                    t_val = int(parts[1], 0)
+                    p_val = int(parts[2], 0)
+                    if p_val != 0:
+                        found_types.add(t_val)
+                except ValueError:
+                    pass
+
+        # Spawners passing sprite type IDs: e.g. wstagXXX_fly_new(type, ...)
+        for m in re.finditer(r"\b\w+_(?:fly|anim)_new\(\s*(\d+|0x[0-9a-fA-F]+)", text):
+            val = int(m.group(1), 0)
+            if val not in found_types:
+                if "PC_PORT" not in text or "sprite != NULL" not in text:
+                    ln = text[:m.start()].count("\n") + 1
+                    bad.append(f"{path.relative_to(ROOT)}:{ln}: spawns sprite type {val}, but not in stage sprites table (found: {sorted(found_types)})")
+
+        # Constant equality checks: (list|sprite|spr)->type == X
+        for m in re.finditer(r"(?:list|sprite|spr)->type\s*==\s*(\d+|0x[0-9a-fA-F]+)", text):
+            val = int(m.group(1), 0)
+            if val not in found_types:
+                if "PC_PORT" not in text or "sprite != NULL" not in text:
+                    ln = text[:m.start()].count("\n") + 1
+                    bad.append(f"{path.relative_to(ROOT)}:{ln}: checks type == {val}, but not in stage sprites table (found: {sorted(found_types)})")
+
+    for b in bad:
+        print(b)
+    print(f"stage-sprites: {total} stage sprite tables scanned, {len(bad)} issues found")
+    return 1 if bad else 0
+
+
 def main():
     ap, sub = inv.build_parser()
     p = sub.add_parser("structs", help="sizeof of every typedef'd struct at -m32/-m64 vs the documented PS1 size")
@@ -229,6 +276,8 @@ def main():
     p.set_defaults(func=cmd_structs)
     p = sub.add_parser("object-sizes", help="object_new/object_create calls with a bare literal size (exit 0 = none)")
     p.set_defaults(func=cmd_object_sizes)
+    p = sub.add_parser("stage-sprites", help="verify spawned sprite types exist in stage sprite tables (exit 0 = none)")
+    p.set_defaults(func=cmd_stage_sprites)
     return inv.main(ap)
 
 
