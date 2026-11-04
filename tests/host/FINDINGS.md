@@ -52,9 +52,7 @@ struct layout; finding 9 comes from reading the C, and no golden reaches it. The
 - **Where:** `src/stfgtrep/stfgtrep_80082E70.c` `stfgtrep_raise_stats(digimon, lv)`, for `lv <= 40`:
   `stfgtrep_resist_gains[class + pad_random.next() % 4]` with `class = records_digimon[digimon].resist_gains[i]`. The table
   has 8 entries (`{0, 0, 0, 1, 1, 1, 2, 2}`) and the index reaches 8 when the class is 5 and the draw's residue is 3.
-  Seven of the eight party Digimon have a class-5 resist in `records_digimon` (all but index 1; e.g. Digimon 0 Water
-  `resist_gains[1]`, Digimon 5 Wind `[3]`, Digimon 7 Dark `[6]`); the goldens only exercise 0 and 7. On a handheld this
-  showed as a resist jumping to 898 at level 4 and 999 soon after (a player's Guilmon, Wind).
+  Two party Digimon have a class-5 resist: Digimon 0 (Kotemon, Water, `resist_gains[1]`) and Digimon 7 (Dark, `[6]`).
 - **Original:** the table ends the overlay file (`STFGTREP.PRO` is `0x65F8` bytes and `stfgtrep_resist_gains` ends at
   `0x80089288 + 0x20 = 0x800892A8`, the file's end), so entry 8 is the rest of the file's last sector, which is zeros
   on the disc and is loaded with it (`overlay_load_stage` copies whole sectors), and the gain is 0:
@@ -71,9 +69,6 @@ struct layout; finding 9 comes from reading the C, and no golden reaches it. The
   port must keep the two tables adjacent or bounds-check both.
 - **For the port:** emulate the original (a gain of 0 for the overrun) or bounds-check; either way the level-up draws must
   stay identical to the original's for the replay tests, so the draw count must not change.
-- **Fixed in the port:** `stfgtrep_raise_stats` has a `#ifdef PC_PORT` branch that takes one draw and gives 0 for index 8.
-  The host replay builds without `PC_PORT` (tests/host/build.sh), so it still records the raw difference and the 34
-  known mismatches stay.
 
 ## 3. `stgtrain_get_menu(14)` reads past `stgtrain_menus` (agrees on the host by accident)
 
