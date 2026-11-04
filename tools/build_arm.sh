@@ -25,8 +25,19 @@ if ! docker image inspect "$IMAGE" &> /dev/null; then
     docker build -t "$IMAGE" -f "$TOOLS_DIR/Dockerfile.armhf" "$TOOLS_DIR"
 fi
 
+# The image has no git. The development stamp is the host commit, not a release tag.
+stamp=$(git -C "$REPO" describe --always --dirty)
+case "$stamp" in
+    v[0-9]*) PSXSTACK_VERSION=${stamp#v} ;;
+    *) PSXSTACK_VERSION=dev-$stamp ;;
+esac
+PSXSTACK_COMMIT=$(git -C "$REPO" rev-parse HEAD)
+export PSXSTACK_VERSION PSXSTACK_COMMIT
+echo "Version stamp: $PSXSTACK_VERSION ($PSXSTACK_COMMIT)"
+
 echo "Configuring and compiling with CMake + Ninja inside Docker..."
 docker run --rm -u "$(id -u):$(id -g)" \
+    -e PSXSTACK_VERSION -e PSXSTACK_COMMIT \
     -v "$REPO:/work" \
     -w /work \
     "$IMAGE" \
@@ -50,7 +61,7 @@ cp "$BUILD_DIR/dw2003" "$PACKAGE_DIR/dw3/dw2003"
 chmod +x "$PACKAGE_DIR/dw3/dw2003"
 
 # Retired files: the package is a mirror, so a file that left handheld/ has to leave it too (the copy loop only adds).
-rm -f "$PACKAGE_DIR/dw3/dw3-tui.sh"   # the terminal menu, replaced by nothing: the console has one UI, dw3-menu.py
+rm -f "$PACKAGE_DIR/dw3/dw3-tui.sh" "$PACKAGE_DIR/dw3/dw3.sh" "$PACKAGE_DIR/dw3/detect-env.sh"
 
 cp "$REPO/handheld/Digimon World 3.sh" "$PACKAGE_DIR/Digimon World 3.sh"
 chmod +x "$PACKAGE_DIR/Digimon World 3.sh"
@@ -64,7 +75,7 @@ for f in "$REPO"/handheld/*; do
     cp "$f" "$PACKAGE_DIR/dw3/"
 done
 chmod -x "$PACKAGE_DIR/dw3/README.txt" 2>/dev/null || true
-chmod +x "$PACKAGE_DIR/dw3/dw3.sh" "$PACKAGE_DIR/dw3/dw3-menu.py" 2>/dev/null || true
+chmod +x "$PACKAGE_DIR/dw3/dw3-menu.py" 2>/dev/null || true
 chmod +x "$PACKAGE_DIR/dw3/ledd.py" 2>/dev/null || true
 
 if [ -d "$BUILD_DIR/mods" ]; then

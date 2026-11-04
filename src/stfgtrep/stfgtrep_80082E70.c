@@ -909,12 +909,20 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         break;
     case 21:
         if (records_battle_results.item != 0) {
+            s32 item_gain = 1;
+#ifdef PC_PORT
+            if (port_mod_xp_boost != 0 && port_mod_xp_boost_card_boost != 0 &&
+                (records_battle_results.item == 91 ||
+                 (records_battle_results.item >= 361 && records_battle_results.item <= 394))) {
+                item_gain = 15;
+            }
+#endif
             data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 11);
             data->messages->set_line_text(data->messages, cdload_module.files.get_file(records_language + 0x6A), records_battle_results.item, 1);
             data->messages->set_speed(data->messages, 6);
             obj->base.step = 25;
             obj->base.substep = 1;
-            gamestate_data.items[records_battle_results.item]++;
+            gamestate_data.items[records_battle_results.item] += item_gain;
             if (gamestate_data.items[records_battle_results.item] >= 100) {
                 gamestate_data.items[records_battle_results.item] = 99;
             }
@@ -981,60 +989,36 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
 }
 
 #ifdef PC_PORT
-/* xp_boost's "all forms", now for the whole party: every digivolution the party owns earns the battle's form experience,
- * not only the forms that fought. The report credits the forms the game marked in records_battle_results
- * (members[slot].forms[]) inside the member's panel, so this covers the rest: the other forms of the member that fought,
- * every form of the members that did not, and every form of a member that fought as its own form (which marks none).
- * Each form is credited once. A Digimon that digivolved in the battle has two marked forms and the panel credits both
- * itself, so they are skipped here - crediting them here too was the double count the old loop had.
- *
- * The number is the game's own for that Digimon: stfgtrep_get_technique_exp divides the battle's tech_exp by the
- * Digimon's level, and by the forms that took part (users), and each form keeps its own requirement table in
- * add_technique_exp. It is not a share divided among the party: dividing would be a rule invented here, and it would
- * punish carrying more forms, which is the opposite of what the game rewards. The per-form ceiling is skipped while the
- * mod is on, so calling it once per form only selects that form's record (and stores the result in that form).
- *
- * The chosen forms that level here raise their row's flag, so the report shows the level-up even though the panel
- * itself has no experience to add for them (the form did not fight). A member without a panel (its share is zero)
- * gets the experience but no message, as it does for the Digimon's own experience. */
+/* xp_boost's "all forms": the three chosen forms of each party member, nine at most. A form left in the
+ * lab is not chosen, so it earns nothing here. It used to, and could reach 99 without a skill, because
+ * learn_skill only runs for a chosen slot. The panel still credits a marked form, so those are skipped.
+ * A member with no panel never reaches that step, so its chosen forms learn one skill here. */
 static void stfgtrep_grant_party_forms(s32 slot, s32 tech_exp, s32 users, StfgtrepMember *member) {
-    s16 owned[44];
     s16 chosen[3];
     s32 digimon = gamestate_data.funcs.get_party_member(slot);
-    s32 count;
-    s32 i;
     s32 j;
-    s32 credited;
 
     if (digimon < 0) {
         return;
     }
-    count = gamestate_data.funcs.list_forms(digimon, owned);
-    if (count <= 0) {
-        return;
-    }
     gamestate_data.funcs.get_chosen_forms(digimon, chosen);
-    for (i = 0; i < count; i++) {
-        if (owned[i] < 4) {
+    for (j = 0; j < 3; j++) {
+        s32 form = chosen[j];
+        s32 up;
+
+        if (form < 4) {
             continue;
         }
-        credited = 0;
-        for (j = 0; j < 3; j++) {
-            if (records_battle_results.members[slot].forms[j] != 0 && chosen[j] == owned[i]) {
-                credited = 1;
-            }
+        if (records_battle_results.members[slot].forms[j] != 0) {
+            continue;
         }
-        if (credited == 0) {
-            s32 up = stfgtrep_funcs.add_technique_exp(
-                digimon, owned[i], stfgtrep_funcs.get_technique_exp(digimon, owned[i], tech_exp, users));
-
-            if (up != 0 && member != NULL && member->exp_gained != 0) {
-                for (j = 0; j < 3; j++) {
-                    if (chosen[j] == owned[i]) {
-                        member->tech_level_ups[j].level_up = 1;
-                    }
-                }
-            }
+        up = stfgtrep_funcs.add_technique_exp(
+            digimon, form, stfgtrep_funcs.get_technique_exp(digimon, form, tech_exp, users));
+        if (up != 0 && member != NULL && member->exp_gained != 0) {
+            member->tech_level_ups[j].level_up = 1;
+        }
+        if (member == NULL || member->exp_gained == 0) {
+            stfgtrep_funcs.learn_skill(digimon, form);
         }
     }
 }

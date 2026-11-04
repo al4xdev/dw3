@@ -24,9 +24,8 @@ A **decompilation** of a commercial game is not accepted by the main catalogue: 
       printed on the buttons, `Select + Start` to quit), Compile and Thanks.
 - [x] **`gameinfo.xml`** — EmulationStation entry (path, name, description, publisher, genre, image).
 - [x] **`screenshot.png`** — 640x480, 4:3, gameplay, captured from this console's own framebuffer (Kusanagi City).
-- [x] **The launcher** (`handheld/Digimon World 3.sh`) follows the conventions: `PORT_32BIT="Y"`, the CFW's
-      `SDL_GAMECONTROLLERCONFIG`, `LD_LIBRARY_PATH`, `pm_platform_helper`/`pm_finish` when present, and it does not
-      `exec` the game so that cleanup runs before the frontend returns.
+- [x] **The launcher** (`handheld/Digimon World 3.sh`) is the one script: `PORT_32BIT` before `mod_`,
+      `get_controls`, `pm_platform_helper`, `pm_finish`. It does not set `SDL_VIDEODRIVER`.
 - [x] **No game data in the zip** — checked by the script, which fails on `.bin/.cue/.iso/.chd/.mcd/.img`.
 - [x] **The repository is the source of truth**: `tools/build_arm.sh` reproduces the binary from a fresh clone
       (`--recurse-submodules`), `docs/XF35H.md` and `docs/gpu/*` carry the evidence, and nothing needed to rebuild lives

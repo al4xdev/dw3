@@ -13,6 +13,11 @@ The port contains no game data: without the disc in `game/` it says `NO DISC IN 
 If the game does not start after an update, the two files worth deleting are `settings.json` and `pad.map` in
 `ports/dw3/` (they are rebuilt on the next launch).
 
+On a handheld with no writable `/dev/fb0`, or where Wayland is the display (ROCKNIX on some devices), the
+framebuffer menu is skipped. The renderer default is software. The launcher passes GLES only when the CPU
+part is `0xd04` (the same chip as this handheld) and `settings.json` has not already chosen. `DW3_FORCE_RENDERER`
+and `DW3_FORCE_VIDEO` still override.
+
 ## Notes
 
 A source port of **Digimon World 2003** (PAL), built from [dw2003recomp](https://github.com/gascarcella/dw2003recomp): the
@@ -48,8 +53,7 @@ buff on (the first Digimon to evolve in a battle gets +100 to every stat for the
 **The two brakes the XP boost removes** (this port's own doing, on the owner's call): the game caps form experience at 10
 points a battle before the fifth form-level threshold and 50 after it - that ceiling is what makes a digivolution gain one
 level per battle, and it is applied before the multiplier, so at 6x a battle still crept one level. With the mod on the
-ceiling is skipped, so a won battle can raise several form levels. `ALL FORMS' XP` goes further: only the forms that
-fought earn experience in the original, which leaves the other digivolutions at the lab for ever. Each form keeps its own
+ceiling is skipped, so a won battle can raise several form levels. `ALL FORMS' XP` credits the three chosen forms of each party member, not a form left in the lab. Each form keeps its own
 requirement table, so nothing is free - a basic form taken to 99 in the late game is a farm the player built.
 
 ## Controls (Default PS1 Layout)

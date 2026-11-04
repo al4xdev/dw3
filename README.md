@@ -118,7 +118,7 @@ such call sites, and the rasteriser divides once per span row.
 that read at 6–15 cycles (the counter lives in the 24 MHz clock domain and is synchronised into the core). At ~8000
 spans per battle frame that is **1–2 ms of the 20 ms budget**, plus a write to the SD card every second.
 
-**Solution.** The meters are off in `dw3.sh` (left as commented lines); a measurement run turns them on by hand. Inside
+**Solution.** The meters are off in `handheld/Digimon World 3.sh` (left as commented lines); a measurement run turns them on by hand. Inside
 the meter, the counters accumulate raw cycles and convert once per second, and the order-list walk uses the same
 counter instead of two `clock_gettime` calls per list.
 
@@ -210,11 +210,9 @@ This is as important as what was done — each of these looked like a win and is
   - **the 10/50 per-battle ceiling on form experience** - the rule that paces a digivolution to one level a battle (99
     battles to 99), applied before the multiplier so a 6x setting still crept one level. Off while the mod is on, so a
     won battle can raise several form levels (`tests` measured form 4 → 11 on the XF35H).
-  - **"only the forms that fought earn experience"** (`all_forms`, on by default): every digivolution every party
-    member owns earns the battle's form experience, whether it fought or not - the game's own number for that Digimon,
-    not a share divided among the party, because dividing would punish carrying more forms. Each form keeps its own
-    requirement table, so taking a basic form to 99 in the late game is a farm the player built, not a shortcut the port
-    hands out. No cap on levels per battle either.
+  - **"only the forms that fought earn experience"** (`all_forms`, on by default): the three chosen forms of each
+    party member earn the battle's form experience, whether that form fought or not. A form left in the lab does not.
+    The number is still the game's own for that Digimon. No cap on levels per battle either.
 - **Fast-forward**: up to 8x where the game has headroom (menus, dialogue, cutscenes). In the field and in battle the
   CPU is the limit, so it only mutes the audio there.
 - **Evolution buff, on in the tuned defaults**: the first Digimon in each battle to evolve gets +100 to every stat for
@@ -232,13 +230,11 @@ This is as important as what was done — each of these looked like a win and is
 
 ## Running it
 
-EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`, which calls
-`/storage/roms/ports/dw3/dw3.sh`. That script shows the gamepad menu and then runs the game on `/dev/fb0`.
+EmulationStation launches `/storage/roms/ports_scripts/Digimon World 3.sh`. That script shows the gamepad menu and then runs the game on `/dev/fb0`.
 
 ```
 /storage/roms/ports/dw3/
   dw2003          the port binary (ARM 32-bit)
-  dw3.sh          menu + game            (from handheld/)
   dw3-menu.py     the framebuffer menu    (from handheld/)
   ledd.py         the LED bar's daemon      (from handheld/)
   README.txt      what each file is, on the device
@@ -270,7 +266,7 @@ card holds. `DW3_PACKAGE_DIR=... tools/build_arm.sh` puts it somewhere else.
 
 ```sh
 rsync -rt -e ssh portmaster/dw3/dw2003 root@<console>:/storage/roms/ports/dw3/
-rsync -rt -e ssh portmaster/dw3/dw3.sh  root@<console>:/storage/roms/ports/dw3/
+rsync -rt -e ssh "portmaster/Digimon World 3.sh" root@<console>:"/storage/roms/ports_scripts/Digimon World 3.sh"
 ```
 
 The card's filesystem refuses Unix sockets, so debug sockets must live in `/tmp`.
@@ -314,7 +310,7 @@ On the map, the `CONFIRM` button on a visited area starts a fast travel.
 
 ## Measuring performance
 
-The meters cost real frames, so `dw3.sh` leaves them off. To measure one run, uncomment the two exports (or set them by
+The meters cost real frames, so `handheld/Digimon World 3.sh` leaves them off. To measure one run, uncomment the two exports (or set them by
 hand) and read `logs/gpu.log` while the scene you care about is on screen. One line a second:
 
 ```

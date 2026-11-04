@@ -182,6 +182,8 @@ s32 port_xp_boost(s32 kind, s32 amount);
  * acted gets a panel that credits them); with this on, every form the party owns (up to 44 a Digimon) earns the game's
  * own number for its Digimon, whether it fought or not, once per battle - the panel still credits the marked forms. */
 extern int port_mod_xp_boost_all_forms;
+/* port_mod_xp_boost_card_boost: when on, winning a battle that drops any Booster Pack (Cardmon) grants 15 packs. */
+extern int port_mod_xp_boost_card_boost;
 /* port_mod_evo_buff: evo_buff is on ("Evolution buff"): the first Digimon in each battle to evolve gains +100 to every
  * stat for the rest of the fight (the rules, get_stats) and, on the enemy turn that follows, takes no damage (Guard at
  * the ceiling, get_stats, only where it is the target: first == 0). One per battle: dw3_evo_buff_member (set on the

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gamepad menu drawn on /dev/fb0. Exit 0 = play, 2 = quit."""
+"""Gamepad menu drawn on /dev/fb0. Exit 0 = play, 2 = quit, 3 = framebuffer unavailable."""
 import glob
 import mmap
 import os
@@ -160,7 +160,7 @@ def defaults():
     party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, the
     evolution buff, and no logs."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0, evo=1,
-                party=1, share=100, xp=1, xp_mul=2, form_xp=1, form_mul=14, all_forms=1, logs=0, lang=0, lang_on=0)
+                party=1, share=100, xp=1, xp_mul=2, form_xp=1, form_mul=14, all_forms=1, card_boost=1, logs=0, lang=0, lang_on=0)
 
 
 def load_state():
@@ -217,17 +217,18 @@ def write_settings(s, disc):
     try:
         import json
 
-        renderer = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+        renderer = json.load(open(CFG)).get("video", {}).get("renderer", renderer_default())
     except (OSError, ValueError):
-        renderer = "gles"
+        renderer = renderer_default()
     if renderer not in ("gles", "software", "gpu"):
-        renderer = "gles"
+        renderer = renderer_default()
     xb_on = bool(s["xp"] or s.get("form_xp", 1))
     xb_exp = s["xp_mul"] if s["xp"] else 1
     xb_bits = s["xp_mul"] if s["xp"] else 1
     xb_form = s["form_mul"] if s.get("form_xp", 1) else 1
     xb_manual = bool((s["xp"] and s["xp_mul"] > 5) or (s.get("form_xp", 1) and s["form_mul"] > 5))
     xb_all_forms = bool(s["all_forms"]) if s.get("form_xp", 1) else False
+    xb_card_boost = bool(s.get("card_boost", 1))
     text = """{
   "schema": 1,
   "disc": { "path": "game/%s" },
@@ -243,7 +244,7 @@ def write_settings(s, disc):
     "battle_animations": { "enabled": %s, "hit_reaction": %s },
     "global_save": { "enabled": %s, "restore_map_state": true },
     "party_xp": { "enabled": %s, "share": %d, "knocked_out": false, "catch_up": false },
-    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s, "all_forms": %s },
+    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s, "all_forms": %s, "card_boost": %s },
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
     "evo_buff": { "enabled": %s },
@@ -253,7 +254,7 @@ def write_settings(s, disc):
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
-       b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(s["evo"]),
+       b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(xb_card_boost), b(s["evo"]),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -381,6 +382,7 @@ GROUPS = [
         ("xp", "XP / BITS BOOST"),
         ("form_xp", "  FORM XP"),
         ("all_forms", "  ALL FORMS' XP"),
+        ("card_boost", "  CARD DROP BOOST"),
     ]),
     ("video", "VIDEO", [
         ("hz", "HZ"),
@@ -435,6 +437,8 @@ def field_text(s, key):
         return "ASK"
     if key == "all_forms":
         return on(s["all_forms"]) if s.get("form_xp", 1) else "off"
+    if key == "card_boost":
+        return on(s.get("card_boost", 1))
     if key == "hit":
         return on(s["hit"]) if s["battles"] else "off"
     if key in ("skip", "battles", "saveany", "evo"):
@@ -505,6 +509,8 @@ def field_toggle(s, key):
             s["all_forms"] = 1
         else:
             s["all_forms"] ^= 1
+    elif key == "card_boost":
+        s["card_boost"] = 0 if s.get("card_boost", 1) else 1
     elif key in ("skip", "battles", "saveany", "evo"):
         s[key] ^= 1
 
@@ -576,17 +582,23 @@ def led_state():
     return _led_seen[1]
 
 
+def renderer_default():
+    """software unless the launcher saw this chip and set DW3_DEFAULT_RENDERER=gles."""
+    name = os.environ.get("DW3_DEFAULT_RENDERER", "software")
+    return name if name in ("gles", "software", "gpu") else "software"
+
+
 def renderer_get():
-    """Which renderer settings.json asks for. gles is the default (that is what the file ships with); software is the one
-    a player picks here for the 2D-heavy sessions, where it measures faster than the GPU (57.7 against 43.5 fps on the
-    scripted boot, because a light frame pays the same ~3.2 ms present either way)."""
+    """Which renderer settings.json asks for. software is the default; gles only when the launcher
+    set it for this chip, or the player already chose it. software is faster in 2D-heavy sessions
+    (57.7 against 43.5 fps on the scripted boot: a light frame pays the same ~3.2 ms present)."""
     import json
 
     try:
-        name = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+        name = json.load(open(CFG)).get("video", {}).get("renderer", renderer_default())
     except (OSError, ValueError):
-        return "gles"
-    return name if name in ("gles", "software", "gpu") else "gles"
+        return renderer_default()
+    return name if name in ("gles", "software", "gpu") else renderer_default()
 
 
 def renderer_set(name):
@@ -755,7 +767,7 @@ def save_logs():
         try:
             import json
 
-            renderer = json.load(open(CFG)).get("video", {}).get("renderer", "gles")
+            renderer = json.load(open(CFG)).get("video", {}).get("renderer", renderer_default())
         except (OSError, ValueError):
             renderer = "?"
         note = "renderer: %s\nsettings: %s\n" % (renderer, CFG)
@@ -802,9 +814,16 @@ def rows(s, screen="main"):
     return out
 
 
+class FramebufferUnavailable(Exception):
+    """Exit 3 is reserved for this. Any other failure stays a normal non-zero exit."""
+
+
 class Screen(object):
     def __init__(self):
-        self.fd = os.open(FB, os.O_RDWR)
+        try:
+            self.fd = os.open(FB, os.O_RDWR)
+        except OSError as exc:
+            raise FramebufferUnavailable("%s: %s" % (FB, exc))
         self.w, self.h, self.stride, self.bpp = 640, 480, 640 * 4, 32
         try:
             import fcntl
@@ -1125,7 +1144,12 @@ def main():
     led_row = count - 4
     group_base = 0  # the first len(GROUPS) rows are the groups, in GROUPS order
     sel = play
-    screen = Screen()
+    try:
+        screen = Screen()
+    except FramebufferUnavailable as exc:
+        with open(os.path.join(GAME, "menu.log"), "a") as log:
+            log.write("framebuffer unavailable: %s\n" % exc)
+        return 3
     launch = False
     try:
         draw(screen, s, sel, disc, pad, page)
