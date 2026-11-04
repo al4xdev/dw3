@@ -1227,6 +1227,9 @@ void stfgtrep_raise_stats(s32 digimon, s32 lv) {
     s32 i;
     s32 base;
     s32 gain;
+#ifdef PC_PORT
+    s32 n;
+#endif
 
     rec = gamestate_data.funcs.get_record(digimon);
     d = &records_digimon[digimon];
@@ -1276,7 +1279,16 @@ void stfgtrep_raise_stats(s32 digimon, s32 lv) {
     if (lv <= 40) {
         for (i = 0; i < 7; i++) {
             base = d->resist_gains[i];
+#ifdef PC_PORT
+            /* Class 5 with residue 3 indexes entry 8, past the 8-entry table (tests/host/FINDINGS.md section 2). The
+             * original reads the zeros that pad the overlay file's last sector (gain 0); the host reads whatever the
+             * linker put there, which is how a resist reached 999 by level 4. The draw is still made once, so the
+             * RNG sequence matches the original's. */
+            n = base + pad_random.next() % 4;
+            gain = n < 8 ? stfgtrep_resist_gains[n] : 0;
+#else
             gain = stfgtrep_resist_gains[base + pad_random.next() % 4];
+#endif
             stats->resists[i] += gain;
             if (stats->resists[i] >= 1000) {
                 stats->resists[i] = 999;
