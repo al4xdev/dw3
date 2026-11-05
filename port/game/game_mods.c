@@ -597,6 +597,7 @@ static struct {
     int loaded;
     int remap;       /* DW3_PAD_REMAP: this runtime has no pad map, the game applies the file's */
     char letter[16]; /* by PS1 button: the letter the text shows, or 0 for the button's own symbol */
+    char letter_by_place[16]; /* by place bit: the letter directly on that physical button */
     u16 perm[16];    /* by PS1 button: the bit the runtime delivers when it is pressed */
 } dw3_pad;
 
@@ -636,26 +637,35 @@ static void dw3_pad_load(void) {
     for (i = 0; i < 16; i++) {
         dw3_pad.perm[i] = (u16)i;
         dw3_pad.letter[i] = 0;
+        dw3_pad.letter_by_place[i] = 0;
     }
     dw3_pad.letter[13] = 'A'; /* circle: confirm */
     dw3_pad.letter[14] = 'B'; /* cross: back */
     dw3_pad.letter[15] = 'X'; /* square */
     dw3_pad.letter[12] = 'Y'; /* triangle */
+    dw3_pad.letter_by_place[14] = 'A'; /* south default */
+    dw3_pad.letter_by_place[13] = 'B'; /* east default */
+    dw3_pad.letter_by_place[15] = 'X'; /* west default */
+    dw3_pad.letter_by_place[12] = 'Y'; /* north default */
     f = fopen("pad.map", "r");
     if (f == NULL) {
         return;
     }
     while (fscanf(f, "%15s %15s %c", name, place, &letter) == 3) {
         bit = dw3_pad_bit_of_name(name);
-        if (bit < 0) {
-            continue;
-        }
         if (letter >= 'a' && letter <= 'z') {
             letter = (char)(letter - 'a' + 'A');
         }
-        dw3_pad.letter[bit] = (letter >= 'A' && letter <= 'Z') ? letter : 0; /* '-': the symbol itself */
+        if (bit >= 0 && bit < 16) {
+            dw3_pad.letter[bit] = (letter >= 'A' && letter <= 'Z') ? letter : 0; /* '-': the symbol itself */
+        }
         at = dw3_pad_bit_of_place(place);
-        dw3_pad.perm[bit] = (u16)(at >= 0 ? at : bit); /* a place this runtime has no button for keeps its own */
+        if (at >= 0 && at < 16) {
+            dw3_pad.letter_by_place[at] = (letter >= 'A' && letter <= 'Z') ? letter : 0;
+            if (bit >= 0 && bit < 16) {
+                dw3_pad.perm[bit] = (u16)at;
+            }
+        }
     }
     fclose(f);
     port_log("button icons: cross %c circle %c square %c triangle %c (pad.map)",
@@ -742,6 +752,21 @@ int port_battle_menu_bit(int action) {
         }
     }
     return want;
+}
+
+char port_battle_menu_letter(int action) {
+    int place_idx, place_bit;
+
+    if (action < 0 || action >= BM_COUNT) {
+        return 0;
+    }
+    dw3_pad_load();
+    place_idx = bm_place[action];
+    place_bit = bm_place_bits[place_idx];
+    if (place_bit >= 0 && place_bit < 16) {
+        return dw3_pad.letter_by_place[place_bit];
+    }
+    return 0;
 }
 
 /* One line a press on the menu: what tests/port/mods.py reads (the action the button chose, or the refusal of one the

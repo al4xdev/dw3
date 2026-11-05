@@ -3436,11 +3436,17 @@ static s32 fightstg_battle_menu_slot(s32 place) {
     }
 }
 
-/* The game's text for the button of a PS1 bit: the face buttons' own glyphs (01 xx, the symbol or the player's letter),
- * else its name in the main font (digits are codes 4..0xD, A-Z are 0xE..0x27). */
-static void fightstg_battle_menu_icon_text(u8 *buf, s32 bit) {
+/* The game's text for the button of an action: direct letter from the configured place if mapped,
+ * else the face buttons' own glyphs (01 xx, the symbol), else its name in the main font (L1, R1...). */
+static void fightstg_battle_menu_icon_text(u8 *buf, s32 action, s32 bit) {
+    char letter = port_battle_menu_letter(action);
     u8 code = 0;
 
+    if (letter >= 'A' && letter <= 'Z') {
+        buf[0] = (u8)(0x0E + (letter - 'A'));
+        buf[1] = 0;
+        return;
+    }
     switch (bit) {
     case 14:
         code = 0x1B;
@@ -3570,10 +3576,10 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             x = fightstg_battle_menu_slots[slot][0];
             /* two actions on one row (L1 and L2) stack downwards */
             y = fightstg_battle_menu_slots[slot][1] + rows[slot]++ * 14;
-            fightstg_battle_menu_icon_text(icon, bit);
+            fightstg_battle_menu_icon_text(icon, i, bit);
             obj->x[i] = x;
             obj->y[i] = y;
-            fightstg_battle_menu_cell(obj, i, slot, icon[0] == 1);
+            fightstg_battle_menu_cell(obj, i, slot, slot < 4);
             obj->grey[i] = ((member->status & 8) && i < 3) || ((member->status & 0x20) && i == 2);
             x -= FIGHTSTG_BMENU_SLIDE * FIGHTSTG_BMENU_SLIDE / 3; /* opens where the slide starts */
             data->icons[i] = message_create_window(0x1005, 3, x + obj->sym_x[i], y + obj->sym_y[i]);

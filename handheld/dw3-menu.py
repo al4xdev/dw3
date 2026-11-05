@@ -160,6 +160,7 @@ def defaults():
     party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, the
     evolution buff, and no logs."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0, evo=1, bmenu=1,
+                bm_fight="east", bm_tech="l1", bm_digivolve="north", bm_tag="south", bm_item="r1", bm_run="west",
                 party=1, share=100, xp=1, xp_mul=2, form_xp=1, form_mul=14, all_forms=1, card_boost=1, logs=0, lang=0, lang_on=0)
 
 
@@ -170,7 +171,7 @@ def load_state():
             if "=" not in line:
                 continue
             k, v = line.strip().split("=", 1)
-            if k in ("ff_speed",):
+            if k in ("ff_speed", "bm_fight", "bm_tech", "bm_digivolve", "bm_tag", "bm_item", "bm_run"):
                 s[k] = v
             elif k in s:
                 s[k] = int(v)
@@ -248,7 +249,7 @@ def write_settings(s, disc):
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
     "evo_buff": { "enabled": %s },
-    "battle_menu": { "enabled": %s },
+    "battle_menu": { "enabled": %s, "fight": "%s", "tech": "%s", "digivolve": "%s", "tag": "%s", "item": "%s", "run": "%s" },
     "led_bar": { "enabled": %s }
   },
   "input": { "gamepad": %s }
@@ -257,6 +258,8 @@ def write_settings(s, disc):
        b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
        b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(xb_card_boost), b(s["evo"]),
        b(s.get("bmenu", 1)),
+       s.get("bm_fight", "east"), s.get("bm_tech", "l1"), s.get("bm_digivolve", "north"),
+       s.get("bm_tag", "south"), s.get("bm_item", "r1"), s.get("bm_run", "west"),
        b(led_mod_on()), gamepad_json(load_pad()))
     write_atomic(CFG, text)
 
@@ -366,6 +369,10 @@ def gamepad_json(pad):
     return "{ " + ", ".join(bits) + " }"
 
 
+BM_ACTIONS = ["fight", "tech", "digivolve", "tag", "item", "run"]
+BM_KEYS = ["bm_" + a for a in BM_ACTIONS]
+BM_PLACES = ["east", "l1", "north", "south", "r1", "west", "l2", "r2"]
+
 # The menu is grouped: the main screen holds one row per group and the actions, and each group opens as its own screen
 # with its own rows. Fourteen rows on a 640x480 panel were already colliding with the legend, and the font could not grow
 # to be read at arm's length. Each entry is (key, label, value function); a key is what the settings file calls the thing,
@@ -378,7 +385,15 @@ GROUPS = [
         ("hit", "  HIT REACTION"),
         ("saveany", "SAVE ANYWHERE"),
         ("evo", "EVO BUFF"),
-        ("bmenu", "BATTLE MENU"),
+    ]),
+    ("bmenu", "BATTLE MENU", [
+        ("bmenu", "ENABLED"),
+        ("bm_fight", "FIGHT"),
+        ("bm_tech", "TECH"),
+        ("bm_digivolve", "DIGIVOLVE"),
+        ("bm_tag", "TAG"),
+        ("bm_item", "ITEM"),
+        ("bm_run", "RUN"),
     ]),
     ("xp", "XP", [
         ("party", "PARTY XP"),
@@ -405,6 +420,7 @@ def group_rows(s):
     """The main screen: the groups, then what acts on the console or runs once, then PLAY."""
     return [
         "GAME                SETTINGS",
+        "BATTLE MENU         %s" % ("ON" if s.get("bmenu", 1) else "off"),
         "XP                  SETTINGS",
         "VIDEO               SETTINGS",
         "DEBUG               SETTINGS",
@@ -419,6 +435,8 @@ def field_text(s, key):
     """Label's value, as the screen shows it."""
     def on(v):
         return "ON" if v else "off"
+    if key in BM_KEYS:
+        return s.get(key, "").upper()
     if key == "ff":
         return "%s  %s" % (on(s["ff"]), s["ff_speed"].upper()) if s["ff"] else "off"
     if key == "party":
@@ -449,9 +467,18 @@ def field_text(s, key):
     return ""
 
 
-def field_toggle(s, key):
+def field_toggle(s, key, direction=1):
     """A press on the row: the same cycles the single-column menu had, one per setting."""
-    if key == "hz":
+    if key in BM_KEYS:
+        curr = s.get(key, "east")
+        idx = BM_PLACES.index(curr) if curr in BM_PLACES else 0
+        nxt = BM_PLACES[(idx + direction) % len(BM_PLACES)]
+        for other in BM_KEYS:
+            if other != key and s.get(other) == nxt:
+                s[other] = curr
+                break
+        s[key] = nxt
+    elif key == "hz":
         s["hz"] = 60 if s["hz"] == 50 else 50
     elif key == "ff":
         if not s["ff"]:
@@ -1162,6 +1189,11 @@ def main():
                 sel = (sel - 1) % count
             elif key == "down":
                 sel = (sel + 1) % count
+            elif key in ("left", "right"):
+                if page != "main":
+                    _title, entries = group_screen(page)
+                    if 0 <= sel < len(entries):
+                        field_toggle(s, entries[sel][0], -1 if key == "left" else 1)
             elif key == "b":
                 if page != "main":
                     page, sel, count = "main", play, len(rows(s, "main"))
