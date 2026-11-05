@@ -289,24 +289,28 @@ lock. On the host there is nothing to see: `tests/port/mods.py` keeps the mod's 
 ### Battle menu
 
 `battle_menu`. Off by default. Redesigns **only the battle's main command menu** (Fight, Tech, Digivolve, Tag, Item,
-Run): the list and its cursor are gone, each action has its own button, and a cross of labels is drawn where the list
-was, each label next to the button that triggers it (`fightstg_battle_menu_update`, `src/fightstg/fightstg_8008D3B4.c`).
+Run): the list and its cursor are gone, each action has its own button, and a compact 3x3 grid shaped like the pad is
+drawn where the list was: the up and down arms (Y, B) are columns, the left and right ones (X, A) and the shoulders
+(L1, R1) are cells. Each action is one of the font's coloured pictures (fist, bolt, figure, arrows, book, wing) beside its
+button's symbol, on a dark panel, with a short slide-in and press feedback (`fightstg_battle_menu_update`,
+`src/fightstg/fightstg_8008D3B4.c`).
 The submenus (techniques, items, Digivolve, Tag), the confusion menu and the rest of the battle are the game's own.
 With the mod off nothing runs: the dispatch is one `#ifdef PC_PORT` test where the menu is created.
 
 | option | default | |
 |---|---|---|
-| `fight` | bottom button | the place of each action on the pad: `south`, `west`, `north`, `east` (the face buttons by position), `l1`, `r1`, `l2`, `r2` |
-| `tech` | left button | |
-| `digivolve` | right button | |
-| `tag` | L1 | |
-| `item` | top button | |
-| `run` | R1 | a shoulder button keeps Run from being pressed by accident |
+| `fight` | right button | the place of each action on the pad: `south`, `west`, `north`, `east` (the face buttons by position), `l1`, `r1`, `l2`, `r2` |
+| `tech` | L1 | |
+| `digivolve` | top button | |
+| `tag` | bottom button | |
+| `item` | R1 | |
+| `run` | left button | |
 
 - **It follows the button mapping.** The options name a *place* on the player's pad, not a PS1 button. `pad.map`
   (`dw3_pad_permute`) says which PS1 bit the player's button at that place delivers (`port_battle_menu_bit`), so
   remapping the pad moves the action with the button, and the icon beside each label is that button's glyph, which
   `dw3_button_glyph` already turns into the player's own letter (A/B/X/Y on the handhelds). L1/R1/L2/R2 are drawn as text.
+  The symbol uses the 9-pixel font, the pictures the 14-pixel one.
 - **Same contract as the list:** the menu's `result` is -1, then 0-5 (Fight, Tech, Digivolve, Tag, Item, Run); a Digimon
   that cannot Fight, Tech or Digivolve (status 8) or Digivolve (0x20) gets those labels greyed and the press refused, as
   the list does. The confirm sound plays on a press, nothing else in the battle changes, and no random number is drawn.

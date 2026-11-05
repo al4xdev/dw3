@@ -445,12 +445,12 @@ static const char *const bm_places[] = { "south", "west", "north", "east", "l1",
 static const u8 bm_place_bits[] = { 14, 15, 12, 13, 10, 11, 8, 9 };
 /* The options' order is the original list's (and the menu's result's): Fight, Tech, Digivolve, Tag, Item, Run. */
 enum { BM_FIGHT, BM_TECH, BM_DV, BM_TAG, BM_ITEM, BM_RUN, BM_COUNT };
-static const u8 bm_default_places[BM_COUNT] = { 0, 1, 3, 4, 2, 5 }; /* south west east l1 north r1 */
+static const u8 bm_default_places[BM_COUNT] = { 3, 4, 2, 0, 5, 1 }; /* east l1 north south r1 west */
 #define BM_OPTION(name, default_place) \
     { .id = name, .type = PORT_MOD_ENUM, .def = default_place, .values = bm_places, .applies = "live" }
 static const PortModOption bm_options[BM_COUNT] = {
-    BM_OPTION("fight", "\"south\""), BM_OPTION("tech", "\"west\""), BM_OPTION("digivolve", "\"east\""),
-    BM_OPTION("tag", "\"l1\""),      BM_OPTION("item", "\"north\""), BM_OPTION("run", "\"r1\""),
+    BM_OPTION("fight", "\"east\""),  BM_OPTION("tech", "\"l1\""),   BM_OPTION("digivolve", "\"north\""),
+    BM_OPTION("tag", "\"south\""),   BM_OPTION("item", "\"r1\""),   BM_OPTION("run", "\"west\""),
 };
 int port_mod_battle_menu;
 static u8 bm_place[BM_COUNT]; /* by action: index into bm_places */

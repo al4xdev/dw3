@@ -3369,11 +3369,18 @@ typedef struct FightstgBattleMenu {
     /* 0x60 */ s32 press_age;
     /* 0x64 */ s32 refused; /* the action last refused, -1: none */
     /* 0x68 */ s32 refused_age;
-    /* 0x6C */ s16 x[6];    /* where each action rests (its icon; the label is icon_w to the right) */
+    /* 0x6C */ s16 x[6];    /* each action's anchor: its picture's corner in the cross's middle column, else its cell's */
     /* 0x78 */ s16 y[6];
-    /* 0x84 */ u8 icon_w[6];
-    /* 0x8A */ u8 grey[6];  /* the Digimon cannot do it now */
-} FightstgBattleMenu; /* size 0x90 */
+    /* 0x84 */ u8 grey[6];  /* the Digimon cannot do it now */
+    /* 0x8A */ s8 sym_x[6]; /* from the anchor: the button's symbol (9-pixel font) */
+    /* 0x90 */ s8 sym_y[6];
+    /* 0x96 */ s8 pic_x[6]; /* the picture */
+    /* 0x9C */ s8 pic_y[6];
+    /* 0xA2 */ s8 panel_x[6]; /* the dark panel's rectangle */
+    /* 0xA8 */ s8 panel_y[6];
+    /* 0xAE */ u8 panel_w[6];
+    /* 0xB4 */ u8 panel_h[6];
+} FightstgBattleMenu; /* size 0xBA */
 
 #define FIGHTSTG_BMENU_SLIDE 8
 #define FIGHTSTG_BMENU_PRESS 7
@@ -3381,15 +3388,32 @@ typedef struct FightstgBattleMenu {
 #define FIGHTSTG_BMENU_PANEL_H 15
 #define FIGHTSTG_BMENU_PANEL_DEPTH 1 /* the windows draw at depth 0; which of the two is behind is settled by the picture */
 #define FIGHTSTG_BMENU_PAL_GREY 7    /* the font's grey row (the list's refused entries) */
-#define FIGHTSTG_BMENU_PAL_HOT 1     /* the pressed action's row */
+#define FIGHTSTG_BMENU_SYMBOL_DY 3   /* the 9-pixel font's symbols sit this far down to centre on a 14-pixel picture */
+#define FIGHTSTG_BMENU_PAL_HOT 0     /* the pressed action keeps its own colours while the others grey */
 
-/* Compact width tailored per action (Fight, Tech, DV, Tag, Item, Run) so badges don't stretch into the scene. */
-static const u8 fightstg_bmenu_panel_w[6] = { 44, 42, 32, 46, 40, 46 };
+/* Each action is drawn as one of the font's coloured pictures (extra glyphs, `01 xx`; one textured quad each, the
+ * same cost as a letter): Fight a fist, Tech a lightning bolt, Digivolve the glowing figure, Tag a gear, Item a
+ * book, Run a wing. All are framed 15-pixel pictures (the bare arrows 0x37/0x38 are not: they looked bigger and
+ * unframed beside the others). Zero-ended; their width is the advance of what is in them. */
+static const u8 fightstg_bmenu_glyphs[6][6] = {
+    { 1, 0x25, 0 }, { 1, 0x33, 0 }, { 1, 0x27, 0 }, { 1, 0x35, 0 }, { 1, 0x28, 0 }, { 1, 0x31, 0 },
+};
+static const u8 fightstg_bmenu_glyph_w[6] = { 15, 15, 15, 15, 15, 15 };
 
-/* The screen position of each place on the pad: north, west, east, south, then the left and right shoulder rows.
- * Compact and placed in the bottom-left corner of the screen so the central battlefield stays clear. */
+/* 3x3 layout matching the physical pad, packed. The button's symbol is in the 9-pixel font (3), the picture in the
+ * 14-pixel one (1). Left and right (X, A, and the shoulders) are a cell, symbol then picture: 27 wide, a shoulder's
+ * 34 (its name has two letters). Up and down (Y, B) are a column the width of the picture, as the cross's arms: the
+ * symbol on the outside, the picture toward the middle, so the hole between X and A is as wide as that column.
+ *                  Y                 y 167 (symbol)
+ *        [L1] [pic Y] [R1]           row 0, y 177
+ *        [X pic] hole [A pic]        row 1, y 193
+ *             [pic B]                row 2, y 209
+ *                  B                 y 224 (symbol)
+ * The cross sits in the screen's bottom-left corner (x 4-99, y 166-234, a margin of about 6 pixels for the handhelds'
+ * overscan), under the player's Digimon and over the arena floor, so neither the Digimon nor the gauge (y 135-150,
+ * x 104 on) is covered; the old list was higher (y 109-204). */
 static const s16 fightstg_battle_menu_slots[6][2] = {
-    { 36, 116 }, { 6, 136 }, { 66, 136 }, { 36, 156 }, { 6, 180 }, { 58, 180 },
+    { 44, 177 }, { 17, 193 }, { 58, 193 }, { 44, 209 }, { 4, 177 }, { 65, 177 },
 };
 
 /* The slot of a pad place (port_battle_menu_place): the face buttons by position, the left triggers and shoulder on the
@@ -3475,15 +3499,44 @@ static void fightstg_battle_menu_show(FightstgBattleMenu *obj, FightstgBattleMen
                                       s32 glow) {
     s32 x = obj->x[i] + dx;
     s32 y = obj->y[i] + dy;
-    s32 pw = fightstg_bmenu_panel_w[i];
+    s32 qx = x + obj->panel_x[i];
+    s32 qy = y + obj->panel_y[i];
 
-    data->icons[i]->set_pos(data->icons[i], x, y);
-    data->labels[i]->set_pos(data->labels[i], x + obj->icon_w[i], y);
-    fightstg_battle_menu_quad(x - 2, y - 1, pw, FIGHTSTG_BMENU_PANEL_H, 2, 150, 140, 100);
+    data->icons[i]->set_pos(data->icons[i], x + obj->sym_x[i], y + obj->sym_y[i]);
+    data->labels[i]->set_pos(data->labels[i], x + obj->pic_x[i], y + obj->pic_y[i]);
+    fightstg_battle_menu_quad(qx, qy, obj->panel_w[i], obj->panel_h[i], 2, 150, 140, 100);
     if (glow == 1) {
-        fightstg_battle_menu_quad(x - 2, y - 1, pw, FIGHTSTG_BMENU_PANEL_H, 1, 30, 90, 170);
+        fightstg_battle_menu_quad(qx, qy, obj->panel_w[i], obj->panel_h[i], 1, 30, 90, 170);
     } else if (glow == 2) {
-        fightstg_battle_menu_quad(x - 2, y - 1, pw, FIGHTSTG_BMENU_PANEL_H, 1, 110, 10, 10);
+        fightstg_battle_menu_quad(qx, qy, obj->panel_w[i], obj->panel_h[i], 1, 110, 10, 10);
+    }
+}
+
+/* Where an action's symbol, picture and panel go from its anchor (see fightstg_battle_menu_slots). `face`: the symbol
+ * is one letter (a shoulder button's is two); `slot` 0 and 3 are the cross's up and down arms, drawn as a column. */
+static void fightstg_battle_menu_cell(FightstgBattleMenu *obj, s32 i, s32 slot, s32 face) {
+    s32 icon_w = face ? 10 : 17; /* the symbol's advance in the 9-pixel font */
+
+    if (slot == 0 || slot == 3) {
+        obj->sym_x[i] = face ? 3 : -1; /* centred on the picture's 15 pixels */
+        obj->sym_y[i] = slot == 0 ? -10 : 15;
+        obj->pic_x[i] = obj->pic_y[i] = 0;
+        obj->panel_x[i] = -2;
+        obj->panel_y[i] = slot == 0 ? -11 : -1;
+        obj->panel_w[i] = 18 + (face ? 0 : 2);
+        obj->panel_h[i] = 26;
+    } else {
+        /* the right side (A, R1) is the left side mirrored: the picture toward the middle, the symbol outside */
+        s32 right = slot == 2 || slot == 5;
+
+        obj->sym_x[i] = right ? fightstg_bmenu_glyph_w[i] : 0;
+        obj->sym_y[i] = FIGHTSTG_BMENU_SYMBOL_DY;
+        obj->pic_x[i] = right ? 0 : icon_w;
+        obj->pic_y[i] = 0;
+        obj->panel_x[i] = -2;
+        obj->panel_y[i] = -1;
+        obj->panel_w[i] = icon_w + fightstg_bmenu_glyph_w[i] + 2;
+        obj->panel_h[i] = FIGHTSTG_BMENU_PANEL_H;
     }
 }
 
@@ -3495,7 +3548,6 @@ static void fightstg_battle_menu_paint(FightstgBattleMenuData *data, s32 i, u8 p
 void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData *data) {
     FightstgMember *member;
     u8 icon[4];
-    u8 *text;
     s32 rows[6] = { 0, 0, 0, 0, 0, 0 }; /* actions already placed in each slot */
     s32 bit;
     s32 slot;
@@ -3510,7 +3562,6 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
-        text = cdload_module.files.get_file(records_language + 0x7F);
         member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
         obj->press = obj->refused = -1;
         for (i = 0; i < 6; i++) {
@@ -3520,16 +3571,15 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             /* two actions on one row (L1 and L2) stack downwards */
             y = fightstg_battle_menu_slots[slot][1] + rows[slot]++ * 14;
             fightstg_battle_menu_icon_text(icon, bit);
-            /* a face button's glyph is one character wide; a shoulder's name ("L1") is two */
             obj->x[i] = x;
             obj->y[i] = y;
-            obj->icon_w[i] = icon[0] == 1 ? 16 : 26;
+            fightstg_battle_menu_cell(obj, i, slot, icon[0] == 1);
             obj->grey[i] = ((member->status & 8) && i < 3) || ((member->status & 0x20) && i == 2);
             x -= FIGHTSTG_BMENU_SLIDE * FIGHTSTG_BMENU_SLIDE / 3; /* opens where the slide starts */
-            data->icons[i] = message_create_window(0x1005, 1, x, y);
+            data->icons[i] = message_create_window(0x1005, 3, x + obj->sym_x[i], y + obj->sym_y[i]);
             data->icons[i]->set_text(data->icons[i], icon, -1);
-            data->labels[i] = message_create_window(0x1005, 1, x + obj->icon_w[i], y);
-            data->labels[i]->set_text(data->labels[i], text, i + 1);
+            data->labels[i] = message_create_window(0x1005, 1, x + obj->pic_x[i], y + obj->pic_y[i]);
+            data->labels[i]->set_text(data->labels[i], (u8 *)fightstg_bmenu_glyphs[i], -1);
             fightstg_battle_menu_paint(data, i, obj->grey[i] ? FIGHTSTG_BMENU_PAL_GREY : 0);
         }
         obj->base.next_state(obj);

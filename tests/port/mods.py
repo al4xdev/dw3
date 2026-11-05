@@ -500,6 +500,8 @@ def bm_state(binary, out):
     ones (CROSS confirms): when the route does not get there as it is, it is run again with CROSS and CIRCLE swapped."""
     steps = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
     steps = steps[:next(i for i, s in enumerate(steps) if s.get("name") == "battle_start") + 1]
+    # the state is written at the end of the checkpoint's frame: a script that ends on the checkpoint exits first
+    steps.append({"type": "wait_frames", "frames": 5})
     state = out / "battle_start.state"
     swap = {"CROSS": "CIRCLE", "CIRCLE": "CROSS"}
     for swapped in (False, True):
@@ -556,9 +558,9 @@ def battle_menu(binary, out):
     check(state is not None, "the first battle's start saved as a state")
     if state is None:
         return
-    # the default places: south Fight, west Tech, east Digivolve, l1 Tag, north Item, r1 Run (script names are the runtime's)
-    for button, action, bit in (("CROSS", 0, 14), ("SQUARE", 1, 15), ("CIRCLE", 2, 13), ("L1", 3, 10),
-                                ("TRIANGLE", 4, 12), ("R1", 5, 11)):
+    # the default places: east Fight, l1 Tech, north Digivolve, south Tag, r1 Item, west Run (script names are the runtime's)
+    for button, action, bit in (("CIRCLE", 0, 13), ("L1", 1, 10), ("TRIANGLE", 2, 12), ("CROSS", 3, 14),
+                                ("R1", 4, 11), ("SQUARE", 5, 15)):
         rc, lines = bm_press(binary, out, state, f"{button}", button, {})
         got = bm_chosen(lines)
         check(rc == 0 and len(got) == 1 and got[0][1:] == (action, bit),
@@ -570,14 +572,14 @@ def battle_menu(binary, out):
     check(rc == 0 and not lines, f"the mod off: the original's menu, no press line ({lines})")
     # the player's pad: logical cross is delivered by the west button, logical square by the south one
     remap = "cross west B\nsquare south X\n"
-    for button, action, bit in (("CROSS", 0, 15), ("SQUARE", 1, 14)):
+    for button, action, bit in (("CROSS", 3, 15), ("SQUARE", 5, 14)):
         rc, lines = bm_press(binary, out, state, f"remap_{button}", button, {}, remap)
         got = bm_chosen(lines)
         check(rc == 0 and len(got) == 1 and got[0][1:] == (action, bit),
               f"pad.map swapping cross and square: {button} chooses action {action} through bit {bit} ({got})")
     rc, lines = bm_press(binary, out, state, "dup", "SQUARE", {"fight": "west", "tech": "west"})
     got = bm_chosen(lines)
-    check(rc == 0 and any("two actions on one button" in l for l in lines) and got == [("action", 1, 15)],
+    check(rc == 0 and any("two actions on one button" in l for l in lines) and got == [("action", 5, 15)],
           f"fight and tech on one button: the defaults are used and logged ({got})")
     rc, lines = bm_press(binary, out, state, "moved", "R2", {"run": "r2", "tag": "l2"})
     got = bm_chosen(lines)
