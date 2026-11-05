@@ -286,6 +286,37 @@ Outside a battle the bar goes dark and its power rail drops: nothing is being wa
 The daemon's own tests are the device (`/.dumps/led-test/`): the palette map, the cost of each path and the singleton
 lock. On the host there is nothing to see: `tests/port/mods.py` keeps the mod's silent no-op honest.
 
+### Battle menu
+
+`battle_menu`. Off by default. Redesigns **only the battle's main command menu** (Fight, Tech, Digivolve, Tag, Item,
+Run): the list and its cursor are gone, each action has its own button, and a cross of labels is drawn where the list
+was, each label next to the button that triggers it (`fightstg_battle_menu_update`, `src/fightstg/fightstg_8008D3B4.c`).
+The submenus (techniques, items, Digivolve, Tag), the confusion menu and the rest of the battle are the game's own.
+With the mod off nothing runs: the dispatch is one `#ifdef PC_PORT` test where the menu is created.
+
+| option | default | |
+|---|---|---|
+| `fight` | bottom button | the place of each action on the pad: `south`, `west`, `north`, `east` (the face buttons by position), `l1`, `r1`, `l2`, `r2` |
+| `tech` | left button | |
+| `digivolve` | right button | |
+| `tag` | L1 | |
+| `item` | top button | |
+| `run` | R1 | a shoulder button keeps Run from being pressed by accident |
+
+- **It follows the button mapping.** The options name a *place* on the player's pad, not a PS1 button. `pad.map`
+  (`dw3_pad_permute`) says which PS1 bit the player's button at that place delivers (`port_battle_menu_bit`), so
+  remapping the pad moves the action with the button, and the icon beside each label is that button's glyph, which
+  `dw3_button_glyph` already turns into the player's own letter (A/B/X/Y on the handhelds). L1/R1/L2/R2 are drawn as text.
+- **Same contract as the list:** the menu's `result` is -1, then 0-5 (Fight, Tech, Digivolve, Tag, Item, Run); a Digimon
+  that cannot Fight, Tech or Digivolve (status 8) or Digivolve (0x20) gets those labels greyed and the press refused, as
+  the list does. The confirm sound plays on a press, nothing else in the battle changes, and no random number is drawn.
+- **Two actions on one button** cannot both work: the default buttons are used and one line is logged.
+- **Known limits:** the D-pad is not offered as a shortcut (the left stick also sets its bits). Two actions on the left
+  or right shoulder row stack one under the other. The confusion menu keeps its list.
+
+`tests/port/mods.py` (headless): the mod on, each button opens its submenu and nothing else does, a refused action does
+nothing, the mod off gives the original's frame log.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`

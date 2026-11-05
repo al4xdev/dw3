@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "id": "battle_menu",
+  "name": "Battle menu",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "The battle's command menu (Fight, Tech, Digivolve, Tag, Item, Run) without the list and its cursor: each action has its own button and is drawn where that button is on the pad. The buttons are chosen by their place on your pad, so the menu follows your button mapping and shows your own button names. The submenus (techniques, items, Digivolve, Tag) are unchanged.",
+  "options": [
+    { "id": "fight", "name": "Fight", "description": "The button for Fight.",
+      "type": "enum", "default": "south", "applies": "live",
+      "values": [
+        { "id": "south", "label": "Bottom button" }, { "id": "west", "label": "Left button" },
+        { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
+        { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
+        { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] },
+    { "id": "tech", "name": "Tech", "description": "The button for Tech.",
+      "type": "enum", "default": "west", "applies": "live",
+      "values": [
+        { "id": "south", "label": "Bottom button" }, { "id": "west", "label": "Left button" },
+        { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
+        { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
+        { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] },
+    { "id": "digivolve", "name": "Digivolve", "description": "The button for Digivolve (DV).",
+      "type": "enum", "default": "east", "applies": "live",
+      "values": [
+        { "id": "south", "label": "Bottom button" }, { "id": "west", "label": "Left button" },
+        { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
+        { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
+        { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] },
+    { "id": "tag", "name": "Tag", "description": "The button for Tag (switching the member).",
+      "type": "enum", "default": "l1", "applies": "live",
+      "values": [
+        { "id": "south", "label": "Bottom button" }, { "id": "west", "label": "Left button" },
+        { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
+        { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
+        { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] },
+    { "id": "item", "name": "Item", "description": "The button for Item.",
+      "type": "enum", "default": "north", "applies": "live",
+      "values": [
+        { "id": "south", "label": "Bottom button" }, { "id": "west", "label": "Left button" },
+        { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
+        { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
+        { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] },
+    { "id": "run", "name": "Run", "description": "The button for Run. A shoulder button keeps it from being pressed by accident.",
+      "type": "enum", "default": "r1", "applies": "live",
+      "values": [
+        { "id": "south", "label": "Bottom button" }, { "id": "west", "label": "Left button" },
+        { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
+        { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
+        { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] }
+  ]
+}

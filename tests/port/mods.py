@@ -53,6 +53,9 @@ gives no form experience (member 0 fights as its own form), so `form_exp` is not
 widescreen (no script of its own): first_battle_save to back_on_field with the mod on, in the headless build
 (no GPU renderer): the frame log equals the run without the mod (the mod changes nothing the game does; the renderer
 draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the picture stays 4:3.
+battle_menu: from the first battle's start (a state of the build), at the command menu: each default button chooses
+its own action, the buttons not on the menu choose nothing, the mod off reads the original's menu, a pad.map that
+swaps cross and square moves the actions with the buttons, two actions on one button fall back to the defaults.
 evo_buff: the registry (a builtin with no options), the flag the setting sets, and the shield's condition: it is the
 member as a *target* only (`first == 0`), because fightstg_rules_scale_damage divides by stats[1] and the buffed
 Digimon's own attacks must keep their numbers on that turn. No scripted route digivolves (the story's first battle has
@@ -490,6 +493,97 @@ def evo_buff(binary, out):
           f"the shield applies to the target's read only ({line!r})")
 
 
+def bm_state(binary, out):
+    """The first battle's start (first_battle_save's checkpoint battle_start) saved as a state of this binary, or None.
+
+    The port keeps the pad's raw bits (pad.c, PC_PORT) while the scripts of the replays were written for the rotated
+    ones (CROSS confirms): when the route does not get there as it is, it is run again with CROSS and CIRCLE swapped."""
+    steps = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
+    steps = steps[:next(i for i, s in enumerate(steps) if s.get("name") == "battle_start") + 1]
+    state = out / "battle_start.state"
+    swap = {"CROSS": "CIRCLE", "CIRCLE": "CROSS"}
+    for swapped in (False, True):
+        route = [dict(s, buttons=[swap.get(b, b) for b in s["buttons"]]) if swapped and "buttons" in s else s
+                 for s in steps]
+        script = derived(out, f"bm_route_{swapped}", route)
+        proc = subprocess.run([str(binary), "--disc", str(DISC), "--script", str(script), "--save-state",
+                               f"battle_start:{state}", "--save-state-exit"], cwd=ROOT, capture_output=True,
+                              text=True, timeout=600)
+        if proc.returncode == 0 and state.exists():
+            return state
+    return None
+
+
+def bm_press(binary, out, state, label, button, mods, remap=None):
+    """One press of `button` at the first battle's command menu with the mod's settings `mods` (None: the mod off);
+    returns the menu's log lines. `remap`: the text of a pad.map, applied (DW3_PAD_REMAP=1) from a directory of its own."""
+    cfg = settings(out, f"bm_{label}", {} if mods is None else {"battle_menu": dict(mods, enabled=True)})
+    steps = [{"type": "wait_frames", "frames": 700}]
+    if button:
+        steps.append({"type": "press", "buttons": [button], "frames": 2, "release": 2})
+    steps += [{"type": "wait_frames", "frames": 40}, {"type": "checkpoint", "name": "end"}]
+    script = derived(out, f"bm_{label}", steps)
+    cwd, env = ROOT, dict(os.environ)
+    if remap is not None:
+        cwd = out / f"bm_{label}_dir"
+        cwd.mkdir()
+        (cwd / "pad.map").write_text(remap)
+        env["DW3_PAD_REMAP"] = "1"
+    proc = subprocess.run([str(binary), "--config", str(cfg), "--script", str(script), "--script-mods",
+                           "--load-state", str(state)], cwd=cwd, env=env, capture_output=True, text=True, timeout=600)
+    (out / f"bm_{label}.stderr").write_text(proc.stderr)
+    return proc.returncode, [l.split("port: ", 1)[1] for l in proc.stderr.splitlines() if "battle menu" in l]
+
+
+def bm_chosen(lines):
+    """[(word, action, bit)] of the menu's press lines."""
+    got = []
+    for l in lines:
+        p = l.replace("(", "").replace(")", "").split()
+        if "frame" in p and p[-4] in ("action", "refused"):   # battle menu: frame N: action A bit B
+            got.append((p[-4], int(p[-3]), int(p[-1])))
+    return got
+
+
+def battle_menu(binary, out):
+    """battle_menu (docs/LAUNCHER.md "Battle menu"): from the first battle's start, at its command menu, with the mod's
+    default buttons each of the six presses chooses its own action; a button that is not on the menu chooses nothing;
+    the mod off draws and reads the original's menu (no press line); a pad.map that swaps cross and square moves the
+    actions with the buttons (the menu follows the player's mapping); two actions on one button fall back to the
+    defaults. What the submenus do with the choice is the game's own: the tests read the menu's result only."""
+    print("mods: battle_menu (the first battle's command menu)")
+    state = bm_state(binary, out)
+    check(state is not None, "the first battle's start saved as a state")
+    if state is None:
+        return
+    # the default places: south Fight, west Tech, east Digivolve, l1 Tag, north Item, r1 Run (script names are the runtime's)
+    for button, action, bit in (("CROSS", 0, 14), ("SQUARE", 1, 15), ("CIRCLE", 2, 13), ("L1", 3, 10),
+                                ("TRIANGLE", 4, 12), ("R1", 5, 11)):
+        rc, lines = bm_press(binary, out, state, f"{button}", button, {})
+        got = bm_chosen(lines)
+        check(rc == 0 and len(got) == 1 and got[0][1:] == (action, bit),
+              f"{button}: action {action} from bit {bit} ({got})")
+    for button in (None, "L2", "R2", "UP", "DOWN", "START"):
+        rc, lines = bm_press(binary, out, state, f"none_{button}", button, {})
+        check(rc == 0 and not bm_chosen(lines), f"{button or 'no press'}: no action chosen ({bm_chosen(lines)})")
+    rc, lines = bm_press(binary, out, state, "off", "CROSS", None)
+    check(rc == 0 and not lines, f"the mod off: the original's menu, no press line ({lines})")
+    # the player's pad: logical cross is delivered by the west button, logical square by the south one
+    remap = "cross west B\nsquare south X\n"
+    for button, action, bit in (("CROSS", 0, 15), ("SQUARE", 1, 14)):
+        rc, lines = bm_press(binary, out, state, f"remap_{button}", button, {}, remap)
+        got = bm_chosen(lines)
+        check(rc == 0 and len(got) == 1 and got[0][1:] == (action, bit),
+              f"pad.map swapping cross and square: {button} chooses action {action} through bit {bit} ({got})")
+    rc, lines = bm_press(binary, out, state, "dup", "SQUARE", {"fight": "west", "tech": "west"})
+    got = bm_chosen(lines)
+    check(rc == 0 and any("two actions on one button" in l for l in lines) and got == [("action", 1, 15)],
+          f"fight and tech on one button: the defaults are used and logged ({got})")
+    rc, lines = bm_press(binary, out, state, "moved", "R2", {"run": "r2", "tag": "l2"})
+    got = bm_chosen(lines)
+    check(rc == 0 and got == [("action", 5, 9)], f"run moved to R2: R2 chooses action 5 ({got})")
+
+
 # Every mod's test, the longest first (the parallel run's critical path): name -> function(binary, out, record).
 MODS_TESTS = {
     "preset_language": lambda binary, out, record: preset_language(binary, out),
@@ -500,6 +594,7 @@ MODS_TESTS = {
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
     "widescreen": lambda binary, out, record: widescreen(binary, out),
+    "battle_menu": lambda binary, out, record: battle_menu(binary, out),
     "led_bar": lambda binary, out, record: led_bar(binary, out),
 }
 

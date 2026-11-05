@@ -195,6 +195,20 @@ extern int port_mod_evo_buff;
 extern s16 dw3_evo_buff_member;   /* the buffed member, -1 if none; the +100 to every stat lasts the battle */
 extern s16 dw3_evo_shield_member; /* the member that takes no damage, -1 if none; lasts the evolution turn */
 
+/* port_mod_battle_menu: battle_menu is on ("Battle menu"): FIGHTSTG's main command menu (fightstg_command_menu_create)
+ * becomes a menu with one pad button per action, drawn where the list was (docs/LAUNCHER.md "Battle menu"). The
+ * buttons are chosen by the place on the player's pad, so the menu follows pad.map (dw3_pad_permute, below): the bit an
+ * action listens to is the one the player's button delivers, and its icon is that bit's own glyph (dw3_button_glyph),
+ * which is the player's letter.
+ * port_battle_menu_bit: the PS1 pad bit (0..15) that triggers action `action` (0 Fight, 1 Tech, 2 Digivolve, 3 Tag,
+ * 4 Item, 5 Run: the order of the original list and of its result).
+ * port_battle_menu_place: where that bit sits on the player's pad: 12 north, 15 west, 13 east, 14 south for the face
+ * buttons, else the shoulder or trigger bit itself (10 L1, 11 R1, 8 L2, 9 R2). */
+extern int port_mod_battle_menu;
+int port_battle_menu_bit(int action);
+int port_battle_menu_place(int bit);
+void port_battle_menu_chosen(int action, int bit, int refused); /* logs a press on the menu (tests/port/mods.py) */
+
 /* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE / _XP, default on).
  * A failure is logged once, never per frame. */
 extern int dw3_feat_icons;

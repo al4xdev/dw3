@@ -2675,6 +2675,9 @@ typedef struct FightstgCommandData {
 
 struct FightstgHud *fightstg_hud_create(void);
 struct FightstgCommandMenu *fightstg_command_menu_create(s32 sel, s32 *result);
+#ifdef PC_PORT
+struct FightstgCommandMenu *fightstg_battle_menu_create(s32 sel, s32 *result);
+#endif
 struct FightstgPortrait *fightstg_portrait_create(void);
 struct FightstgDigivolveMenu *fightstg_digivolve_menu_create(s32 *result);
 struct FightstgItemMenu *fightstg_item_menu_create(s32 *result);
@@ -2732,6 +2735,11 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
                         data->children[0] = fightstg_hud_create();
                     }
                     if (data->children[1] == NULL) {
+#ifdef PC_PORT
+                        if (port_mod_battle_menu != 0) {
+                            data->children[1] = fightstg_battle_menu_create(obj->last, &obj->choice);
+                        } else
+#endif
                         data->children[1] = fightstg_command_menu_create(obj->last, &obj->choice);
                     }
                     if (data->children[2] == NULL) {
@@ -3336,6 +3344,266 @@ void fightstg_command_menu_update(FightstgCommandMenu *obj, FightstgCommandMenuD
         break;
     }
 }
+
+#ifdef PC_PORT
+/* battle_menu (docs/LAUNCHER.md "Battle menu"): the command menu with one button per action instead of the list and
+ * its cursor. It keeps the original's contract: *result is -1, then the chosen entry (0 Fight, 1 Tech, 2 Digivolve,
+ * 3 Tag, 4 Item, 5 Run), and the same refusals (a Digimon with status 8 cannot Fight, Tech or Digivolve; with 0x20 it
+ * cannot Digivolve). Each action is an icon window (the button's glyph, which dw3_button_glyph turns into the player's
+ * own letter) and the entry's label window, placed where the button is on the player's pad. */
+typedef struct FightstgBattleMenuData {
+    /* 0x00 */ MessageWindow *icons[6];
+    /* 0x18 */ MessageWindow *labels[6];
+} FightstgBattleMenuData; /* size 0x30; only pointers: the block is run and scanned as objects */
+
+/* The menu's object: FightstgCommandMenu's own fields, then what the animation needs (never in the data block). The
+ * animation is the little the old list had (a highlight) made for a press: the actions slide in (8 ticks), the pressed
+ * one nudges and lights while the others grey (7 ticks, then the choice is given), a refused one shakes. Per frame it
+ * costs one flat quad and two window moves a action, no allocation. */
+typedef struct FightstgBattleMenu {
+    /* 0x00 */ Object base;
+    /* 0x50 */ s32 sel;
+    /* 0x54 */ s32 *result;
+    /* 0x58 */ s32 age;     /* ticks since it opened */
+    /* 0x5C */ s32 press;   /* the action being confirmed, -1: none */
+    /* 0x60 */ s32 press_age;
+    /* 0x64 */ s32 refused; /* the action last refused, -1: none */
+    /* 0x68 */ s32 refused_age;
+    /* 0x6C */ s16 x[6];    /* where each action rests (its icon; the label is icon_w to the right) */
+    /* 0x78 */ s16 y[6];
+    /* 0x84 */ u8 icon_w[6];
+    /* 0x8A */ u8 grey[6];  /* the Digimon cannot do it now */
+} FightstgBattleMenu; /* size 0x90 */
+
+#define FIGHTSTG_BMENU_SLIDE 8
+#define FIGHTSTG_BMENU_PRESS 7
+#define FIGHTSTG_BMENU_SHAKE 6
+#define FIGHTSTG_BMENU_PANEL_H 15
+#define FIGHTSTG_BMENU_PANEL_DEPTH 1 /* the windows draw at depth 0; which of the two is behind is settled by the picture */
+#define FIGHTSTG_BMENU_PAL_GREY 7    /* the font's grey row (the list's refused entries) */
+#define FIGHTSTG_BMENU_PAL_HOT 1     /* the pressed action's row */
+
+/* Compact width tailored per action (Fight, Tech, DV, Tag, Item, Run) so badges don't stretch into the scene. */
+static const u8 fightstg_bmenu_panel_w[6] = { 44, 42, 32, 46, 40, 46 };
+
+/* The screen position of each place on the pad: north, west, east, south, then the left and right shoulder rows.
+ * Compact and placed in the bottom-left corner of the screen so the central battlefield stays clear. */
+static const s16 fightstg_battle_menu_slots[6][2] = {
+    { 36, 116 }, { 6, 136 }, { 66, 136 }, { 36, 156 }, { 6, 180 }, { 58, 180 },
+};
+
+/* The slot of a pad place (port_battle_menu_place): the face buttons by position, the left triggers and shoulder on the
+ * left row, the right ones on the right. */
+static s32 fightstg_battle_menu_slot(s32 place) {
+    switch (place) {
+    case 12:
+        return 0;
+    case 15:
+        return 1;
+    case 13:
+        return 2;
+    case 14:
+        return 3;
+    case 10:
+    case 8:
+        return 4;
+    default:
+        return 5;
+    }
+}
+
+/* The game's text for the button of a PS1 bit: the face buttons' own glyphs (01 xx, the symbol or the player's letter),
+ * else its name in the main font (digits are codes 4..0xD, A-Z are 0xE..0x27). */
+static void fightstg_battle_menu_icon_text(u8 *buf, s32 bit) {
+    u8 code = 0;
+
+    switch (bit) {
+    case 14:
+        code = 0x1B;
+        break;
+    case 13:
+        code = 0x2F;
+        break;
+    case 15:
+        code = 0x32;
+        break;
+    case 12:
+        code = 0x34;
+        break;
+    }
+    if (code != 0) {
+        buf[0] = 1;
+        buf[1] = code;
+        buf[2] = 0;
+        return;
+    }
+    buf[0] = (bit == 10 || bit == 8) ? 0x19 : (bit == 11 || bit == 9) ? 0x1F : 0x25; /* L, R, else X */
+    buf[1] = (bit == 10 || bit == 11) ? 5 : (bit == 8 || bit == 9) ? 6 : 0;
+    buf[2] = 0;
+}
+
+/* A flat quad on the menu's layer, behind the text: `abr` 2 subtracts the colour from the scene (the dark panel, which
+ * keeps the text readable over the bright arena), 1 adds it (a press's glow). */
+static void fightstg_battle_menu_quad(s32 x, s32 y, s32 w, s32 h, s32 abr, u8 r, u8 g, u8 b) {
+    POLY_F4 *poly;
+    DR_TPAGE *tpage;
+    GfxLayer *layer = gfx_module.funcs.get_layer(0x1005);
+    u32 *ot;
+
+    if (layer == NULL) {
+        return;
+    }
+    ot = layer->get_ot_entry(layer, FIGHTSTG_BMENU_PANEL_DEPTH);
+    poly = gfx_module.funcs.get_packet();
+    tpage = (DR_TPAGE *)(poly + 1);
+    setRGB0(poly, r, g, b);
+    setPolyF4(poly);
+    setSemiTrans(poly, 1);
+    poly->x0 = poly->x2 = x;
+    poly->x1 = poly->x3 = x + w;
+    poly->y0 = poly->y1 = y;
+    poly->y2 = poly->y3 = y + h;
+    addPrim(ot, poly);
+    SetDrawTPage(tpage, 0, 1, getTPage(1, abr, 0, 0));
+    addPrim(ot, tpage);
+    tpage++;
+    gfx_module.funcs.set_packet(tpage);
+}
+
+/* Action i at its rest place moved by (dx, dy): its windows, its panel, and `glow` (0 none, 1 pressed, 2 refused). */
+static void fightstg_battle_menu_show(FightstgBattleMenu *obj, FightstgBattleMenuData *data, s32 i, s32 dx, s32 dy,
+                                      s32 glow) {
+    s32 x = obj->x[i] + dx;
+    s32 y = obj->y[i] + dy;
+    s32 pw = fightstg_bmenu_panel_w[i];
+
+    data->icons[i]->set_pos(data->icons[i], x, y);
+    data->labels[i]->set_pos(data->labels[i], x + obj->icon_w[i], y);
+    fightstg_battle_menu_quad(x - 2, y - 1, pw, FIGHTSTG_BMENU_PANEL_H, 2, 150, 140, 100);
+    if (glow == 1) {
+        fightstg_battle_menu_quad(x - 2, y - 1, pw, FIGHTSTG_BMENU_PANEL_H, 1, 30, 90, 170);
+    } else if (glow == 2) {
+        fightstg_battle_menu_quad(x - 2, y - 1, pw, FIGHTSTG_BMENU_PANEL_H, 1, 110, 10, 10);
+    }
+}
+
+static void fightstg_battle_menu_paint(FightstgBattleMenuData *data, s32 i, u8 palette) {
+    data->icons[i]->set_palette(data->icons[i], palette);
+    data->labels[i]->set_palette(data->labels[i], palette);
+}
+
+void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData *data) {
+    FightstgMember *member;
+    u8 icon[4];
+    u8 *text;
+    s32 rows[6] = { 0, 0, 0, 0, 0, 0 }; /* actions already placed in each slot */
+    s32 bit;
+    s32 slot;
+    s32 x;
+    s32 y;
+    s32 r;
+    s32 dx;
+    s32 dy;
+    s32 glow;
+    s32 i;
+
+    switch (obj->base.state) {
+    case OBJECT_STATE_INIT:
+    default:
+        text = cdload_module.files.get_file(records_language + 0x7F);
+        member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
+        obj->press = obj->refused = -1;
+        for (i = 0; i < 6; i++) {
+            bit = port_battle_menu_bit(i);
+            slot = fightstg_battle_menu_slot(port_battle_menu_place(bit));
+            x = fightstg_battle_menu_slots[slot][0];
+            /* two actions on one row (L1 and L2) stack downwards */
+            y = fightstg_battle_menu_slots[slot][1] + rows[slot]++ * 14;
+            fightstg_battle_menu_icon_text(icon, bit);
+            /* a face button's glyph is one character wide; a shoulder's name ("L1") is two */
+            obj->x[i] = x;
+            obj->y[i] = y;
+            obj->icon_w[i] = icon[0] == 1 ? 16 : 26;
+            obj->grey[i] = ((member->status & 8) && i < 3) || ((member->status & 0x20) && i == 2);
+            x -= FIGHTSTG_BMENU_SLIDE * FIGHTSTG_BMENU_SLIDE / 3; /* opens where the slide starts */
+            data->icons[i] = message_create_window(0x1005, 1, x, y);
+            data->icons[i]->set_text(data->icons[i], icon, -1);
+            data->labels[i] = message_create_window(0x1005, 1, x + obj->icon_w[i], y);
+            data->labels[i]->set_text(data->labels[i], text, i + 1);
+            fightstg_battle_menu_paint(data, i, obj->grey[i] ? FIGHTSTG_BMENU_PAL_GREY : 0);
+        }
+        obj->base.next_state(obj);
+        break;
+    case OBJECT_STATE_RUN:
+        obj->age += gfx_module.funcs.get_frame_ticks();
+        r = FIGHTSTG_BMENU_SLIDE - obj->age;
+        r = r < 0 ? 0 : r;
+        if (obj->press >= 0) {
+            obj->press_age += gfx_module.funcs.get_frame_ticks();
+        }
+        if (obj->refused >= 0) {
+            obj->refused_age += gfx_module.funcs.get_frame_ticks();
+            if (obj->refused_age >= FIGHTSTG_BMENU_SHAKE) {
+                obj->refused = -1;
+            }
+        }
+        for (i = 0; i < 6; i++) {
+            dx = -(r * r) / 3;
+            dy = 0;
+            glow = 0;
+            if (i == obj->press) {
+                /* a nudge toward the menu's middle that settles back: 2 3 2 1 0 0 0 */
+                dx += obj->press_age < 4 ? (obj->press_age < 2 ? 2 + obj->press_age : 4 - obj->press_age) : 0;
+                glow = 1;
+            } else if (i == obj->refused) {
+                dx += (obj->refused_age & 1) ? 3 : -3;
+                glow = 2;
+            }
+            fightstg_battle_menu_show(obj, data, i, dx, dy, glow);
+        }
+        if (obj->press >= 0) {
+            /* The choice is given when the nudge is done; the original gives it at once. */
+            if (obj->press_age >= FIGHTSTG_BMENU_PRESS) {
+                *obj->result = obj->press;
+                obj->base.set_state(obj, OBJECT_STATE_END);
+            }
+            break;
+        }
+        /* Nothing is read on the frame of the INIT above, as the original's: a press that closed a submenu is gone. */
+        for (i = 0; i < 6; i++) {
+            if (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i))) {
+                sound_module.play(0x4001C);
+                if (obj->grey[i]) {
+                    port_battle_menu_chosen(i, port_battle_menu_bit(i), 1);
+                    obj->refused = i;
+                    obj->refused_age = 0;
+                    break;
+                }
+                port_battle_menu_chosen(i, port_battle_menu_bit(i), 0);
+                obj->press = i;
+                obj->press_age = 0;
+                for (r = 0; r < 6; r++) {
+                    fightstg_battle_menu_paint(data, r, r == i ? FIGHTSTG_BMENU_PAL_HOT : FIGHTSTG_BMENU_PAL_GREY);
+                }
+                break;
+            }
+        }
+        break;
+    case OBJECT_STATE_DONE:
+    case OBJECT_STATE_END:
+        break;
+    }
+}
+
+FightstgCommandMenu *fightstg_battle_menu_create(s32 sel, s32 *result) {
+    FightstgBattleMenu *obj = object_new(fightstg_battle_menu_update, sizeof(FightstgBattleMenu), sizeof(FightstgBattleMenuData));
+
+    obj->result = result;
+    *result = -1;
+    obj->sel = sel;
+    return (FightstgCommandMenu *)obj; /* the object starts with FightstgCommandMenu's fields */
+}
+#endif
 
 FightstgCommandMenu *fightstg_command_menu_create(s32 sel, s32 *result) {
     FightstgCommandMenu *obj = object_new(fightstg_command_menu_update, sizeof(FightstgCommandMenu), sizeof(FightstgCommandMenuData));

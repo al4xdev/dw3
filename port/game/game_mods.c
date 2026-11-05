@@ -436,6 +436,44 @@ static const char *led_bar_status(struct PortMod *mod) {
     return led_status();
 }
 
+/* ---- battle_menu (docs/LAUNCHER.md "Battle menu"): while enabled, port_mod_battle_menu makes FIGHTSTG's
+ * fightstg_command_menu_create build a menu with one pad button per action (fightstg_bmenu_*) instead of the list and
+ * its cursor. Each option names a place on the player's pad; port_battle_menu_bit (below, after pad.map's code) turns it
+ * into the PS1 bit the player's own button delivers, so the menu follows the pad map and shows that button's glyph.
+ * Two actions on one place cannot both work: the defaults are used then. */
+static const char *const bm_places[] = { "south", "west", "north", "east", "l1", "r1", "l2", "r2", NULL };
+static const u8 bm_place_bits[] = { 14, 15, 12, 13, 10, 11, 8, 9 };
+/* The options' order is the original list's (and the menu's result's): Fight, Tech, Digivolve, Tag, Item, Run. */
+enum { BM_FIGHT, BM_TECH, BM_DV, BM_TAG, BM_ITEM, BM_RUN, BM_COUNT };
+static const u8 bm_default_places[BM_COUNT] = { 0, 1, 3, 4, 2, 5 }; /* south west east l1 north r1 */
+#define BM_OPTION(name, default_place) \
+    { .id = name, .type = PORT_MOD_ENUM, .def = default_place, .values = bm_places, .applies = "live" }
+static const PortModOption bm_options[BM_COUNT] = {
+    BM_OPTION("fight", "\"south\""), BM_OPTION("tech", "\"west\""), BM_OPTION("digivolve", "\"east\""),
+    BM_OPTION("tag", "\"l1\""),      BM_OPTION("item", "\"north\""), BM_OPTION("run", "\"r1\""),
+};
+int port_mod_battle_menu;
+static u8 bm_place[BM_COUNT]; /* by action: index into bm_places */
+
+static void bm_start(struct PortMod *mod) {
+    int a, b, clash = 0;
+    for (a = 0; a < BM_COUNT; a++) {
+        bm_place[a] = (u8)mod->values[a].number;
+    }
+    for (a = 0; a < BM_COUNT; a++) {
+        for (b = a + 1; b < BM_COUNT; b++) {
+            clash |= bm_place[a] == bm_place[b];
+        }
+    }
+    if (clash) {
+        port_log("battle menu: two actions on one button, the default buttons are used");
+        for (a = 0; a < BM_COUNT; a++) {
+            bm_place[a] = bm_default_places[a];
+        }
+    }
+    port_mod_battle_menu = 1;
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
@@ -454,6 +492,7 @@ static PortMod game_mod_table[] = {
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
     { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
       .status = led_bar_status },
+    { .id = "battle_menu", .version = "0.1", .options = bm_options, .option_count = BM_COUNT, .start = bm_start },
 };
 
 int game_mod_count(void) {
@@ -679,6 +718,36 @@ s16 dw3_button_glyph(u8 code) {
         g = (s16)(0x0E + (letter - 'A'));
     }
     return g;
+}
+
+/* Where a PS1 bit sits on the player's pad: the bit the runtime delivers for it (pad.map's middle column; the identity
+ * when the runtime maps the pad itself). */
+int port_battle_menu_place(int bit) {
+    dw3_pad_load();
+    return (bit >= 0 && bit < 16 && dw3_pad.remap) ? (int)dw3_pad.perm[bit] : bit;
+}
+
+/* The PS1 bit whose button is at the action's place. A face place can hold any bit once the player has remapped, so
+ * search; the identity (the first match is the bit itself) when nothing is remapped. */
+int port_battle_menu_bit(int action) {
+    int want, bit;
+
+    if (action < 0 || action >= BM_COUNT) {
+        return -1;
+    }
+    want = bm_place_bits[bm_place[action]];
+    for (bit = 0; bit < 16; bit++) {
+        if (port_battle_menu_place(bit) == want) {
+            return bit;
+        }
+    }
+    return want;
+}
+
+/* One line a press on the menu: what tests/port/mods.py reads (the action the button chose, or the refusal of one the
+ * Digimon cannot do, and the logical pad bit that triggered it). A press is a human's pace, never per frame. */
+void port_battle_menu_chosen(int action, int bit, int refused) {
+    port_log("battle menu: frame %ld: %s %d (bit %d)", port_frames, refused ? "refused" : "action", action, bit);
 }
 
 static s32 dw3_travel_map;
