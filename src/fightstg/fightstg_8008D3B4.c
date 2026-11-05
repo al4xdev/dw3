@@ -3518,6 +3518,15 @@ static void fightstg_battle_menu_show(FightstgBattleMenu *obj, FightstgBattleMen
     }
 }
 
+/* Each action sits at a fixed place on the screen regardless of which button is mapped to it:
+ * 0 Fight -> slot 2 (Right of cross)
+ * 1 Tech -> slot 4 (Top-Left wing)
+ * 2 Digivolve -> slot 0 (Top of cross)
+ * 3 Tag -> slot 3 (Bottom of cross)
+ * 4 Item -> slot 5 (Top-Right wing)
+ * 5 Run -> slot 1 (Left of cross) */
+static const u8 fightstg_bmenu_action_slot[6] = { 2, 4, 0, 3, 5, 1 };
+
 /* Where an action's symbol, picture and panel go from its anchor (see fightstg_battle_menu_slots). `face`: the symbol
  * is one letter (a shoulder button's is two); `slot` 0 and 3 are the cross's up and down arms, drawn as a column. */
 static void fightstg_battle_menu_cell(FightstgBattleMenu *obj, s32 i, s32 slot, s32 face) {
@@ -3572,14 +3581,13 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         obj->press = obj->refused = -1;
         for (i = 0; i < 6; i++) {
             bit = port_battle_menu_bit(i);
-            slot = fightstg_battle_menu_slot(port_battle_menu_place(bit));
+            slot = fightstg_bmenu_action_slot[i];
             x = fightstg_battle_menu_slots[slot][0];
-            /* two actions on one row (L1 and L2) stack downwards */
-            y = fightstg_battle_menu_slots[slot][1] + rows[slot]++ * 14;
+            y = fightstg_battle_menu_slots[slot][1];
             fightstg_battle_menu_icon_text(icon, i, bit);
             obj->x[i] = x;
             obj->y[i] = y;
-            fightstg_battle_menu_cell(obj, i, slot, slot < 4);
+            fightstg_battle_menu_cell(obj, i, slot, icon[1] == 0);
             obj->grey[i] = ((member->status & 8) && i < 3) || ((member->status & 0x20) && i == 2);
             x -= FIGHTSTG_BMENU_SLIDE * FIGHTSTG_BMENU_SLIDE / 3; /* opens where the slide starts */
             data->icons[i] = message_create_window(0x1005, 3, x + obj->sym_x[i], y + obj->sym_y[i]);
