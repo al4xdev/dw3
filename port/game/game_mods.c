@@ -754,6 +754,20 @@ int port_battle_menu_bit(int action) {
     return want;
 }
 
+u16 dw3_raw_buttons = 0;
+u16 dw3_raw_pressed = 0;
+
+int port_battle_menu_pressed(int action) {
+    int place_idx, bit;
+
+    if (action < 0 || action >= BM_COUNT) {
+        return 0;
+    }
+    place_idx = bm_place[action];
+    bit = bm_place_bits[place_idx];
+    return (dw3_raw_pressed >> bit) & 1;
+}
+
 char port_battle_menu_letter(int action) {
     int place_idx, place_bit;
 

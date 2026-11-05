@@ -3635,7 +3635,7 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         }
         /* Nothing is read on the frame of the INIT above, as the original's: a press that closed a submenu is gone. */
         for (i = 0; i < 6; i++) {
-            if (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i))) {
+            if (port_battle_menu_pressed(i) || (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i)))) {
                 sound_module.play(0x4001C);
                 if (obj->grey[i]) {
                     port_battle_menu_chosen(i, port_battle_menu_bit(i), 1);

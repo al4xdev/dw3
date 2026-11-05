@@ -1102,7 +1102,7 @@ def draw_bmenu_remap(screen, s, pad, sel, capture):
         here = (sel == i + 1)
         screen.text(16, y, ">" if here else " ", C_KEY)
         screen.text(40, y, "%-12s" % action.upper(), C_KEY if here else C_TEXT)
-        display_place = PLACE_DISPLAY.get(place, place).upper()[:12]
+        display_place = place.upper()[:12]
         screen.text(40 + 13 * 6 * screen.scale, y, display_place, C_KEY if here else C_NOTE)
         y += 10 * screen.scale
 
@@ -1133,8 +1133,7 @@ def remap_bmenu(screen, s, pad):
                 code = key[1]
                 ev = EVDEV.get(code)
                 if ev and not ev.startswith("dp") and ev not in ("back", "start"):
-                    game_place = PLACE_TO_GAME.get(ev, ev)
-                    bm_place = {"leftshoulder": "l1", "rightshoulder": "r1", "lefttrigger": "l2", "righttrigger": "r2"}.get(game_place, game_place)
+                    bm_place = {"leftshoulder": "l1", "rightshoulder": "r1", "lefttrigger": "l2", "righttrigger": "r2"}.get(ev, ev)
                     action_key = BM_KEYS[sel - 1]
                     old_place = s.get(action_key, BM_DEFAULT_PLACES.get(action_key, "east"))
                     for other in BM_KEYS:

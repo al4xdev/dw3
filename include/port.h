@@ -207,6 +207,7 @@ extern s16 dw3_evo_shield_member; /* the member that takes no damage, -1 if none
 extern int port_mod_battle_menu;
 int port_battle_menu_bit(int action);
 int port_battle_menu_place(int bit);
+int port_battle_menu_pressed(int action);
 char port_battle_menu_letter(int action);
 void port_battle_menu_chosen(int action, int bit, int refused); /* logs a press on the menu (tests/port/mods.py) */
 

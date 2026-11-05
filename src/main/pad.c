@@ -296,6 +296,13 @@ void pad_read_buttons(u8 id, u8 *data, u8 *rec) {
         /* The player's own pad map (pad.map, through dw3_pad_permute): the handheld's SDL2 runtime has no pad map of its
          * own, and this is the one place every read of the pad passes through - the raw bit tests as much as the button
          * map's. No language rotation first: the map's places are the pad's own PS1 positions. */
+        {
+            extern u16 dw3_raw_buttons, dw3_raw_pressed;
+            static u16 dw3_raw_prev;
+            dw3_raw_buttons = buttons;
+            dw3_raw_pressed = (buttons ^ dw3_raw_prev) & buttons;
+            dw3_raw_prev = buttons;
+        }
         buttons = dw3_pad_permute(buttons, 0);
 #endif
         if (mode == 7) {
