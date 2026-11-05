@@ -623,11 +623,25 @@ static int dw3_pad_bit_of_place(const char *place) {
     return -1;
 }
 
+static char dw3_pad_letters_by_place[8]; /* south(0), west(1), north(2), east(3), l1(4), r1(5), l2(6), r2(7) */
+
+static int dw3_place_index(const char *place) {
+    if (strcmp(place, "south") == 0) return 0;
+    if (strcmp(place, "west") == 0) return 1;
+    if (strcmp(place, "north") == 0) return 2;
+    if (strcmp(place, "east") == 0) return 3;
+    if (strcmp(place, "l1") == 0 || strcmp(place, "leftshoulder") == 0) return 4;
+    if (strcmp(place, "r1") == 0 || strcmp(place, "rightshoulder") == 0) return 5;
+    if (strcmp(place, "l2") == 0 || strcmp(place, "lefttrigger") == 0) return 6;
+    if (strcmp(place, "r2") == 0 || strcmp(place, "righttrigger") == 0) return 7;
+    return -1;
+}
+
 /* Reads pad.map once. Without the file: the identity, and the Xbox letters at the handheld's own positions. */
 static void dw3_pad_load(void) {
     FILE *f;
     char name[16], place[16], letter;
-    int bit, at, i;
+    int bit, at, idx, i;
 
     if (dw3_pad.loaded) {
         return;
@@ -637,16 +651,14 @@ static void dw3_pad_load(void) {
     for (i = 0; i < 16; i++) {
         dw3_pad.perm[i] = (u16)i;
         dw3_pad.letter[i] = 0;
-        dw3_pad.letter_by_place[i] = 0;
     }
-    dw3_pad.letter[13] = 'A'; /* circle: confirm */
-    dw3_pad.letter[14] = 'B'; /* cross: back */
-    dw3_pad.letter[15] = 'X'; /* square */
-    dw3_pad.letter[12] = 'Y'; /* triangle */
-    dw3_pad.letter_by_place[14] = 'A'; /* south default */
-    dw3_pad.letter_by_place[13] = 'B'; /* east default */
-    dw3_pad.letter_by_place[15] = 'X'; /* west default */
-    dw3_pad.letter_by_place[12] = 'Y'; /* north default */
+    for (i = 0; i < 8; i++) {
+        dw3_pad_letters_by_place[i] = 0;
+    }
+    dw3_pad_letters_by_place[0] = 'A'; /* south default */
+    dw3_pad_letters_by_place[1] = 'X'; /* west default */
+    dw3_pad_letters_by_place[2] = 'Y'; /* north default */
+    dw3_pad_letters_by_place[3] = 'B'; /* east default */
     f = fopen("pad.map", "r");
     if (f == NULL) {
         return;
@@ -660,11 +672,12 @@ static void dw3_pad_load(void) {
             dw3_pad.letter[bit] = (letter >= 'A' && letter <= 'Z') ? letter : 0; /* '-': the symbol itself */
         }
         at = dw3_pad_bit_of_place(place);
-        if (at >= 0 && at < 16) {
-            dw3_pad.letter_by_place[at] = (letter >= 'A' && letter <= 'Z') ? letter : 0;
-            if (bit >= 0 && bit < 16) {
-                dw3_pad.perm[bit] = (u16)at;
-            }
+        if (at >= 0 && at < 16 && bit >= 0 && bit < 16) {
+            dw3_pad.perm[bit] = (u16)at;
+        }
+        idx = dw3_place_index(place);
+        if (idx >= 0 && idx < 8) {
+            dw3_pad_letters_by_place[idx] = (letter >= 'A' && letter <= 'Z') ? letter : 0;
         }
     }
     fclose(f);
@@ -769,18 +782,11 @@ int port_battle_menu_pressed(int action) {
 }
 
 char port_battle_menu_letter(int action) {
-    int place_idx, place_bit;
-
     if (action < 0 || action >= BM_COUNT) {
         return 0;
     }
     dw3_pad_load();
-    place_idx = bm_place[action];
-    place_bit = bm_place_bits[place_idx];
-    if (place_bit >= 0 && place_bit < 16) {
-        return dw3_pad.letter_by_place[place_bit];
-    }
-    return 0;
+    return dw3_pad_letters_by_place[bm_place[action]];
 }
 
 /* One line a press on the menu: what tests/port/mods.py reads (the action the button chose, or the refusal of one the
