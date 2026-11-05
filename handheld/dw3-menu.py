@@ -385,15 +385,7 @@ GROUPS = [
         ("hit", "  HIT REACTION"),
         ("saveany", "SAVE ANYWHERE"),
         ("evo", "EVO BUFF"),
-    ]),
-    ("bmenu", "BATTLE MENU", [
-        ("bmenu", "ENABLED"),
-        ("bm_fight", "FIGHT"),
-        ("bm_tech", "TECH"),
-        ("bm_digivolve", "DIGIVOLVE"),
-        ("bm_tag", "TAG"),
-        ("bm_item", "ITEM"),
-        ("bm_run", "RUN"),
+        ("bmenu", "BATTLE MENU"),
     ]),
     ("xp", "XP", [
         ("party", "PARTY XP"),
@@ -420,12 +412,12 @@ def group_rows(s):
     """The main screen: the groups, then what acts on the console or runs once, then PLAY."""
     return [
         "GAME                SETTINGS",
-        "BATTLE MENU         %s" % ("ON" if s.get("bmenu", 1) else "off"),
         "XP                  SETTINGS",
         "VIDEO               SETTINGS",
         "DEBUG               SETTINGS",
         "LED BAR             %s" % led_state(),
         "BUTTONS             REMAP",
+        "BATTLE MENU         REMAP",
         "RESET SETTINGS      ASK",
         "PLAY",
     ]
@@ -1083,6 +1075,102 @@ def remap(screen, pad):
             return "back"
 
 
+BM_DEFAULT_PLACES = {
+    "bm_fight": "east",
+    "bm_tech": "l1",
+    "bm_digivolve": "north",
+    "bm_tag": "south",
+    "bm_item": "r1",
+    "bm_run": "west",
+}
+
+
+def draw_bmenu_remap(screen, s, pad, sel, capture):
+    screen.fill(0x001018)
+    screen.text(24, 16, "BATTLE MENU", C_TITLE)
+    y = 48
+    here = (sel == 0)
+    screen.text(16, y, ">" if here else " ", C_KEY)
+    screen.text(40, y, "ENABLED", C_KEY if here else C_TEXT)
+    on_txt = "ON" if s.get("bmenu", 1) else "off"
+    screen.text(40 + 20 * 6 * screen.scale, y, on_txt, C_KEY if here else (C_ON if on_txt == "ON" else C_DIM))
+    y += 10 * screen.scale
+
+    for i, action in enumerate(BM_ACTIONS):
+        k = "bm_" + action
+        place = s.get(k, BM_DEFAULT_PLACES.get(k, "east"))
+        here = (sel == i + 1)
+        screen.text(16, y, ">" if here else " ", C_KEY)
+        screen.text(40, y, "%-12s" % action.upper(), C_KEY if here else C_TEXT)
+        display_place = PLACE_DISPLAY.get(place, place).upper()[:12]
+        screen.text(40 + 13 * 6 * screen.scale, y, display_place, C_KEY if here else C_NOTE)
+        y += 10 * screen.scale
+
+    step = 8 * screen.scale
+    y = screen.h - 3 * step - 6
+    if capture:
+        screen.text(24, y, "PRESS THE BUTTON NOW - ANY OF THEM", C_WARN)
+    else:
+        x = screen.text(24, y, key_label(pad, "cross"), C_KEY)
+        screen.text(x, y, ": PICK A ROW, THEN THE BUTTON", C_NOTE)
+    x = screen.text(24, y + step, "LEFT/RIGHT", C_KEY)
+    screen.text(x, y + step, ": TOGGLE OR CYCLE THIS ROW", C_NOTE)
+    x = screen.text(24, y + 2 * step, key_label(pad, "triangle"), C_KEY)
+    screen.text(x, y + 2 * step, ": BACK TO THE MENU", C_NOTE)
+
+
+def remap_bmenu(screen, s, pad):
+    sel = 0
+    capture = False
+    n = 1 + len(BM_ACTIONS)
+    while True:
+        draw_bmenu_remap(screen, s, pad, sel, capture)
+        key = pad_events(pad, capture)
+        if key == "quit":
+            return "quit"
+        if capture:
+            if isinstance(key, tuple):
+                code = key[1]
+                ev = EVDEV.get(code)
+                if ev and not ev.startswith("dp") and ev not in ("back", "start"):
+                    game_place = PLACE_TO_GAME.get(ev, ev)
+                    bm_place = {"leftshoulder": "l1", "rightshoulder": "r1", "lefttrigger": "l2", "righttrigger": "r2"}.get(game_place, game_place)
+                    action_key = BM_KEYS[sel - 1]
+                    old_place = s.get(action_key, BM_DEFAULT_PLACES.get(action_key, "east"))
+                    for other in BM_KEYS:
+                        if other != action_key and s.get(other) == bm_place:
+                            s[other] = old_place
+                            break
+                    s[action_key] = bm_place
+                capture = False
+            continue
+        if key == "up":
+            sel = (sel - 1) % n
+        elif key == "down":
+            sel = (sel + 1) % n
+        elif key in ("left", "right"):
+            if sel == 0:
+                s["bmenu"] = 0 if s.get("bmenu", 1) else 1
+            else:
+                action_key = BM_KEYS[sel - 1]
+                step = -1 if key == "left" else 1
+                curr = s.get(action_key, BM_DEFAULT_PLACES.get(action_key, "east"))
+                idx = BM_PLACES.index(curr) if curr in BM_PLACES else 0
+                nxt = BM_PLACES[(idx + step) % len(BM_PLACES)]
+                for other in BM_KEYS:
+                    if other != action_key and s.get(other) == nxt:
+                        s[other] = curr
+                        break
+                s[action_key] = nxt
+        elif key == "a":
+            if sel == 0:
+                s["bmenu"] = 0 if s.get("bmenu", 1) else 1
+            else:
+                capture = True
+        elif key in ("play", "b"):
+            return "back"
+
+
 def confirm_reset(screen, pad):
     """Ask, because there is no undo: A puts everything back - the settings, the pad map and the LED mod - and writes the
     files, B leaves it alone. The memory cards are not part of it: a reset is for a broken configuration, not for
@@ -1170,8 +1258,9 @@ def main():
     # level, which is the only place anyone looks for it.
     play = count - 1
     reset_row = count - 2
-    buttons = count - 3
-    led_row = count - 4
+    bmenu_row = count - 3
+    buttons = count - 4
+    led_row = count - 5
     group_base = 0  # the first len(GROUPS) rows are the groups, in GROUPS order
     sel = play
     try:
@@ -1221,6 +1310,15 @@ def main():
                             draw(screen, s, sel, disc, pad, page)
                             screen.text(24, screen.h - 8 * screen.scale - 8, "SAVED %s" % zipped, C_NOTE)
                             continue
+                        if entries[sel][0] == "bmenu":
+                            if remap_bmenu(screen, s, pad) == "quit":
+                                screen.fill(0x000000)
+                                return 2
+                            save_state(s)
+                            if disc:
+                                write_settings(s, disc)
+                            draw(screen, s, sel, disc, pad, page)
+                            continue
                         field_toggle(s, entries[sel][0])
                 elif sel == play:
                     launch = True
@@ -1243,6 +1341,13 @@ def main():
                         if disc:
                             write_settings(s, disc)
                         led_mod_set(True)
+                elif sel == bmenu_row:
+                    if remap_bmenu(screen, s, pad) == "quit":
+                        screen.fill(0x000000)
+                        return 2
+                    save_state(s)
+                    if disc:
+                        write_settings(s, disc)
                 elif sel == buttons:
                     if remap(screen, pad) == "quit":
                         screen.fill(0x000000)
