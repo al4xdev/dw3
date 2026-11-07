@@ -804,7 +804,10 @@ int port_battle_menu_bit(int action) {
     return want;
 }
 
-u16 dw3_raw_buttons = 0;
+/* Pressed this frame, as the runtime delivers it before pad.map's permutation (src/main/pad.c). The menu listens to
+ * this and, beside it, to the logical bit pad_state reports (fightstg_battle_menu_update): the place is the physical
+ * button whatever the map and the language's rotation did to the bits, and the logical bit is what the tests' scripted
+ * pad and a runtime that maps the pad itself deliver. Neither alone covers both. */
 u16 dw3_raw_pressed = 0;
 
 int port_battle_menu_pressed(int action) {
