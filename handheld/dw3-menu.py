@@ -94,8 +94,13 @@ LAYOUTS = {
 }
 LAYOUT_NAMES = ["ps1", "modern"]
 
-# Kernel place -> the direction printed on this handheld's pad (its kernel calls the physical top "west" and the
-# physical left "north").
+# Three vocabularies for a face button's place, and the translations between them:
+#   kernel   what the launcher reads and stores (EVDEV), in its settings and in the battle menu's options;
+#   display  what this handheld's pad prints (its kernel calls the physical top "west" and the physical left "north"):
+#            PLACE_DISPLAY, only ever for the screen's text;
+#   game     what the game's SDL names the same button: PLACE_TO_GAME, applied when pad.map and the gamepad map are
+#            written (the game's bm_slot.game, port/game/game_mods.c, is the same translation, for the battle menu's
+#            places, which the game reads in kernel names).
 PLACE_DISPLAY = {"north": "west", "west": "north"}
 # The launcher reads the kernel's face places; the game sees SDL's, a quarter turn away. pad.map is written in the
 # game's names, so the launcher keeps its own and translates on the way in and out.
@@ -428,7 +433,10 @@ def field_text(s, key):
     def on(v):
         return "ON" if v else "off"
     if key in BM_KEYS:
-        return s.get(key, "").upper()
+        # The place is stored as the kernel names it; the screen says it as the BUTTONS rows do (PLACE_DISPLAY), so one
+        # button is not "WEST" on one screen and "NORTH" on the other.
+        place = s.get(key, "")
+        return PLACE_DISPLAY.get(place, place).upper()
     if key == "ff":
         return "%s  %s" % (on(s["ff"]), s["ff_speed"].upper()) if s["ff"] else "off"
     if key == "party":
