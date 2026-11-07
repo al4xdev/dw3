@@ -441,8 +441,35 @@ static const char *led_bar_status(struct PortMod *mod) {
  * its cursor. Each option names a place on the player's pad; port_battle_menu_bit (below, after pad.map's code) turns it
  * into the PS1 bit the player's own button delivers, so the menu follows the pad map and shows that button's glyph.
  * Two actions on one place cannot both work: the defaults are used then. */
-static const char *const bm_places[] = { "south", "west", "north", "east", "l1", "r1", "l2", "r2", NULL };
-static const u8 bm_place_bits[] = { 14, 15, 12, 13, 10, 11, 8, 9 };
+/* The eight places a battle menu action (and a pad.map letter) can sit on, one table for everything that is known about
+ * a place: X(name, pad.map's alias, the PS1 bit the runtime delivers there, the index of the place carrying this name in
+ * the other vocabulary, the letter the Xbox layout prints at the place pad.map calls by this name when there is no
+ * pad.map).
+ *
+ * Two vocabularies meet here. The launcher names a place by the physical button; pad.map names it in the game's terms,
+ * because the launcher translates with PLACE_TO_GAME (dw3-menu.py) when it writes the file: physical south is the game's
+ * west, west is east, east is south, north is north. The game index is that translation: `game`, an index of this same
+ * table. The order is the options' values and bm_place's indexes. */
+#define BM_PLACES(X)                                \
+    X("south", NULL, 14, 1, 'A')                    \
+    X("west", NULL, 15, 3, 'X')                     \
+    X("north", NULL, 12, 2, 'Y')                    \
+    X("east", NULL, 13, 0, 'B')                     \
+    X("l1", "leftshoulder", 10, 4, 0)               \
+    X("r1", "rightshoulder", 11, 5, 0)              \
+    X("l2", "lefttrigger", 8, 6, 0)                 \
+    X("r2", "righttrigger", 9, 7, 0)
+#define BM_PLACE_COUNT 8
+#define BM_NAME(name, alias, bit, game, xbox) name,
+static const char *const bm_places[] = { BM_PLACES(BM_NAME) NULL };
+#define BM_SLOT(name, alias, bit, game, xbox) { name, alias, bit, game, xbox },
+static const struct {
+    const char *name;
+    const char *alias; /* pad.map's own name for it, or NULL */
+    u8 bit;
+    u8 game;           /* the slot whose pad.map name this launcher place carries (the launcher's translation) */
+    char xbox;         /* by pad.map's name */
+} bm_slot[BM_PLACE_COUNT] = { BM_PLACES(BM_SLOT) };
 /* The options' order is the original list's (and the menu's result's): Fight, Tech, Digivolve, Tag, Item, Run. */
 enum { BM_FIGHT, BM_TECH, BM_DV, BM_TAG, BM_ITEM, BM_RUN, BM_COUNT };
 static const u8 bm_default_places[BM_COUNT] = { 3, 4, 2, 0, 5, 1 }; /* east l1 north south r1 west */
@@ -574,15 +601,13 @@ static const struct {
 };
 
 /* The PS1 button the handheld's runtime wires each gamepad input to (input.c, the SDL2 branch: SDL2's own button
- * positions). A name that is not here - guide, the sticks, the touchpad - has no button of its own there. */
+ * positions): the places of bm_slot, and these, which no battle menu action can sit on. A name that is in neither -
+ * guide, the sticks, the touchpad - has no button of its own there. */
 static const struct {
     const char *place;
     int bit;
 } dw3_pad_places[] = {
-    { "south", 14 },        { "east", 13 },          { "west", 15 },       { "north", 12 },
-    { "leftshoulder", 10 }, { "rightshoulder", 11 }, { "lefttrigger", 8 }, { "righttrigger", 9 },
-    { "back", 0 },          { "start", 3 },          { "dpup", 4 },        { "dpright", 5 },
-    { "dpdown", 6 },        { "dpleft", 7 },
+    { "back", 0 }, { "start", 3 }, { "dpup", 4 }, { "dpright", 5 }, { "dpdown", 6 }, { "dpleft", 7 },
 };
 
 /* records_language's rotation of the face buttons (src/main/pad.c): cross 14 -> circle 13, triangle 12 -> cross 14,
@@ -595,10 +620,11 @@ static const u8 dw3_pad_rot[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 12
 
 static struct {
     int loaded;
+    int has_file;    /* pad.map was read: without it the places carry the Xbox letters (bm_slot.xbox) */
     int remap;       /* DW3_PAD_REMAP: this runtime has no pad map, the game applies the file's */
     char letter[16]; /* by PS1 button: the letter the text shows, or 0 for the button's own symbol */
-    char letter_by_place[16]; /* by place bit: the letter directly on that physical button */
     u16 perm[16];    /* by PS1 button: the bit the runtime delivers when it is pressed */
+    u8 at[BM_PLACE_COUNT]; /* by place (pad.map's name for it): the PS1 button whose row sits there */
 } dw3_pad;
 
 static int dw3_pad_bit_of_name(const char *name) {
@@ -612,9 +638,24 @@ static int dw3_pad_bit_of_name(const char *name) {
     return -1;
 }
 
-static int dw3_pad_bit_of_place(const char *place) {
+/* The index in bm_slot of a place named by pad.map (or the launcher): its name or its alias. -1: not a place there. */
+static int dw3_place_index(const char *place) {
     int i;
 
+    for (i = 0; i < BM_PLACE_COUNT; i++) {
+        if (strcmp(place, bm_slot[i].name) == 0 || (bm_slot[i].alias != NULL && strcmp(place, bm_slot[i].alias) == 0)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int dw3_pad_bit_of_place(const char *place) {
+    int i = dw3_place_index(place);
+
+    if (i >= 0) {
+        return bm_slot[i].bit;
+    }
     for (i = 0; i < DW3_PAD_PLACES; i++) {
         if (strcmp(place, dw3_pad_places[i].place) == 0) {
             return dw3_pad_places[i].bit;
@@ -622,25 +663,6 @@ static int dw3_pad_bit_of_place(const char *place) {
     }
     return -1;
 }
-
-static char dw3_pad_letters_by_place[8]; /* south(0), west(1), north(2), east(3), l1(4), r1(5), l2(6), r2(7) */
-
-static int dw3_place_index(const char *place) {
-    if (strcmp(place, "south") == 0) return 0;
-    if (strcmp(place, "west") == 0) return 1;
-    if (strcmp(place, "north") == 0) return 2;
-    if (strcmp(place, "east") == 0) return 3;
-    if (strcmp(place, "l1") == 0 || strcmp(place, "leftshoulder") == 0) return 4;
-    if (strcmp(place, "r1") == 0 || strcmp(place, "rightshoulder") == 0) return 5;
-    if (strcmp(place, "l2") == 0 || strcmp(place, "lefttrigger") == 0) return 6;
-    if (strcmp(place, "r2") == 0 || strcmp(place, "righttrigger") == 0) return 7;
-    return -1;
-}
-
-/* The PS1 button whose row of pad.map sits at each place (same indexes). The battle menu draws that row's own symbol
- * when the letter is "-": it must come from the file, as the letter does, not from the runtime's pad (which is the
- * identity where the runtime maps the pad itself), or the symbol would not follow the custom layout. */
-static u8 dw3_pad_bit_by_place[8];
 
 /* Reads pad.map once. Without the file: the identity, and the Xbox letters at the handheld's own positions. */
 static void dw3_pad_load(void) {
@@ -657,20 +679,14 @@ static void dw3_pad_load(void) {
         dw3_pad.perm[i] = (u16)i;
         dw3_pad.letter[i] = 0;
     }
-    for (i = 0; i < 8; i++) {
-        dw3_pad_letters_by_place[i] = 0;
-    }
-    dw3_pad_letters_by_place[0] = 'A'; /* south default */
-    dw3_pad_letters_by_place[1] = 'X'; /* west default */
-    dw3_pad_letters_by_place[2] = 'Y'; /* north default */
-    dw3_pad_letters_by_place[3] = 'B'; /* east default */
-    for (i = 0; i < 8; i++) {
-        dw3_pad_bit_by_place[i] = bm_place_bits[i]; /* same order as dw3_place_index */
+    for (i = 0; i < BM_PLACE_COUNT; i++) {
+        dw3_pad.at[i] = bm_slot[i].bit; /* until a row says otherwise: the button the runtime delivers there */
     }
     f = fopen("pad.map", "r");
     if (f == NULL) {
         return;
     }
+    dw3_pad.has_file = 1;
     while (fscanf(f, "%15s %15s %c", name, place, &letter) == 3) {
         bit = dw3_pad_bit_of_name(name);
         if (letter >= 'a' && letter <= 'z') {
@@ -684,11 +700,8 @@ static void dw3_pad_load(void) {
             dw3_pad.perm[bit] = (u16)at;
         }
         idx = dw3_place_index(place);
-        if (idx >= 0 && idx < 8) {
-            dw3_pad_letters_by_place[idx] = (letter >= 'A' && letter <= 'Z') ? letter : 0;
-            if (bit >= 0 && bit < 16) {
-                dw3_pad_bit_by_place[idx] = (u8)bit;
-            }
+        if (idx >= 0 && bit >= 0 && bit < 16) {
+            dw3_pad.at[idx] = (u8)bit;
         }
     }
     fclose(f);
@@ -769,7 +782,7 @@ int port_battle_menu_bit(int action) {
     if (action < 0 || action >= BM_COUNT) {
         return -1;
     }
-    want = bm_place_bits[bm_place[action]];
+    want = bm_slot[bm_place[action]].bit;
     for (bit = 0; bit < 16; bit++) {
         if (port_battle_menu_place(bit) == want) {
             return bit;
@@ -782,29 +795,17 @@ u16 dw3_raw_buttons = 0;
 u16 dw3_raw_pressed = 0;
 
 int port_battle_menu_pressed(int action) {
-    int place_idx, bit;
-
     if (action < 0 || action >= BM_COUNT) {
         return 0;
     }
-    place_idx = bm_place[action];
-    bit = bm_place_bits[place_idx];
-    return (dw3_raw_pressed >> bit) & 1;
+    return (dw3_raw_pressed >> bm_slot[bm_place[action]].bit) & 1;
 }
 
-/* The battle menu's places are the launcher's own (the physical button, as the player picked it), while pad.map names
- * the places in the game's terms: the launcher translates with PLACE_TO_GAME (dw3-menu.py) when it writes the file -
- * physical south is the game's west, west is east, east is south, north is north. The letters and symbols are indexed
- * by the file's names, so the action's place has to be translated the same way or the glyph of another button shows
- * (only north, the one place the two agree on, was right). Same order as bm_places: south west north east l1 r1 l2 r2. */
-static const u8 bm_place_to_game[8] = { 1, 3, 2, 0, 4, 5, 6, 7 };
-
-char port_battle_menu_letter(int action) {
-    if (action < 0 || action >= BM_COUNT) {
-        return 0;
-    }
-    dw3_pad_load();
-    return dw3_pad_letters_by_place[bm_place_to_game[bm_place[action]]];
+/* The action's place in pad.map's names (the launcher's physical south is the game's west...: bm_slot.game). The
+ * letters and symbols are indexed by the file's names, so a lookup that skipped this showed the glyph of another button
+ * (only north, the one place the two agree on, was right). */
+static int bm_place_in_file(int action) {
+    return bm_slot[bm_place[action]].game;
 }
 
 /* The PS1 button the player's pad.map puts at the action's place: the symbol the menu shows when there is no letter. */
@@ -813,7 +814,23 @@ int port_battle_menu_symbol_bit(int action) {
         return -1;
     }
     dw3_pad_load();
-    return dw3_pad_bit_by_place[bm_place_to_game[bm_place[action]]];
+    return dw3_pad.at[bm_place_in_file(action)];
+}
+
+/* The letter on the button at the action's place: its row's own, or the Xbox one when there is no pad.map; 0 is the
+ * button's symbol. */
+char port_battle_menu_letter(int action) {
+    char letter;
+
+    if (action < 0 || action >= BM_COUNT) {
+        return 0;
+    }
+    dw3_pad_load();
+    if (!dw3_pad.has_file) {
+        return bm_slot[bm_place_in_file(action)].xbox;
+    }
+    letter = dw3_pad.letter[dw3_pad.at[bm_place_in_file(action)]];
+    return (letter >= 'A' && letter <= 'Z') ? letter : 0;
 }
 
 /* One line a press on the menu: what tests/port/mods.py reads (the action the button chose, or the refusal of one the
