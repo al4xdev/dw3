@@ -3441,7 +3441,12 @@ static s32 fightstg_battle_menu_slot(s32 place) {
 static void fightstg_battle_menu_icon_text(u8 *buf, s32 action, s32 bit) {
     char letter = port_battle_menu_letter(action);
     u8 code = 0;
+    s32 symbol_bit = port_battle_menu_symbol_bit(action);
 
+    /* The symbol follows pad.map's row at the action's place, as the letter does; the input bit is unrelated. */
+    if (symbol_bit >= 0) {
+        bit = symbol_bit;
+    }
     if (letter >= 'A' && letter <= 'Z') {
         buf[0] = (u8)(0x0E + (letter - 'A'));
         buf[1] = 0;

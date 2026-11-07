@@ -637,6 +637,11 @@ static int dw3_place_index(const char *place) {
     return -1;
 }
 
+/* The PS1 button whose row of pad.map sits at each place (same indexes). The battle menu draws that row's own symbol
+ * when the letter is "-": it must come from the file, as the letter does, not from the runtime's pad (which is the
+ * identity where the runtime maps the pad itself), or the symbol would not follow the custom layout. */
+static u8 dw3_pad_bit_by_place[8];
+
 /* Reads pad.map once. Without the file: the identity, and the Xbox letters at the handheld's own positions. */
 static void dw3_pad_load(void) {
     FILE *f;
@@ -659,6 +664,9 @@ static void dw3_pad_load(void) {
     dw3_pad_letters_by_place[1] = 'X'; /* west default */
     dw3_pad_letters_by_place[2] = 'Y'; /* north default */
     dw3_pad_letters_by_place[3] = 'B'; /* east default */
+    for (i = 0; i < 8; i++) {
+        dw3_pad_bit_by_place[i] = bm_place_bits[i]; /* same order as dw3_place_index */
+    }
     f = fopen("pad.map", "r");
     if (f == NULL) {
         return;
@@ -678,6 +686,9 @@ static void dw3_pad_load(void) {
         idx = dw3_place_index(place);
         if (idx >= 0 && idx < 8) {
             dw3_pad_letters_by_place[idx] = (letter >= 'A' && letter <= 'Z') ? letter : 0;
+            if (bit >= 0 && bit < 16) {
+                dw3_pad_bit_by_place[idx] = (u8)bit;
+            }
         }
     }
     fclose(f);
@@ -781,12 +792,28 @@ int port_battle_menu_pressed(int action) {
     return (dw3_raw_pressed >> bit) & 1;
 }
 
+/* The battle menu's places are the launcher's own (the physical button, as the player picked it), while pad.map names
+ * the places in the game's terms: the launcher translates with PLACE_TO_GAME (dw3-menu.py) when it writes the file -
+ * physical south is the game's west, west is east, east is south, north is north. The letters and symbols are indexed
+ * by the file's names, so the action's place has to be translated the same way or the glyph of another button shows
+ * (only north, the one place the two agree on, was right). Same order as bm_places: south west north east l1 r1 l2 r2. */
+static const u8 bm_place_to_game[8] = { 1, 3, 2, 0, 4, 5, 6, 7 };
+
 char port_battle_menu_letter(int action) {
     if (action < 0 || action >= BM_COUNT) {
         return 0;
     }
     dw3_pad_load();
-    return dw3_pad_letters_by_place[bm_place[action]];
+    return dw3_pad_letters_by_place[bm_place_to_game[bm_place[action]]];
+}
+
+/* The PS1 button the player's pad.map puts at the action's place: the symbol the menu shows when there is no letter. */
+int port_battle_menu_symbol_bit(int action) {
+    if (action < 0 || action >= BM_COUNT) {
+        return -1;
+    }
+    dw3_pad_load();
+    return dw3_pad_bit_by_place[bm_place_to_game[bm_place[action]]];
 }
 
 /* One line a press on the menu: what tests/port/mods.py reads (the action the button chose, or the refusal of one the
