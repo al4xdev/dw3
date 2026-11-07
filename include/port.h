@@ -210,6 +210,7 @@ int port_battle_menu_place(int bit);
 int port_battle_menu_pressed(int action);
 char port_battle_menu_letter(int action);
 int port_battle_menu_symbol_bit(int action); /* the PS1 button pad.map puts at the action's place (its symbol) */
+u8 port_face_symbol_code(int bit); /* the extra glyph of a face button's symbol; 0 for a shoulder or trigger */
 void port_battle_menu_chosen(int action, int bit, int refused); /* logs a press on the menu (tests/port/mods.py) */
 
 /* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE / _XP, default on).

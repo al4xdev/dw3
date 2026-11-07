@@ -739,32 +739,45 @@ u16 dw3_pad_permute(u16 buttons, int rotated) {
     return out;
 }
 
-static char dw3_letter_for(const char *action) {
-    int bit = dw3_pad_bit_of_name(action);
+/* The game's extra glyph (`01 xx`) that draws each face button's symbol. */
+static const struct {
+    u8 code;
+    int bit;
+} dw3_face_codes[] = {
+    { 0x1B, 14 }, /* cross */
+    { 0x2F, 13 }, /* circle */
+    { 0x32, 15 }, /* square */
+    { 0x34, 12 }, /* triangle */
+};
+#define DW3_FACE_CODES ((int)(sizeof(dw3_face_codes) / sizeof(dw3_face_codes[0])))
 
-    dw3_pad_load();
-    return bit < 0 ? 0 : dw3_pad.letter[bit];
+/* The extra glyph of the face button `bit`'s own symbol, or 0 for a button without one (a shoulder, a trigger). */
+u8 port_face_symbol_code(int bit) {
+    int i;
+
+    for (i = 0; i < DW3_FACE_CODES; i++) {
+        if (dw3_face_codes[i].bit == bit) {
+            return dw3_face_codes[i].code;
+        }
+    }
+    return 0;
 }
 
+/* The glyph code of the letter pad.map gives a face symbol (the extra glyph `code`), or 0 to keep the symbol. */
 s16 dw3_button_glyph(u8 code) {
-    s16 g = 0;
     char letter = 0;
+    int i;
+
     if (!dw3_feat_icons) {
         return 0;
     }
-    if (code == 0x1B) {
-        letter = dw3_letter_for("cross");
-    } else if (code == 0x2F) {
-        letter = dw3_letter_for("circle");
-    } else if (code == 0x32) {
-        letter = dw3_letter_for("square");
-    } else if (code == 0x34) {
-        letter = dw3_letter_for("triangle");
+    dw3_pad_load();
+    for (i = 0; i < DW3_FACE_CODES; i++) {
+        if (dw3_face_codes[i].code == code) {
+            letter = dw3_pad.letter[dw3_face_codes[i].bit];
+        }
     }
-    if (letter >= 'A' && letter <= 'Z') {
-        g = (s16)(0x0E + (letter - 'A'));
-    }
-    return g;
+    return (letter >= 'A' && letter <= 'Z') ? (s16)(0x0E + (letter - 'A')) : 0;
 }
 
 /* Where a PS1 bit sits on the player's pad: the bit the runtime delivers for it (pad.map's middle column; the identity
@@ -822,7 +835,7 @@ int port_battle_menu_symbol_bit(int action) {
 char port_battle_menu_letter(int action) {
     char letter;
 
-    if (action < 0 || action >= BM_COUNT) {
+    if (action < 0 || action >= BM_COUNT || !dw3_feat_icons) { /* icons off: the symbols, as in the game's text */
         return 0;
     }
     dw3_pad_load();

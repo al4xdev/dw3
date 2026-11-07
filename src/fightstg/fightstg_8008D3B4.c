@@ -3438,33 +3438,16 @@ static s32 fightstg_battle_menu_slot(s32 place) {
 
 /* The game's text for the button of an action: direct letter from the configured place if mapped,
  * else the face buttons' own glyphs (01 xx, the symbol), else its name in the main font (L1, R1...). */
-static void fightstg_battle_menu_icon_text(u8 *buf, s32 action, s32 bit) {
+static void fightstg_battle_menu_icon_text(u8 *buf, s32 action) {
     char letter = port_battle_menu_letter(action);
-    u8 code = 0;
-    s32 symbol_bit = port_battle_menu_symbol_bit(action);
-
     /* The symbol follows pad.map's row at the action's place, as the letter does; the input bit is unrelated. */
-    if (symbol_bit >= 0) {
-        bit = symbol_bit;
-    }
+    s32 bit = port_battle_menu_symbol_bit(action);
+    u8 code = port_face_symbol_code(bit);
+
     if (letter >= 'A' && letter <= 'Z') {
         buf[0] = (u8)(0x0E + (letter - 'A'));
         buf[1] = 0;
         return;
-    }
-    switch (bit) {
-    case 14:
-        code = 0x1B;
-        break;
-    case 13:
-        code = 0x2F;
-        break;
-    case 15:
-        code = 0x32;
-        break;
-    case 12:
-        code = 0x34;
-        break;
     }
     if (code != 0) {
         buf[0] = 1;
@@ -3569,7 +3552,6 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
     FightstgMember *member;
     u8 icon[4];
     s32 rows[6] = { 0, 0, 0, 0, 0, 0 }; /* actions already placed in each slot */
-    s32 bit;
     s32 slot;
     s32 x;
     s32 y;
@@ -3585,11 +3567,10 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
         obj->press = obj->refused = -1;
         for (i = 0; i < 6; i++) {
-            bit = port_battle_menu_bit(i);
             slot = fightstg_bmenu_action_slot[i];
             x = fightstg_battle_menu_slots[slot][0];
             y = fightstg_battle_menu_slots[slot][1];
-            fightstg_battle_menu_icon_text(icon, i, bit);
+            fightstg_battle_menu_icon_text(icon, i);
             obj->x[i] = x;
             obj->y[i] = y;
             fightstg_battle_menu_cell(obj, i, slot, icon[1] == 0);
