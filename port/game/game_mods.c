@@ -1,5 +1,6 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost, widescreen and led_bar, as PortMod records the
+ * battle_animations, global_save, preset_language, party_xp, xp_boost, evo_buff, widescreen, led_bar and battle_menu
+ * (and, after them, the handheld's features and the player's pad.map), as PortMod records the
  * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
