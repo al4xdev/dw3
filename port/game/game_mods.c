@@ -1,5 +1,5 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost, evo_buff, widescreen, led_bar and battle_menu
+ * battle_animations, global_save, preset_language, party_xp, xp_boost, evo_buff, widescreen, led_bar, battle_menu and battle_text
  * (and, after them, the handheld's features and the player's pad.map), as PortMod records the
  * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
@@ -502,6 +502,24 @@ static void bm_start(struct PortMod *mod) {
     port_mod_battle_menu = 1;
 }
 
+/* ---- battle_text (docs/LAUNCHER.md "Battle text"): the battle's message box (FightstgMessage) is only presentation, and
+ * every action waits for it and for a confirm press. `mode` off leaves it, skip drops every message, async (the default)
+ * lets the action go on while the text stays up for a moment (a toast: new text replaces the old) and drops the
+ * messages the animation already says. The mode is read every vsync, so it applies live. The toast's windows are arena
+ * objects held here (FIGHTSTG runs and draws them), so they are part of the save state. */
+static const char *const bt_modes[] = { "off", "skip", "async", NULL };
+enum { BT_MODE };
+static const PortModOption bt_options[] = {
+    { .id = "mode", .type = PORT_MOD_ENUM, .def = "\"async\"", .values = bt_modes, .applies = "live" },
+};
+int port_mod_battle_text;
+void *port_battle_text_windows[2];
+s32 port_battle_text_frames;
+
+static void bt_frame(struct PortMod *mod) {
+    port_mod_battle_text = (int)mod->values[BT_MODE].number;
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
@@ -521,6 +539,8 @@ static PortMod game_mod_table[] = {
     { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
       .status = led_bar_status },
     { .id = "battle_menu", .version = "0.1", .options = bm_options, .option_count = BM_COUNT, .start = bm_start },
+    { .id = "battle_text", .version = "0.1", .options = bt_options,
+      .option_count = (int)(sizeof(bt_options) / sizeof(bt_options[0])), .start = bt_frame, .frame = bt_frame },
 };
 
 int game_mod_count(void) {
@@ -538,6 +558,8 @@ void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, gs_opened_from);
     PORT_STATE_VAR(s, px_ko);
     PORT_STATE_VAR(s, xb_tenths);
+    PORT_STATE_VAR(s, port_battle_text_windows);
+    PORT_STATE_VAR(s, port_battle_text_frames);
 }
 
 /* ---- handheld features (R36S). Each is an if. A miss is logged once. ---- */

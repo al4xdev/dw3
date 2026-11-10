@@ -91,6 +91,34 @@ directly (the defeat camera, `fightstg_player_reaction`) and the scenes outside 
 digivolutions, the intro and defeat cameras) are left alone: they carry functional writes. `tests/port/battle.py`
 checks the scanner against every script on the disc; `tests/port/mods.py` runs the first story battle with the mod on.
 
+### Battle text
+
+`battle_text`. Option: `mode` (enum `off` / `skip` / `async`, default `async`; read every vsync, so it applies live).
+Flag: `port_mod_battle_text` (0, 1, 2).
+
+The battle's message box (`FightstgMessage`, `src/fightstg/fightstg_8008D3B4.c`) is presentation only: the rules ran
+before it is shown, but every action waits for it to be dismissed with a confirm press. The hook sits in
+`fightstg_message_update`'s RUN, the frame a message is ready (`fightstg_message_port_take`). Each message has a class,
+set by `fightstg_message_show` from its type and text ID (`ESMFIGHT`):
+
+- **keep:** the victory (0x52) and defeat (0x53) texts. They are the game's pacing (`wfightmn_victory_wait` closes the
+  victory text after 100 frames), so they run as on the disc in every mode.
+- **drop:** what the animation already says: a plain "Attack" (8), "Evade" (0x1D), "Focus on attack/guard" (0x3C, 0x3D),
+  "Special effect up" (0x3E), "Blast gauge up" (0x3F), "Excited" (0x40). Ended at once in `skip` and `async`.
+- **normal** (technique and item names, damage, healing, statuses, switches...): `skip` ends it at once; `async` hands
+  its two windows to a **toast** and ends it, so the action goes on (the animation starts with the technique's name
+  still up, and the damage replaces it when it arrives). A chain (a queued follow-up: regeneration, the counter's
+  damage) shows only its last page. The toast stays 90 frames unless a newer text replaces it.
+
+The toast is owned by no object: the battle's slots object (`fightstg_slots_update`) runs and draws the windows each
+frame, and `fightstg_slots_create` clears it for a new battle. Its state (`port_battle_text_windows`,
+`port_battle_text_frames`, in `port/game/game_mods.c`) is named in the save state. No random number is drawn and no
+rule changes, but the frame count of a battle does, so the scripted replays of the disc's own battles do not apply with
+the mode on.
+
+The handheld's menu (`handheld/dw3-menu.py`, GAME > BATTLE TEXT) cycles OFF / SKIP / ASYNC and ships it on, in
+`async`. The stack has no "on unless the settings say otherwise" for a mod: on a desktop it is off until switched on.
+
 ### Save anywhere
 
 `global_save`. Option: `restore_map_state` (bool, default true). No hotkey: it acts whenever enabled

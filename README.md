@@ -27,6 +27,11 @@ controls are in [`docs/HANDHELD.md`](docs/HANDHELD.md).
   
   ![Persona-style Direct Battle HUD](docs/images/battle_hud.png)
 
+- **Battle text that does not stop the fight** (`battle_text`): the battle's message boxes no longer wait for a button.
+  In `async` (the default) the action carries on while the text stays up for a moment, and notes the animation already
+  shows (a plain Attack, Evade, stance and gauge notes) are dropped; `skip` removes the boxes, `off` is the original.
+  The rules and results are unchanged.
+
 - **Direct framebuffer present**: the PS1's VRAM expanded straight into `/dev/fb0` with NEON, which is what makes the 2D
   game and the movies run at full speed.
 - **A second renderer on the Mali** (`--renderer gles`): the VRAM as a texture, faster than the CPU rasteriser in heavy

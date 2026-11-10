@@ -295,7 +295,7 @@ typedef struct FightstgMessage {
     /* 0x80 */ s32 window_frames; /* frames per window */
     /* 0x84 */ s32 window_time; /* time the window was shown */
     /* 0x88 */ s32 queue_index; /* index into queue */
-    /* 0x8C */ u8 unk_8C[0x4];
+    /* 0x8C */ s32 port_class; /* PC_PORT only (unused on the PS1): battle_text's class of the message being shown */
     /* 0x90 */ s32 arrow_frame; /* "next" arrow animation frame, 0..4 */
     /* 0x94 */ s32 arrow_time; /* its last time */
     /* 0x98 */ s32 waiting; /* waiting for the button: the arrow is shown */
@@ -5243,6 +5243,112 @@ void fightstg_message_draw(FightstgMessage *obj) {
     sprite.draw(bank, 0x31, 0xB, 0xBC);
 }
 
+#ifdef PC_PORT
+/* battle_text (docs/LAUNCHER.md "Battle text"; port_mod_battle_text: 0 off, 1 skip, 2 async). The message box is pure
+ * presentation: the rules ran before it was shown. Classes, set by fightstg_message_show:
+ *  - KEEP: the message is the game's pacing (victory: closed by wfightmn_victory_wait after 100 frames; defeat),
+ *    so it runs as on the disc in every mode;
+ *  - DROP: a message the animation already says (a plain "Attack", "Evade", the stance and gauge notes);
+ *  - NORMAL: skip ends it at once; async hands its windows to the toast below and ends it, so whoever waits for it
+ *    goes on while the text stays up. */
+enum { FIGHTSTG_MSG_NORMAL, FIGHTSTG_MSG_KEEP, FIGHTSTG_MSG_DROP };
+#define FIGHTSTG_TOAST_FRAMES 90
+
+static s32 fightstg_message_port_class(s32 msg, const s32 *args) {
+    if (msg == 1 && (args[0] == 0x52 || args[0] == 0x53)) {
+        return FIGHTSTG_MSG_KEEP;
+    }
+    if (msg == 1 || msg == 2 || msg == 7) {
+        switch (args[0]) {
+        case 8:    /* "Attack" */
+        case 0x1D: /* "Evade" (the dodge shows) */
+        case 0x3C: /* "Focus on attack" */
+        case 0x3D: /* "Focus on guard" */
+        case 0x3E: /* "Special effect up" */
+        case 0x3F: /* "Blast gauge up" */
+        case 0x40: /* "Excited" */
+            return FIGHTSTG_MSG_DROP;
+        }
+    }
+    return FIGHTSTG_MSG_NORMAL;
+}
+
+/* The toast's windows and the frames it has left: kept by game_mods.c (they are named in its save state: the windows
+ * are arena objects, so a state resumes them). Owned by no object: fightstg_toast_run, called by the slots object
+ * every frame of a battle, runs and draws them. */
+extern void *port_battle_text_windows[2];
+extern s32 port_battle_text_frames;
+
+void fightstg_toast_clear(void) {
+    s32 i;
+
+    for (i = 0; i < 2; i++) {
+        if (port_battle_text_windows[i] != NULL) {
+            heap_objects.stop(port_battle_text_windows[i]);
+            port_battle_text_windows[i] = NULL;
+        }
+    }
+}
+
+/* A new battle: the old toast's windows went with the previous run's heap. */
+void fightstg_toast_reset(void) {
+    port_battle_text_windows[0] = port_battle_text_windows[1] = NULL;
+    port_battle_text_frames = 0;
+}
+
+void fightstg_toast_run(void) {
+    Sprite sprite;
+    s32 i;
+
+    if (port_battle_text_windows[0] == NULL && port_battle_text_windows[1] == NULL) {
+        return;
+    }
+    if (port_battle_text_frames-- <= 0) {
+        fightstg_toast_clear();
+        return;
+    }
+    for (i = 0; i < 2; i++) {
+        if (port_battle_text_windows[i] != NULL) {
+            heap_objects.try_run(port_battle_text_windows[i]);
+        }
+    }
+    sprite_init(&sprite);
+    sprite.set_layer_id(0x1005, 1);
+    sprite.set_vram_pos(0x200, 0);
+    sprite.draw(cdload_module.get_subfile_by_id(0x4550000), 0x31, 0xB, 0xBC); /* fightstg_message_draw's frame */
+}
+
+/* Async: shows the message's last page (a queued follow-up replaces its first: "HP gradually recovers" then "30 HP
+ * healed" becomes the second) for a while, in place of any toast before it. */
+static void fightstg_message_to_toast(FightstgMessage *obj, FightstgMessageData *data) {
+    s32 msg;
+    s32 i;
+
+    while ((msg = obj->queue[++obj->queue_index]) != 0) {
+        obj->show(obj, msg, NULL);
+    }
+    fightstg_toast_clear();
+    for (i = 0; i < obj->window_count && i < 2; i++) {
+        port_battle_text_windows[i] = data->windows[i];
+        data->windows[i]->set_visible(data->windows[i], 1);
+        data->windows[i] = NULL; /* the message no longer owns it */
+    }
+    port_battle_text_frames = FIGHTSTG_TOAST_FRAMES;
+}
+
+/* The message, the frame it is ready: 1 when battle_text took it (it is over), 0 when it runs as on the disc. */
+static s32 fightstg_message_port_take(FightstgMessage *obj, FightstgMessageData *data) {
+    if (port_mod_battle_text == 0 || obj->ready == 0 || obj->base.step != 0 || obj->port_class == FIGHTSTG_MSG_KEEP) {
+        return 0;
+    }
+    if (port_mod_battle_text == 2 && obj->port_class == FIGHTSTG_MSG_NORMAL) {
+        fightstg_message_to_toast(obj, data);
+    }
+    obj->base.state = OBJECT_STATE_END;
+    return 1;
+}
+#endif
+
 void fightstg_message_step(FightstgMessage *obj, FightstgMessageData *data) {
     s32 msg;
 
@@ -5311,6 +5417,11 @@ void fightstg_message_update(FightstgMessage *obj, FightstgMessageData *data) {
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
+#ifdef PC_PORT
+        if (fightstg_message_port_take(obj, data) != 0) {
+            break;
+        }
+#endif
         fightstg_message_draw(obj);
         fightstg_message_step(obj, data);
         break;
@@ -5488,6 +5599,11 @@ void fightstg_message_show(FightstgMessage *obj, s32 msg, s32 *args) {
     s32 total;
 
     obj->ready = 1;
+#ifdef PC_PORT
+    if (args != NULL) { /* a queued follow-up (args NULL) keeps its first message's class */
+        obj->port_class = fightstg_message_port_class(msg, args);
+    }
+#endif
     if (data->windows[0] == NULL) {
         data->windows[0] = message_create_window(0x1005, 1, 0x14, 0xC2);
     }

@@ -164,7 +164,7 @@ def defaults():
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
     party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, the
     evolution buff, and no logs."""
-    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, saveany=0, evo=1, bmenu=1,
+    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, btext=2, saveany=0, evo=1, bmenu=1,
                 bm_fight="east", bm_tech="l1", bm_digivolve="north", bm_tag="south", bm_item="r1", bm_run="west",
                 party=1, share=100, xp=1, xp_mul=2, form_xp=1, form_mul=14, all_forms=1, card_boost=1, logs=0, lang=0, lang_on=0)
 
@@ -248,6 +248,7 @@ def write_settings(s, disc):
     "fast_forward": { "enabled": %s, "speed": "%s", "mute": true, "hold": "", "toggle": "" },
     "skip_dialogues": { "enabled": %s, "fast_forward_waits": false },
     "battle_animations": { "enabled": %s, "hit_reaction": %s },
+    "battle_text": { "enabled": %s, "mode": "%s" },
     "global_save": { "enabled": %s, "restore_map_state": true },
     "party_xp": { "enabled": %s, "share": %d, "knocked_out": false, "catch_up": false },
     "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s, "all_forms": %s, "card_boost": %s },
@@ -260,7 +261,7 @@ def write_settings(s, disc):
   "input": { "gamepad": %s }
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
-       b(s["battles"]), b(s["hit"]), b(s["saveany"]), b(s["party"]), s["share"],
+       b(s["battles"]), b(s["hit"]), b(s.get("btext", 2) != 0), BTEXT_MODES[s.get("btext", 2)] if s.get("btext", 2) else "async", b(s["saveany"]), b(s["party"]), s["share"],
        b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(xb_card_boost), b(s["evo"]),
        b(s.get("bmenu", 1)),
        s.get("bm_fight", "east"), s.get("bm_tech", "l1"), s.get("bm_digivolve", "north"),
@@ -388,6 +389,7 @@ GROUPS = [
         ("skip", "SKIP DIALOGUES"),
         ("battles", "SKIP BATTLE ANIMS"),
         ("hit", "  HIT REACTION"),
+        ("btext", "BATTLE TEXT"),
         ("saveany", "SAVE ANYWHERE"),
         ("evo", "EVO BUFF"),
         ("bmenu", "BATTLE MENU"),
@@ -411,6 +413,7 @@ GROUPS = [
 ]
 
 LOG_LEVELS = ["off", "soft", "heavy"]
+BTEXT_MODES = ["off", "skip", "async"]  # the battle_text mod's modes; async is the default
 
 
 def group_rows(s):
@@ -460,6 +463,8 @@ def field_text(s, key):
         return on(s["all_forms"]) if s.get("form_xp", 1) else "off"
     if key == "card_boost":
         return on(s.get("card_boost", 1))
+    if key == "btext":
+        return BTEXT_MODES[s.get("btext", 2) % 3].upper()
     if key == "hit":
         return on(s["hit"]) if s["battles"] else "off"
     if key in ("skip", "battles", "saveany", "evo", "bmenu"):
@@ -527,6 +532,8 @@ def field_toggle(s, key, direction=1):
         renderer_toggle()
     elif key == "logs":
         s["logs"] = (s["logs"] + 1) % len(LOG_LEVELS)
+    elif key == "btext":
+        s["btext"] = (s.get("btext", 2) + direction) % 3
     elif key == "hit":
         if not s["battles"]:
             s["battles"] = 1
