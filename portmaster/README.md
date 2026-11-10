@@ -51,7 +51,7 @@ with the audio muted, the whole party sharing all the experience, XP boost 2x, f
 | `VIDEO` | `HZ` (50 or 60), `RENDERER` (`GLES` for 3D, `SOFTWARE` for 2D-heavy scenes and the byte-exact reference) |
 | `DEBUG` | `LOGS` (off / soft / heavy, off by default), `SAVE LOGS` (a `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map) and `CLEAN LOGS`, after asking, which deletes those files and the old zips |
 | `LED BAR` | the console's LED bar follows the acting Digimon's HP in battle (installs a small daemon) |
-| `BUTTONS` | remap the pad: a `LAYOUT` row (`PS1` symbols or `MODERN` A/B/X/Y) for the letters, then one row per action (`X`, `SQUARE`, `CIRCLE`, `TRIANGLE`, `L1`...); left/right on a face row edits that row's letter |
+| `BUTTONS` | remap the pad: `LAYOUT` (`PS1` symbols or `MODERN` A/B/X/Y), `BATTLE MENU` (direct-button Persona-style HUD bindings for Fight, Tech, DV, Items, Tag, Run), and per-action button remapping |
 | `RESET SETTINGS` | after asking, puts everything back: the tuned settings, the pad map (modern layout) and the LED bar switched on. The memory cards are never touched |
 | `PLAY` | start the game |
 

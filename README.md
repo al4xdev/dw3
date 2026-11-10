@@ -23,6 +23,10 @@ controls are in [`docs/HANDHELD.md`](docs/HANDHELD.md).
 
 ## What the fork adds
 
+- **Persona-style Direct Battle HUD**: a responsive direct-button battle HUD mapped directly to handheld face/shoulder buttons (Fight, Tech, DV, Items, Tag, Run) in a cross/diamond layout with dedicated icons, skipping sluggish sub-menu navigation. Rebindable from the launcher.
+  
+  ![Persona-style Direct Battle HUD](docs/images/battle_hud.png)
+
 - **Direct framebuffer present**: the PS1's VRAM expanded straight into `/dev/fb0` with NEON, which is what makes the 2D
   game and the movies run at full speed.
 - **A second renderer on the Mali** (`--renderer gles`): the VRAM as a texture, faster than the CPU rasteriser in heavy
