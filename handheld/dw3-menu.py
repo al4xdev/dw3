@@ -255,7 +255,7 @@ def write_settings(s, disc):
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
     "evo_buff": { "enabled": %s },
-    "battle_menu": { "enabled": %s, "fight": "%s", "tech": "%s", "digivolve": "%s", "tag": "%s", "item": "%s", "run": "%s" },
+    "battle_menu": { "enabled": %s, "fight": "%s", "tech": "%s", "digivolve": "%s", "tag": "%s", "item": "%s", "run": "%s", "remember_cursor": true, "buffer_input": "short" },
     "led_bar": { "enabled": %s }
   },
   "input": { "gamepad": %s }

@@ -472,15 +472,21 @@ static const struct {
     char xbox;         /* by pad.map's name */
 } bm_slot[BM_PLACE_COUNT] = { BM_PLACES(BM_SLOT) };
 /* The options' order is the original list's (and the menu's result's): Fight, Tech, Digivolve, Tag, Item, Run. */
-enum { BM_FIGHT, BM_TECH, BM_DV, BM_TAG, BM_ITEM, BM_RUN, BM_COUNT };
+enum { BM_FIGHT, BM_TECH, BM_DV, BM_TAG, BM_ITEM, BM_RUN, BM_COUNT, BM_REMEMBER = BM_COUNT, BM_BUFFER, BM_OPTIONS };
 static const u8 bm_default_places[BM_COUNT] = { 3, 4, 2, 0, 5, 1 }; /* east l1 north south r1 west */
 #define BM_OPTION(name, default_place) \
     { .id = name, .type = PORT_MOD_ENUM, .def = default_place, .values = bm_places, .applies = "live" }
-static const PortModOption bm_options[BM_COUNT] = {
+static const char *const bm_buffers[] = { "off", "short", "long", NULL };
+static const int bm_buffer_ms[] = { 0, 300, 600 };
+static const PortModOption bm_options[BM_OPTIONS] = {
     BM_OPTION("fight", "\"east\""),  BM_OPTION("tech", "\"l1\""),   BM_OPTION("digivolve", "\"north\""),
     BM_OPTION("tag", "\"south\""),   BM_OPTION("item", "\"r1\""),   BM_OPTION("run", "\"west\""),
+    { .id = "remember_cursor", .type = PORT_MOD_BOOL, .def = "true", .applies = "live" },
+    { .id = "buffer_input", .type = PORT_MOD_ENUM, .def = "\"short\"", .values = bm_buffers, .applies = "live" },
 };
 int port_mod_battle_menu;
+int port_mod_bm_remember;
+int port_mod_bm_buffer; /* frames; 0: off */
 static u8 bm_place[BM_COUNT]; /* by action: index into bm_places */
 
 static void bm_start(struct PortMod *mod) {
@@ -500,6 +506,122 @@ static void bm_start(struct PortMod *mod) {
         }
     }
     port_mod_battle_menu = 1;
+    port_mod_bm_remember = mod->values[BM_REMEMBER].number != 0;
+    /* the window in frames at the game's own rate (50 or 60 a second) */
+    port_mod_bm_buffer = (int)(bm_buffer_ms[(int)mod->values[BM_BUFFER].number] * port_rate / 1000);
+}
+
+/* ---- battle_menu's two helpers for the menus (docs/LAUNCHER.md "Battle menu"):
+ *  - remember_cursor: the technique and item menus open on what the Digimon used last (an ID by party member and kind:
+ *    port_bm_recall/port_bm_remember), and the command menu keeps its cursor between turns;
+ *  - buffer_input: the presses made in the last `port_mod_bm_buffer` frames before the command menu opens (a press of
+ *    one of the six actions' buttons, and the confirm bit) are given to it as it opens, oldest first, one each time a
+ *    menu asks: the command menu for the action, a technique or item menu for the confirm. At most two are kept.
+ *    A press is only kept while no menu is open and no battle message is up (fightstg_8008D3B4.c decides: a press
+ *    that dismisses a message is not a command), and everything is dropped when a press is refused or the turn's
+ *    command is chosen. Nothing is invented: a press the menu would have taken is taken, a refused one leaves the menu
+ *    open. */
+#define BMB_MAX 2
+static struct {
+    long t;      /* the frame it was pressed */
+    s32 action;  /* the action (0..5) whose button it was, -1 none */
+    u32 confirm; /* it was the confirm bit (0x2000) */
+    s32 armed;   /* the command menu opened within the window of it: it may be given */
+} bmb[BMB_MAX];
+static s32 bmb_n;
+static s32 bm_memory[2][64]; /* [technique, item][party member id & 63] */
+
+void port_bm_record(s32 action, u32 confirm) {
+    if (port_mod_bm_buffer == 0) {
+        return;
+    }
+    if (bmb_n == BMB_MAX) {
+        bmb[0] = bmb[1];
+        bmb_n--;
+    }
+    bmb[bmb_n].t = port_frames;
+    bmb[bmb_n].action = action;
+    bmb[bmb_n].confirm = confirm;
+    bmb[bmb_n].armed = 0;
+    bmb_n++;
+    port_log("battle menu: frame %ld: press kept (action %d)", port_frames, action);
+}
+
+/* A battle message is up this frame: a press made now or the frame before may be what dismissed it. */
+void port_bm_message(void) {
+    while (bmb_n > 0 && bmb[bmb_n - 1].t >= port_frames - 1) {
+        bmb_n--;
+    }
+}
+
+void port_bm_clear(void) {
+    bmb_n = 0;
+}
+
+/* The command menu opens: what was pressed within the window may be given, the rest is gone. */
+void port_bm_open(void) {
+    s32 i, n = 0;
+    for (i = 0; i < bmb_n; i++) {
+        /* one already armed was left by the last menu (a cancelled digivolve's second press): it is gone */
+        if (!bmb[i].armed && port_frames - bmb[i].t <= port_mod_bm_buffer) {
+            bmb[n] = bmb[i];
+            bmb[n++].armed = 1;
+        }
+    }
+    bmb_n = n;
+}
+
+/* The oldest given press's action (-1: none, or one that was not an action's button). */
+s32 port_bm_take_action(void) {
+    s32 action, i;
+    if (bmb_n == 0 || !bmb[0].armed) {
+        return -1;
+    }
+    action = bmb[0].action;
+    for (i = 1; i < bmb_n; i++) {
+        bmb[i - 1] = bmb[i];
+    }
+    bmb_n--;
+    if (action >= 0) {
+        port_log("battle menu: frame %ld: buffered press, action %d", port_frames, action);
+    }
+    return action;
+}
+
+/* The oldest given press as a confirm for a technique or item menu: 0x2000 or 0. */
+u32 port_bm_take_confirm(void) {
+    u32 confirm;
+    s32 i;
+    if (bmb_n == 0 || !bmb[0].armed) {
+        return 0;
+    }
+    confirm = bmb[0].confirm;
+    for (i = 1; i < bmb_n; i++) {
+        bmb[i - 1] = bmb[i];
+    }
+    bmb_n--;
+    if (confirm) {
+        port_log("battle menu: frame %ld: buffered confirm", port_frames);
+    }
+    return confirm;
+}
+
+s32 port_bm_recall(s32 kind, s32 member) {
+    return port_mod_bm_remember ? bm_memory[kind][member & 63] : 0;
+}
+
+/* A technique or item menu opened on the remembered entry (a line tests/port/mods.py reads). */
+void port_bm_log(s32 kind, s32 id, s32 position) {
+    port_log("battle menu: frame %ld: the %s menu opens on %d (entry %d)", port_frames, kind ? "item" : "technique", id,
+             position);
+}
+
+void port_bm_log_last(s32 last) {
+    port_log("battle menu: frame %ld: command menu created with last %d", port_frames, last);
+}
+
+void port_bm_remember(s32 kind, s32 member, s32 value) {
+    bm_memory[kind][member & 63] = value;
 }
 
 /* ---- battle_text (docs/LAUNCHER.md "Battle text"): the battle's message box (FightstgMessage) is only presentation, and
@@ -538,7 +660,7 @@ static PortMod game_mod_table[] = {
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
     { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
       .status = led_bar_status },
-    { .id = "battle_menu", .version = "0.1", .options = bm_options, .option_count = BM_COUNT, .start = bm_start },
+    { .id = "battle_menu", .version = "0.1", .options = bm_options, .option_count = BM_OPTIONS, .start = bm_start },
     { .id = "battle_text", .version = "0.1", .options = bt_options,
       .option_count = (int)(sizeof(bt_options) / sizeof(bt_options[0])), .start = bt_frame, .frame = bt_frame },
 };
@@ -560,6 +682,9 @@ void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, xb_tenths);
     PORT_STATE_VAR(s, port_battle_text_windows);
     PORT_STATE_VAR(s, port_battle_text_frames);
+    PORT_STATE_VAR(s, bmb);
+    PORT_STATE_VAR(s, bmb_n);
+    PORT_STATE_VAR(s, bm_memory);
 }
 
 /* ---- handheld features (R36S). Each is an if. A miss is logged once. ---- */

@@ -12,6 +12,19 @@
 #include "fightstg.h"
 #include "psyq/gtemac.h"
 
+/* The pad the technique and item menus read: the PS1's own, and on the host also the confirm press that battle_menu's
+ * buffer_input gives (port_bm_take_confirm; 0 when there is none). A macro because LOOP_BLOCK's arguments cannot hold #ifdef. */
+#ifdef PC_PORT
+#define FIGHTSTG_MENU_PAD() (pad_state.get_pressed(0) | port_bm_take_confirm())
+#else
+#define FIGHTSTG_MENU_PAD() pad_state.get_pressed(0)
+#endif
+#ifdef PC_PORT
+/* battle_menu's buffer_input: the command object is in its menu step (a menu is open, so a press is the menu's, not the
+ * buffer's); set by fightstg_command_update every frame, cleared with the toast at a battle's start. */
+s32 fightstg_bm_in_menu;
+#endif
+
 /* .bss, in address order. GCC 2.8 emits uninitialized definitions in the order of their first declaration
  * (fightstg_camera_setting's is in fightstg.h), so they are defined here, before the code's own externs. */
 FightstgCameraSetting fightstg_camera_setting;
@@ -2699,12 +2712,18 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
         obj->base.next_state(obj);
         return;
     case OBJECT_STATE_RUN:
+#ifdef PC_PORT
+        fightstg_bm_in_menu = obj->base.step == 2;
+#endif
         switch (obj->base.step) {
         case 0:
         default:
             switch (obj->base.substep) {
             case 0:
             default:
+#ifdef PC_PORT
+                if (port_mod_bm_remember == 0) /* remember_cursor: the command menu's cursor is kept between turns */
+#endif
                 obj->last = 0;
                 for (i = 1; i < 7; i++) {
                     child = data->children[i];
@@ -2742,6 +2761,11 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
 #endif
                         data->children[1] = fightstg_command_menu_create(obj->last, &obj->choice);
                     }
+#ifdef PC_PORT
+                    if (port_mod_battle_menu != 0) {
+                        port_bm_log_last(obj->last);
+                    }
+#endif
                     if (data->children[2] == NULL) {
                         data->children[2] = fightstg_portrait_create();
                     }
@@ -2811,6 +2835,9 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
                     } else if (obj->choice != -1) {
                         obj->command = 3;
                         obj->arg = obj->choice;
+#ifdef PC_PORT
+                        port_bm_remember(1, gamestate_data.funcs.get_party_member(fightstg_battle.state.current[0]), obj->choice);
+#endif
                         obj->base.set_step(obj, 0);
                     }
                     return;
@@ -2828,6 +2855,9 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
                     } else if (obj->choice != -1) {
                         obj->command = 4;
                         obj->arg = obj->choice;
+#ifdef PC_PORT
+                        port_bm_remember(0, gamestate_data.funcs.get_party_member(fightstg_battle.state.current[0]), obj->choice);
+#endif
                         obj->base.set_step(obj, 0);
                     }
                     return;
@@ -3416,26 +3446,6 @@ static const s16 fightstg_battle_menu_slots[6][2] = {
     { 44, 177 }, { 17, 193 }, { 58, 193 }, { 44, 209 }, { 4, 177 }, { 65, 177 },
 };
 
-/* The slot of a pad place (port_battle_menu_place): the face buttons by position, the left triggers and shoulder on the
- * left row, the right ones on the right. */
-static s32 fightstg_battle_menu_slot(s32 place) {
-    switch (place) {
-    case 12:
-        return 0;
-    case 15:
-        return 1;
-    case 13:
-        return 2;
-    case 14:
-        return 3;
-    case 10:
-    case 8:
-        return 4;
-    default:
-        return 5;
-    }
-}
-
 /* The game's text for the button of an action: direct letter from the configured place if mapped,
  * else the face buttons' own glyphs (01 xx, the symbol), else its name in the main font (L1, R1...). */
 static void fightstg_battle_menu_icon_text(u8 *buf, s32 action) {
@@ -3560,12 +3570,14 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
     s32 dy;
     s32 glow;
     s32 i;
+    s32 buffered;
 
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
         member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
         obj->press = obj->refused = -1;
+        port_bm_open(); /* buffer_input: what was pressed just before is given from the first frame */
         for (i = 0; i < 6; i++) {
             slot = fightstg_bmenu_action_slot[i];
             x = fightstg_battle_menu_slots[slot][0];
@@ -3620,10 +3632,12 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             break;
         }
         /* Nothing is read on the frame of the INIT above, as the original's: a press that closed a submenu is gone. */
+        buffered = port_bm_take_action();
         for (i = 0; i < 6; i++) {
-            if (port_battle_menu_pressed(i) || (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i)))) {
+            if (i == buffered || port_battle_menu_pressed(i) || (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i)))) {
                 sound_module.play(0x4001C);
                 if (obj->grey[i]) {
+                    port_bm_clear(); /* a refused press leaves the menu open, and nothing else is given */
                     port_battle_menu_chosen(i, port_battle_menu_bit(i), 1);
                     obj->refused = i;
                     obj->refused_age = 0;
@@ -4269,6 +4283,10 @@ void fightstg_item_menu_update(FightstgItemMenu *obj, FightstgItemMenuData *data
     s32 page;
     s32 pad;
     s32 shown;
+#ifdef PC_PORT
+    s32 mem_k = 0;
+    s32 want;
+#endif
 
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
@@ -4306,7 +4324,24 @@ void fightstg_item_menu_update(FightstgItemMenu *obj, FightstgItemMenuData *data
                 }
             }
         }
+#ifdef PC_PORT
+        /* remember_cursor: opens on the item this member used last, on its page */
+        want = obj->count != 0 ? port_bm_recall(1, gamestate_data.funcs.get_party_member(fightstg_battle.state.current[0])) : 0;
+        for (i = 0; want != 0 && i < obj->count; i++) {
+            if (obj->list[i] == want) {
+                mem_k = i;
+                port_bm_log(1, want, i);
+                obj->page = i / 7;
+                shown = obj->count - obj->page * 7;
+                fightstg_item_menu_cursor.count = shown >= 8 ? 7 : shown;
+                break;
+            }
+        }
+#endif
         data->cursor = fightstg_cursor_create(&fightstg_item_menu_cursor);
+#ifdef PC_PORT
+        data->cursor->sel = obj->shown = mem_k % 7;
+#endif
         fightstg_item_menu_open(obj, data);
         fightstg_item_menu_show_page(obj, data);
         obj->base.next_state(obj);
@@ -4316,7 +4351,7 @@ void fightstg_item_menu_update(FightstgItemMenu *obj, FightstgItemMenuData *data
          * of line, after the unk_54 store. */
         LOOP_BLOCK(
             fightstg_item_menu_draw(obj);
-            pad = pad_state.get_pressed(0);
+            pad = FIGHTSTG_MENU_PAD();
             page = obj->page;
             if (obj->pages != 0) {
                 if (pad & 0x400) {
@@ -4552,6 +4587,9 @@ void fightstg_tech_menu_update(FightstgTechMenu *obj, FightstgTechMenuData *data
     s32 pad;
     s32 page;
     s32 cost;
+#ifdef PC_PORT
+    s32 mem_k = 0;
+#endif
 
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
@@ -4632,7 +4670,25 @@ void fightstg_tech_menu_update(FightstgTechMenu *obj, FightstgTechMenuData *data
         } else {
             fightstg_tech_menu_cursor.count = 1;
         }
+#ifdef PC_PORT
+        /* remember_cursor: opens on the technique this member used last, on its page (the list is rebuilt each time, so
+         * it is found by ID) */
+        tech = port_bm_recall(0, id);
+        for (i = 0; tech != 0 && i < obj->count; i++) {
+            if ((obj->techniques[i] & 0x1FFF) == tech) {
+                mem_k = i;
+                port_bm_log(0, tech, i);
+                obj->page = i / 6;
+                shown = obj->count - obj->page * 6;
+                fightstg_tech_menu_cursor.count = shown >= 7 ? 6 : shown;
+                break;
+            }
+        }
+#endif
         data->cursor = fightstg_cursor_create(&fightstg_tech_menu_cursor);
+#ifdef PC_PORT
+        data->cursor->sel = obj->shown = mem_k % 6;
+#endif
         fightstg_tech_menu_open(obj, data);
         fightstg_tech_menu_show_page(obj, data);
         obj->base.next_state(obj);
@@ -4642,7 +4698,7 @@ void fightstg_tech_menu_update(FightstgTechMenu *obj, FightstgTechMenuData *data
          * the confirm stub (a jump into the confirm tail) out of line before case 1. */
         LOOP_BLOCK(
             fightstg_tech_menu_draw(obj);
-            pad = pad_state.get_pressed(0);
+            pad = FIGHTSTG_MENU_PAD();
             page = obj->page;
             if (obj->pages != 0) {
                 if (pad & 0x400) {
@@ -5290,8 +5346,31 @@ void fightstg_toast_clear(void) {
     }
 }
 
+/* buffer_input: every frame of a battle (the slots object calls this), a press of one of the menu's six buttons, or the
+ * confirm bit, is offered to the buffer unless a menu is open. */
+void fightstg_bm_record(void) {
+    u32 pad;
+    s32 action = -1;
+    s32 i;
+
+    if (port_mod_battle_menu == 0 || port_mod_bm_buffer == 0 || fightstg_bm_in_menu) {
+        return;
+    }
+    pad = pad_state.get_pressed(0);
+    for (i = 0; i < 6; i++) {
+        if (port_battle_menu_pressed(i) || (pad & (1 << port_battle_menu_bit(i)))) {
+            action = i;
+            break;
+        }
+    }
+    if (action >= 0 || (pad & 0x2000)) {
+        port_bm_record(action, pad & 0x2000);
+    }
+}
+
 /* A new battle: the old toast's windows went with the previous run's heap. */
 void fightstg_toast_reset(void) {
+    fightstg_bm_in_menu = 0;
     port_battle_text_windows[0] = port_battle_text_windows[1] = NULL;
     port_battle_text_frames = 0;
 }
@@ -5425,6 +5504,7 @@ void fightstg_message_update(FightstgMessage *obj, FightstgMessageData *data) {
         break;
     case OBJECT_STATE_RUN:
 #ifdef PC_PORT
+        port_bm_message(); /* a press while a message is up is its dismissal, not a command */
         if (fightstg_message_port_take(obj, data) != 0) {
             break;
         }

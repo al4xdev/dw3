@@ -54,6 +54,15 @@
         { "id": "north", "label": "Top button" }, { "id": "east", "label": "Right button" },
         { "id": "l1", "label": "L1" }, { "id": "r1", "label": "R1" },
         { "id": "l2", "label": "L2" }, { "id": "r2", "label": "R2" }
+      ] },
+    { "id": "remember_cursor", "name": "Remember the cursor",
+      "description": "The technique and item menus open on what that Digimon used last, and the command menu keeps its cursor between turns.",
+      "type": "bool", "default": true, "applies": "live" },
+    { "id": "buffer_input", "name": "Buffer the next command",
+      "description": "A button pressed just before the command menu opens (the last moments of the animation) is given to it as it opens, so a quick R1 then X picks the same technique before you see the menu. A refused press just leaves the menu open.",
+      "type": "enum", "default": "short", "applies": "live",
+      "values": [
+        { "id": "off", "label": "Off" }, { "id": "short", "label": "Short (0.3 s)" }, { "id": "long", "label": "Long (0.6 s)" }
       ] }
   ]
 }

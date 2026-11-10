@@ -205,6 +205,7 @@ void fightstg_slots_update();
 #ifdef PC_PORT
 void fightstg_toast_run(void);   /* fightstg_8008D3B4: battle_text's text kept up after its message is over */
 void fightstg_toast_reset(void);
+void fightstg_bm_record(void);
 #endif
 s32 fightstg_slots_find(FightstgSlots *obj, s32 id);
 void fightstg_slots_remove(FightstgSlots *obj, s32 id);
@@ -618,6 +619,7 @@ void fightstg_slots_update(FightstgSlots *obj) {
         break;
     case OBJECT_STATE_RUN:
 #ifdef PC_PORT
+        fightstg_bm_record(); /* battle_menu's buffer_input */
         fightstg_toast_run(); /* battle_text: the slots object lives for the whole battle, so it carries the toast */
 #endif
         break;

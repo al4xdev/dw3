@@ -619,6 +619,46 @@ def battle_menu(binary, out):
     rc, lines = bm_press(binary, out, state, "moved", "R2", {"run": "r2", "tag": "l2"})
     got = bm_chosen(lines)
     check(rc == 0 and got == [("action", 5, 9)], f"run moved to R2: R2 chooses action 5 ({got})")
+    battle_menu_flow(binary, out, state)
+
+
+def bm_run(binary, out, state, label, steps, mods):
+    """The first battle from its start state with a script of `steps`; battle_menu with `mods`; returns the stderr lines
+    of the menu's mod ("battle menu")."""
+    cfg = settings(out, f"bm_{label}", {"battle_menu": dict(mods, enabled=True),
+                                        "battle_text": {"enabled": True, "mode": "skip"}})
+    script = derived(out, f"bm_{label}", steps + [{"type": "checkpoint", "name": "end"}])
+    proc = subprocess.run([str(binary), "--config", str(cfg), "--script", str(script), "--script-mods",
+                           "--load-state", str(state)], cwd=ROOT, capture_output=True, text=True, timeout=600)
+    (out / f"bm_{label}.stderr").write_text(proc.stderr)
+    return proc.returncode, [l.split("port: ", 1)[1] for l in proc.stderr.splitlines() if "battle menu" in l]
+
+
+def battle_menu_flow(binary, out, state):
+    """remember_cursor and buffer_input, from the first battle's start."""
+    tap = lambda b: {"type": "press", "buttons": [b], "frames": 2, "release": 6}
+    wait = lambda n: {"type": "wait_frames", "frames": n}
+    # remember_cursor: action 5 (Run) on turn 1, then the enemy's turn; turn 2 opens with last 5 when remembered, 0 when off
+    run_act = [wait(700), tap("SQUARE"), wait(1500), wait(60)]
+    for remember in (True, False):
+        rc, lines = bm_run(binary, out, state, f"remember_{remember}", run_act,
+                           {"remember_cursor": remember, "buffer_input": "off"})
+        lasts = [int(l.split("last ")[1]) for l in lines if "command menu created with last" in l]
+        want = [0, 5] if remember else [0, 0]
+        check(rc == 0 and lasts[:2] == want,
+              f"remember_cursor {str(remember).lower()}: the command menu keeps the last choice ({lasts[:2]}, want {want})")
+    # buffer_input: Fight, then Fight pressed every 8 frames through the animation and the enemy's turn: with the buffer
+    # one press falls in the window before each next menu and is given to it; without it none is
+    mash = [wait(700), tap("CIRCLE")] + [s for _ in range(150) for s in (wait(8), tap("CIRCLE"))] + [wait(60)]
+    results = {}
+    for buf in ("off", "short", "long"):
+        rc, lines = bm_run(binary, out, state, f"buffer_{buf}", mash, {"remember_cursor": False, "buffer_input": buf})
+        results[buf] = (rc, sum("buffered press" in l for l in lines), len(bm_chosen(lines)))
+    check(results["off"][0] == 0 and results["off"][1] == 0, f"buffer_input off: nothing is given ({results['off']})")
+    for buf in ("short", "long"):
+        rc, given, chosen = results[buf]
+        check(rc == 0 and given >= 1 and given <= chosen,
+              f"buffer_input {buf}: a press before the menu is given to it, never more than the menus ({results[buf]})")
 
 
 # Every mod's test, the longest first (the parallel run's critical path): name -> function(binary, out, record).

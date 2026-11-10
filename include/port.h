@@ -216,6 +216,24 @@ char port_battle_menu_letter(int action);
 int port_battle_menu_symbol_bit(int action); /* the PS1 button pad.map puts at the action's place (its symbol) */
 u8 port_face_symbol_code(int bit); /* the extra glyph of a face button's symbol; 0 for a shoulder or trigger */
 void port_battle_menu_chosen(int action, int bit, int refused); /* logs a press on the menu (tests/port/mods.py) */
+/* battle_menu's remember_cursor and buffer_input (port/game/game_mods.c, "battle_menu's two helpers"):
+ * port_mod_bm_remember: the technique and item menus open on the member's last choice (port_bm_recall/_remember: kind 0
+ * technique, 1 item; 0 when none or off); port_mod_bm_buffer: the buffer's window in frames, 0 off. The buffer keeps up to
+ * two presses (port_bm_record) made before the command menu opens (port_bm_open) and gives them one at a time
+ * (port_bm_take_action to the command menu, port_bm_take_confirm to a technique or item menu); port_bm_message drops what
+ * a battle message may have taken, port_bm_clear everything. */
+extern int port_mod_bm_remember;
+extern int port_mod_bm_buffer;
+void port_bm_record(s32 action, u32 confirm);
+void port_bm_message(void);
+void port_bm_clear(void);
+void port_bm_open(void);
+s32 port_bm_take_action(void);
+u32 port_bm_take_confirm(void);
+s32 port_bm_recall(s32 kind, s32 member);
+void port_bm_remember(s32 kind, s32 member, s32 value);
+void port_bm_log(s32 kind, s32 id, s32 position);
+void port_bm_log_last(s32 last);
 
 /* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE / _XP, default on).
  * A failure is logged once, never per frame. */
