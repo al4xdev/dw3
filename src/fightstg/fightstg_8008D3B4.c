@@ -5338,7 +5338,14 @@ static void fightstg_message_to_toast(FightstgMessage *obj, FightstgMessageData 
 
 /* The message, the frame it is ready: 1 when battle_text took it (it is over), 0 when it runs as on the disc. */
 static s32 fightstg_message_port_take(FightstgMessage *obj, FightstgMessageData *data) {
-    if (port_mod_battle_text == 0 || obj->ready == 0 || obj->base.step != 0 || obj->port_class == FIGHTSTG_MSG_KEEP) {
+    if (port_mod_battle_text == 0 || obj->ready == 0) {
+        return 0;
+    }
+    if (obj->port_class == FIGHTSTG_MSG_KEEP) {
+        fightstg_toast_clear(); /* the victory/defeat box takes the same place: no toast under it */
+        return 0;
+    }
+    if (obj->base.step != 0) {
         return 0;
     }
     if (port_mod_battle_text == 2 && obj->port_class == FIGHTSTG_MSG_NORMAL) {
