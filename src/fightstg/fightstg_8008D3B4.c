@@ -3118,6 +3118,10 @@ typedef struct FightstgHud {
     /* 0x58 */ FightstgHudBar bars[2]; /* per side */
     /* 0x80 */ s32 update_time; /* frames since the last HP update */
     /* 0x84 */ s32 update_frames; /* frames between HP updates */
+#ifdef PC_PORT
+    s8 mod_sign[2][3]; /* last shown sign (-1, 0, 1) of modifiers[0..2] */
+    u8 mod_elem[2];    /* last shown def_resist_down_mask per side */
+#endif
 } FightstgHud; /* size 0x88 */
 
 /* fightstg_hud_update's data block: its message windows. */
@@ -3127,7 +3131,15 @@ typedef struct FightstgHudData {
     /* 0x08 */ MessageWindow *slash;
     /* 0x0C */ MessageWindow *max_hp; /* max HP */
     /* 0x10 */ MessageWindow *hp;
+#ifdef PC_PORT
+    MessageWindow *stat_mod[2][3]; /* Attack, Defense, Speed buff/debuff icons */
+    MessageWindow *elem_mod[2][7]; /* elemental Resist Down icons */
+#endif
 } FightstgHudData; /* size 0x14 */
+
+#ifdef PC_PORT
+static void fightstg_hud_draw_mods(FightstgHud *obj, FightstgHudData *data);
+#endif
 
 void fightstg_hud_update_hp(FightstgHud *obj, FightstgHudData *data);
 
@@ -3284,6 +3296,9 @@ void fightstg_hud_draw(FightstgHud *obj, FightstgHudData *data) {
         sprite.draw(bank, frame + 0x37, 0x109, 0x3E);
     }
     sprite.draw(bank, 0xB, 0x104, 0x3D);
+#ifdef PC_PORT
+    fightstg_hud_draw_mods(obj, data);
+#endif
     for (i = 0; i < 2; i++) {
         for (j = 0; j < 3; j++) {
             if (fightstg_battle.state.type >= 4 && j > 0 && i > 0) {
@@ -3548,6 +3563,128 @@ static void fightstg_battle_menu_quad(s32 x, s32 y, s32 w, s32 h, s32 abr, u8 r,
     tpage++;
     gfx_module.funcs.set_packet(tpage);
 }
+
+#ifdef PC_PORT
+/* PRD 2, layer C: active member buff/debuff icons under the HP bar (A/D/S + ↑/↓ in green/red; elemental Resist Down
+ * as ↓ in the element's 14-pixel palette). Kept clear of the HP digits (y 26) and the member squares tab. */
+#define FIGHTSTG_HUD_MOD_Y 48
+#define FIGHTSTG_HUD_MOD_STAT_STEP 17
+#define FIGHTSTG_HUD_MOD_ELEM_STEP 9
+
+static void fightstg_hud_draw_mods(FightstgHud *obj, FightstgHudData *data) {
+    static const u8 stat_glyph[3] = { 0x0E, 0x11, 0x20 }; /* A (Attack), D (Defense), S (Speed) */
+    static const u8 elem_pal[7] = { 5, 2, 1, 4, 3, 7, 6 }; /* Fire, Water, Ice, Wind, Thunder, Machine, Dark */
+    static const u8 elem_text[3] = { 1, 0x3A, 0 };         /* ↓ */
+    s32 side;
+
+    if (!def_on()) {
+        for (side = 0; side < 2; side++) {
+            s32 k;
+            for (k = 0; k < 3; k++) {
+                if (data->stat_mod[side][k] != NULL) {
+                    data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 0);
+                }
+                obj->mod_sign[side][k] = 0;
+            }
+            for (k = 0; k < 7; k++) {
+                if (data->elem_mod[side][k] != NULL) {
+                    data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
+                }
+            }
+            obj->mod_elem[side] = 0;
+        }
+        return;
+    }
+
+    for (side = 0; side < 2; side++) {
+        s32 slot = fightstg_battle.state.current[side];
+        FightstgMember *m = &fightstg_battle.state.members[side][slot];
+        s8 signs[3];
+        u8 mask = (u8)def_resist_down_mask(side, slot);
+        s32 changed = (mask != obj->mod_elem[side]);
+        s32 total_w = 0;
+        s32 n_stat = 0;
+        s32 n_elem = 0;
+        s32 k;
+        s32 x0;
+        s32 cur_x;
+
+        for (k = 0; k < 3; k++) {
+            signs[k] = m->modifiers[k] > 0 ? 1 : (m->modifiers[k] < 0 ? -1 : 0);
+            if (signs[k] != obj->mod_sign[side][k]) {
+                changed = 1;
+            }
+            if (signs[k] != 0) {
+                n_stat++;
+            }
+        }
+        for (k = 0; k < 7; k++) {
+            if ((mask >> k) & 1) {
+                n_elem++;
+            }
+        }
+        if (n_stat + n_elem == 0) {
+            if (changed) {
+                for (k = 0; k < 3; k++) {
+                    if (data->stat_mod[side][k] != NULL) {
+                        data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 0);
+                    }
+                    obj->mod_sign[side][k] = 0;
+                }
+                for (k = 0; k < 7; k++) {
+                    if (data->elem_mod[side][k] != NULL) {
+                        data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
+                    }
+                }
+                obj->mod_elem[side] = 0;
+            }
+            continue;
+        }
+        total_w = n_stat * FIGHTSTG_HUD_MOD_STAT_STEP + n_elem * FIGHTSTG_HUD_MOD_ELEM_STEP - 1;
+        x0 = (side == 1) ? 53 : (259 - total_w);
+        fightstg_battle_menu_quad(x0 - 2, FIGHTSTG_HUD_MOD_Y, total_w + 3, 12, 2, 150, 140, 100);
+        if (!changed) {
+            continue;
+        }
+        cur_x = x0;
+        for (k = 0; k < 3; k++) {
+            if (signs[k] != 0) {
+                u8 buf[4];
+                if (data->stat_mod[side][k] == NULL) {
+                    data->stat_mod[side][k] = message_create_window(0x1005, 1, cur_x, FIGHTSTG_HUD_MOD_Y);
+                }
+                buf[0] = stat_glyph[k];
+                buf[1] = 1;
+                buf[2] = signs[k] > 0 ? 0x39 : 0x3A;
+                buf[3] = 0;
+                data->stat_mod[side][k]->set_text(data->stat_mod[side][k], buf, -1);
+                data->stat_mod[side][k]->set_palette(data->stat_mod[side][k], signs[k] > 0 ? 4 : 5);
+                data->stat_mod[side][k]->set_pos(data->stat_mod[side][k], cur_x, FIGHTSTG_HUD_MOD_Y);
+                data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 1);
+                cur_x += FIGHTSTG_HUD_MOD_STAT_STEP;
+            } else if (data->stat_mod[side][k] != NULL) {
+                data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 0);
+            }
+            obj->mod_sign[side][k] = signs[k];
+        }
+        for (k = 0; k < 7; k++) {
+            if ((mask >> k) & 1) {
+                if (data->elem_mod[side][k] == NULL) {
+                    data->elem_mod[side][k] = message_create_window(0x1005, 1, cur_x, FIGHTSTG_HUD_MOD_Y);
+                    data->elem_mod[side][k]->set_text(data->elem_mod[side][k], (u8 *)elem_text, -1);
+                    data->elem_mod[side][k]->set_palette(data->elem_mod[side][k], elem_pal[k]);
+                }
+                data->elem_mod[side][k]->set_pos(data->elem_mod[side][k], cur_x, FIGHTSTG_HUD_MOD_Y);
+                data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 1);
+                cur_x += FIGHTSTG_HUD_MOD_ELEM_STEP;
+            } else if (data->elem_mod[side][k] != NULL) {
+                data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
+            }
+        }
+        obj->mod_elem[side] = mask;
+    }
+}
+#endif
 
 /* Action i at its rest place moved by (dx, dy): its windows, its panel, and `glow` (0 none, 1 pressed, 2 refused). */
 static void fightstg_battle_menu_show(FightstgBattleMenu *obj, FightstgBattleMenuData *data, s32 i, s32 dx, s32 dy,

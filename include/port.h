@@ -309,6 +309,7 @@ void def_mp_hook(void); /* layer 8: the rookies' MP patch, at a new game and at 
 struct FightstgStats;
 int def_tech_effect(u8 side, int tech, int *msg);
 void def_apply_resist_mod(int side, int member, struct FightstgStats *out);
+int def_resist_down_mask(int side, int slot);
 const unsigned char *def_message(int i);
 int def_swap_free(void);       /* a swap would be free now: the HUD's Tag button shows it */
 int def_target_staggered(void); /* the current target is open */

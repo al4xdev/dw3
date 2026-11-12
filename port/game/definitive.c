@@ -534,6 +534,23 @@ void def_apply_resist_mod(int side, int member, FightstgStats *out) {
     }
 }
 
+/* Bits 0..6 of the elements whose resistance is currently lowered on `side` (0 party, 1 enemy), `slot` (0..2). */
+int def_resist_down_mask(int side, int slot) {
+    int e, mask = 0;
+
+    side = side != 0;
+    if (!def_on() || slot < 0 || resist_turns[side][slot % 3] == 0) {
+        return 0;
+    }
+    slot %= 3;
+    for (e = 0; e < 7; e++) {
+        if (resist_mod[side][slot][e] < 0) {
+            mask |= 1 << e;
+        }
+    }
+    return mask;
+}
+
 /* 0: not one of the four; 1: done, `*msg` the message (0 Libra, 1 Relay, 2 resist lowered); 2: no effect (immune). */
 int def_tech_effect(u8 side, int tech, int *msg) {
     int enemy = side != 0;

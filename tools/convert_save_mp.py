@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rescale max MP/MP of old DW3 saves to the new per-Digimon MP growth (raw PS1 .mcd card).
+"""Rescale max MP/MP and grant retroactive TP for old DW3 saves (raw PS1 .mcd card).
 
 Usage: convert_save_mp.py [--dry-run] card.mcd
 """
@@ -19,6 +19,13 @@ MP_TABLE = {
 }
 NAMES = ["Kotemon", "Kumamon", "Monmon", "Agumon", "Veemon", "Guilmon", "Renamon", "Patamon"]
 
+# TP per level band (matches port/game/definitive.h / definitive_progression.c).
+TP_GAIN_LV_2_20 = 7
+TP_GAIN_LV_21_40 = 9
+TP_GAIN_LV_41_50 = 30
+TP_GAIN_LV_51_UP = 0
+TP_CAP = 99
+
 MP_CAP = 9999
 CARD_SIZE = 0x20000
 BLOCK = 0x2000
@@ -27,8 +34,34 @@ SAVE_BLOCKS = 4
 SLOT_DATA = 0x26C4
 SLOT_STRIDE = 0x2700
 SLOT_HDR = 0x300          # slots start this far into the file
-MARKER = b"MPV1"
+MARKER_MP = b"MPV1"       # legacy: MP only
+MARKER = b"DFV2"          # current: MP + retroactive TP
 MARKER_OFF = 0x26EC       # tail of the slot part: outside the checksum, not used by the game
+
+
+def tp_gain(level):
+    if level <= 1:
+        return 0
+    if level <= 20:
+        return TP_GAIN_LV_2_20
+    if level <= 40:
+        return TP_GAIN_LV_21_40
+    if level <= 50:
+        return TP_GAIN_LV_41_50
+    return TP_GAIN_LV_51_UP
+
+
+def tp_total(level):
+    return sum(tp_gain(lv) for lv in range(2, level + 1))
+
+
+def retroactive_tp(level, tp):
+    lv = min(max(level, 1), 50)
+    delta = max(0, tp_total(lv) - 5 * (lv - 1))
+    raw = tp + delta
+    ntp = max(0, min(TP_CAP, raw))
+    lost = max(0, raw - TP_CAP)
+    return ntp, lost
 
 
 def find_save_block(data):
@@ -73,32 +106,39 @@ def convert_slot(data, off, n, dry):
     if slot[2] != 4:
         print(f"slot {n}: version {slot[2]}, empty/invalid - skipped")
         return False
-    if data[off + MARKER_OFF:off + MARKER_OFF + 4] == MARKER:
-        print(f"slot {n}: already converted (MPV1) - skipped")
+    marker = data[off + MARKER_OFF:off + MARKER_OFF + 4]
+    if marker == MARKER:
+        print(f"slot {n}: already converted ({MARKER.decode()}) - skipped")
         return False
     if xor_sum(slot[4:]) != slot[0]:
         print(f"slot {n}: bad checksum - skipped")
         return False
+    do_mp = marker != MARKER_MP
     party = struct.unpack_from("<3i", slot, 0x70)
-    print(f"slot {n}:")
-    print("  idx name     lvl   mp/max_mp (old)  ->  mp/max_mp (new)")
+    note = " (upgrading MPV1 -> DFV2: MP kept, adding TP)" if not do_mp else ""
+    print(f"slot {n}:{note}")
+    print("  idx name     lvl   mp/max_mp (old)  ->  mp/max_mp (new)    tp (old -> new)")
     for d in range(8):
         base = 0x75C + d * 0x3DC
         joined = struct.unpack_from("<i", slot, base + 4)[0]
         if not joined and d not in party:
             continue
         o = off + base + 0xC + 0x1C
-        level, _tp, _hp, _mhp, mp, mmp = struct.unpack_from("<6h", data, o)
-        if d in MP_TABLE:
+        level, tp, _hp, _mhp, mp, mmp = struct.unpack_from("<6h", data, o)
+        if do_mp and d in MP_TABLE:
             oi, og, ni, ng = MP_TABLE[d]
             delta = (ni - oi) + (ng - og) * (level - 1)
             nmmp = max(0, min(MP_CAP, mmp + delta))
             nmp = min(max(0, min(MP_CAP, mp + delta)), nmmp)
         else:
             nmp, nmmp = mp, mmp
-        print(f"  {d:<3} {NAMES[d]:<8} {level:>3}   {mp:>5}/{mmp:<5}      ->  {nmp:>5}/{nmmp:<5}")
-        struct.pack_into("<h", data, o + 8, nmp)
-        struct.pack_into("<h", data, o + 10, nmmp)
+        ntp, lost = retroactive_tp(level, tp)
+        warn = f"  WARNING: {lost} TP lost to cap ({TP_CAP})" if lost > 0 else ""
+        print(f"  {d:<3} {NAMES[d]:<8} {level:>3}   {mp:>5}/{mmp:<5}      ->  {nmp:>5}/{nmmp:<5}      {tp:>2} -> {ntp:>2}{warn}")
+        struct.pack_into("<h", data, o + 2, ntp)
+        if do_mp:
+            struct.pack_into("<h", data, o + 8, nmp)
+            struct.pack_into("<h", data, o + 10, nmmp)
     data[off + MARKER_OFF:off + MARKER_OFF + 4] = MARKER
     data[off] = xor_sum(data[off + 4:off + SLOT_DATA])
     return True
