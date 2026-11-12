@@ -268,6 +268,8 @@ void def_log_begin(void);
 void def_log_turn(int side);
 void def_log_action(int side, int kind, int arg);
 void def_log_end(int result);
+/* Layer 1: the replacement for entry `i` of the text file loaded at `data` (font_get_entry), or NULL. */
+void *def_text_override(void *data, s32 i);
 s32 def_get_damage(u8 side, s32 id);
 s32 def_get_special_damage(u8 side, s32 id);
 

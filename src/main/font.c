@@ -124,6 +124,14 @@ void *font_get_entry(void *data, s32 i) {
     if (i < 0 || n < i) {
         return NULL;
     }
+#ifdef PC_PORT
+    {
+        void *over = def_text_override(data, i);
+        if (over != NULL) {
+            return over;
+        }
+    }
+#endif
     return (u8 *)data + offsets[i + 1];
 }
 

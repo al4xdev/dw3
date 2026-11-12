@@ -1,0 +1,150 @@
+SKLINF 53: Fire attack.
+SKLINF 54: Physical attack. Crit chance.
+SKLINF 55: Physical attack.
+SKLINF 56: Fire magic.
+SKLINF 57: Physical attack.
+SKLINF 58: Fire magic.
+SKLINF 59: Ice magic.
+SKLINF 60: Wind magic.
+SKLINF 61: Physical attack. 4 hits.
+SKLINF 62: Physical attack. Crit chance.
+SKLINF 63: Physical attack. Counters.
+SKLINF 64: Fire magic.
+SKLINF 65: Fire magic.
+SKLINF 66: Thunder attack.
+SKLINF 67: Fire magic.
+SKLINF 68: Wind attack.
+SKLINF 69: Physical attack. Drains HP.
+SKLINF 70: Physical attack.
+SKLINF 71: Thunder attack.
+SKLINF 72: Wind attack. 3 hits.
+SKLINF 73: Physical attack. 3 hits.
+SKLINF 74: Physical attack. 3 hits.
+SKLINF 75: Machine magic.
+SKLINF 76: Machine magic.
+SKLINF 77: Physical attack. 3 hits.
+SKLINF 78: Fire magic.
+SKLINF 79: Physical attack.
+SKLINF 80: Magic attack. KO chance.
+SKLINF 82: Machine attack.
+SKLINF 83: Thunder magic.
+SKLINF 84: Dark magic.
+SKLINF 85: Physical attack.
+SKLINF 86: Physical attack.
+SKLINF 87: Physical attack. Sleep chance.
+SKLINF 88: Physical attack.
+SKLINF 89: Physical attack.
+SKLINF 90: Physical attack. Counters.
+SKLINF 91: Magic attack.
+SKLINF 92: Physical attack.
+SKLINF 93: Ice magic.
+SKLINF 94: Physical attack. Poison chance.
+SKLINF 95: Dark attack.
+SKLINF 96: Physical attack.
+SKLINF 97: Dark magic.
+SKLINF 98: Machine attack.
+SKLINF 99: Physical attack. KO chance.
+SKLINF 100: Revives all allies at max HP.
+SKLINF 101: Physical attack. Paralysis chance.
+SKLINF 102: Physical attack.
+SKLINF 103: Physical attack. 3 hits.
+SKLINF 104: Dark magic.
+SKLINF 105: Fire attack.
+SKLINF 106: Fire attack.
+SKLINF 107: Ice attack.
+SKLINF 108: Ice attack.
+SKLINF 109: Wind attack.
+SKLINF 110: Wind attack.
+SKLINF 111: Thunder attack.
+SKLINF 112: Thunder attack.
+SKLINF 113: Machine attack.
+SKLINF 114: Machine attack.
+SKLINF 115: Physical attack. Poison chance.
+SKLINF 116: Physical attack. Poison chance.
+SKLINF 117: Physical attack. Paralysis chance.
+SKLINF 118: Physical attack. Paralysis chance.
+SKLINF 119: Physical attack. Confusion chance.
+SKLINF 120: Physical attack. Confusion chance.
+SKLINF 121: Physical attack. Counters.
+SKLINF 122: Physical attack. Counters.
+SKLINF 123: Physical attack. 3 hits.
+SKLINF 124: Physical attack. 3 hits.
+SKLINF 125: Physical attack. Crit chance.
+SKLINF 126: Physical attack. Crit chance.
+SKLINF 127: Physical attack. Steals an item.
+SKLINF 128: Physical attack. Steals an item.
+SKLINF 131: Physical attack.
+SKLINF 132: Physical attack.
+SKLINF 133: Physical attack.
+SKLINF 134: Physical attack.
+SKLINF 135: Physical attack.
+SKLINF 136: Physical attack.
+SKLINF 137: Fire magic.
+SKLINF 138: Fire magic.
+SKLINF 139: Fire magic.
+SKLINF 140: Fire magic.
+SKLINF 141: Fire magic. 3 hits.
+SKLINF 142: Fire magic. 3 hits.
+SKLINF 143: Fire magic. 3 hits.
+SKLINF 144: Fire magic. 3 hits.
+SKLINF 145: Water magic.
+SKLINF 147: Water magic.
+SKLINF 149: Ice magic.
+SKLINF 150: Ice magic.
+SKLINF 151: Ice magic.
+SKLINF 152: Ice magic.
+SKLINF 153: Wind magic.
+SKLINF 154: Wind magic.
+SKLINF 155: Wind magic.
+SKLINF 156: Thunder magic.
+SKLINF 157: Thunder magic.
+SKLINF 158: Thunder magic.
+SKLINF 159: Thunder magic.
+SKLINF 160: Machine magic.
+SKLINF 161: Machine magic.
+SKLINF 162: Machine magic.
+SKLINF 163: Machine magic.
+SKLINF 164: Dark magic.
+SKLINF 165: Dark magic.
+SKLINF 166: Dark magic.
+SKLINF 167: Dark magic.
+SKLINF 168: Dark magic. 3 hits.
+SKLINF 169: Dark magic. 3 hits.
+SKLINF 170: Dark magic. 3 hits.
+SKLINF 171: Dark magic. 3 hits.
+SKLINF 172: Magic attack. Poison chance.
+SKLINF 173: Magic attack. Poison chance.
+SKLINF 174: Magic attack. Paralysis chance.
+SKLINF 175: Magic attack. Paralysis chance.
+SKLINF 176: Magic attack. Confusion chance.
+SKLINF 177: Magic attack. Confusion chance.
+SKLINF 178: Magic attack. Sleep chance.
+SKLINF 179: Magic attack. Sleep chance.
+SKLINF 180: Magic attack. KO chance.
+SKLINF 181: Magic attack. KO chance.
+SKLINF 182: Magic attack. Drains HP.
+SKLINF 183: Magic attack. Drains HP.
+SKLINF 184: Heals the user.
+SKLINF 185: Heals the user.
+SKLINF 186: Heals the user.
+SKLINF 187: Heals all allies.
+SKLINF 188: Heals all allies.
+SKLINF 189: Heals the user over time.
+SKLINF 190: Cures poison on the user.
+SKLINF 191: Cures poison on all allies.
+SKLINF 192: Cures paralysis on the user.
+SKLINF 193: Cures paralysis on all allies.
+SKLINF 194: Cures confusion on the user.
+SKLINF 195: Cures confusion on all allies.
+SKLINF 196: Cures all ailments on the user.
+SKLINF 197: Cures all ailments on all allies.
+SKLINF 198: Raises attack of the user.
+SKLINF 199: Raises attack of all allies.
+SKLINF 200: Raises defense of the user.
+SKLINF 201: Raises defense of all allies.
+SKLINF 202: Raises speed of the user.
+SKLINF 203: Raises speed of all allies.
+SKLINF 205: Lowers enemy defense.
+SKLINF 206: Lowers enemy defense.
+SKLINF 207: Lowers enemy speed.
+SKLINF 208: Lowers enemy speed.

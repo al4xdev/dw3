@@ -3,10 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "cdload.h"
 #include "common.h"
 #include "fightstg.h"
 #include "gamestate.h"
 #include "records.h"
+
+#include "port_runtime.h"
 
 #include "definitive.h"
 
@@ -132,4 +135,35 @@ void def_log_end(int result) {
             LOG("  party %d hp %d/%d", i, m->hp, m->max_hp);
         }
     }
+}
+
+/* ---- Text overrides (layer 1). font_get_entry only gets the file's buffer, so the file is found by looking the buffer
+ * up in the CD module's loaded entries (no load, no side effect). Only the English sets (records_language 1, 2): the
+ * other languages keep the disc's text. Returns the replacement entry or NULL. */
+void *def_text_override(void *data, s32 i) {
+    int e, k;
+
+    if ((records_language != 1 && records_language != 2) || data == NULL) {
+        return NULL;
+    }
+    for (e = 0; e < 64; e++) {
+        const CdloadEntry *ent = &cdload_module.entries[e];
+        if (ent->state != 3 || ent->buffer != data) {
+            continue;
+        }
+        for (k = 0; k < def_text_override_count; k++) {
+            if (def_text_overrides[k].file + records_language == ent->id && def_text_overrides[k].index == i) {
+                {
+                    static unsigned char seen[512]; /* one line per entry, not per frame it is drawn */
+                    if (k < 512 && !seen[k]) {
+                        seen[k] = 1;
+                        port_log("text override: file 0x%X entry %d", ent->id, i);
+                    }
+                }
+                return (void *)def_text_overrides[k].bytes;
+            }
+        }
+        return NULL;
+    }
+    return NULL;
 }

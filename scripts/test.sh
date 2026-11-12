@@ -134,6 +134,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/host/gpu_hw_replay.py"   # its rasteriser on the gpu goldens (only with a GPU device)
             "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records
             "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
+            "$PY" "$ROOT/tests/port/text_override.py"   # the generated text overrides are current (definitive combat)
             "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's
             "$PY" "$ROOT/tests/port/subpixel_jitter.py" run   # the GTE shadow in the first battle (sub-pixel precision, ~40 s)
             "$PY" "$ROOT/tests/port/debug.py"      # the debug channel (--debug) and tools/mcp's offline self-test
