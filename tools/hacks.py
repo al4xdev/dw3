@@ -140,7 +140,8 @@ class Source:
     def functions(self):
         """(first line, last line, name) of every function definition, from the braces at file scope."""
         if self._funcs is None:
-            code = "\n".join("" if DIRECTIVE.match(ln) else ln for ln in self.lines)  # same line numbers
+            # blanked to spaces, not emptied: self.line() maps offsets with the original text's newlines, so the length must stay
+            code = "\n".join(" " * len(ln) if DIRECTIVE.match(ln) else ln for ln in self.lines)
             self._funcs, depth, start = [], 0, None
             for m in re.finditer(r"[{}]", code):
                 if m.group() == "{":
