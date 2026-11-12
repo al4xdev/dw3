@@ -309,9 +309,17 @@ void def_log_end(int result);
 /* Layer 1: the replacement for entry `i` of the text file loaded at `data` (font_get_entry), or NULL. */
 void *def_text_override(void *data, s32 i);
 /* Layer 2, Inspect: the glyph-byte label of element `e` (0..6: Fire, Water, Ice, Wind, Thunder, Machine, Dark), and the
- * label for element `e` of a target with these resists (Weak / Resist / -), with its palette in *palette. */
+ * label for element `e` of a target with these resists (Weak / Resist / -, ??? while not learnt), with its palette in
+ * the 14-pixel font in *palette. */
 const unsigned char *def_inspect_element(int e);
 const unsigned char *def_inspect_state(const short *resists, int e, int *palette);
+/* The screens that show elements (Inspect, the bestiary, the technique list): the element's picture as text of the
+ * 14-pixel font; a technique's element index (-1: it has none); and def_inspect_state for the bestiary's species
+ * `index`, from its SDIGIEDT record `rec` (the base resists, with the port's table) instead of the battle's. */
+const unsigned char *def_element_icon(int e);
+int def_tech_element(int tech);
+struct FightstgEnemyRecord;
+const unsigned char *def_bestiary_state(struct FightstgEnemyRecord *rec, int index, int e, int *palette);
 /* Layer 2: the sound that tells a hit on a weakness, a neutral one or a resisted one (the player's elemental
  * techniques), played where the hit's own sound plays (fightstg_script_run_sound). */
 void def_hit_feedback(void);

@@ -12,17 +12,30 @@
 #include "window_anim.h"
 #ifdef PC_PORT
 #include "fightstg.h"
+#include "psyq/libgpu.h"
 
 /* The bestiary screen (definitive combat, layer 9; port/game/definitive_bestiary.c): a last entry of the field's menu that
  * lists the species of SDIGIEDT with what the player learned of their elements. It reuses the menu's own windows: the
- * option windows carry a page of names, the three member panels' space carries the chosen species' elements. */
-extern const unsigned char def_str_Fire[], def_str_Water[], def_str_Ice[], def_str_Wind[], def_str_Thunder[],
-    def_str_Machine[], def_str_Dark[], def_str_Unknown[], def_str_Bestiary[];
-int def_bestiary_known(int index);
+ * title bar carries its name and the page, the option windows a page of names; in the member panels' place a panel of
+ * its own (fieldmenu_bestiary_panel) carries the chosen species: its name, then a line per element (picture, name,
+ * Weak / Resist / - / ???). */
+extern const unsigned char def_str_Unknown[], def_str_Bestiary[], def_str_BestiaryMenu[], def_str_BestiaryHint[],
+    def_str_Slash[];
 int def_bestiary_active(void);
 #define BS_SPECIES 193 /* species in the table (DEF_BESTIARY_SPECIES) */
 #define BS_ROWS 6      /* names per page (DEF_BESTIARY_ROWS): the options' panel holds at least six rows */
 #define BS_STEP 100    /* fieldmenu_update's step of the open screen (the PS1 menu has 0..7) */
+#define BS_PANEL_X 4   /* the species' panel: left of the options' (x 0xA8), from their top down */
+#define BS_PANEL_Y 0x28
+#define BS_PANEL_W 154
+#define BS_PANEL_H 142
+#define BS_TEXT_X 12   /* the species' name and the elements' pictures */
+#define BS_NAME_Y 0x2C
+#define BS_ROW_Y 0x40  /* the first element's line, 14 pixels each */
+#define BS_ELEM_X 30   /* the element's name */
+#define BS_STATE_X 100 /* its state */
+#define BS_HINT_Y 0xA5
+#define BS_PAGE_X 0x112 /* the page, at the title bar's right end */
 #endif
 
 /* A window's position and message: a party member's name (fieldmenu_name_pos), the labels (fieldmenu_label_pos) and
@@ -76,7 +89,11 @@ typedef struct FieldmenuWindows {
     /* 0x24 */ MessageCursor *cursor;    /* the cursor */
     /* 0x28 */ FieldmenuMemberWindows members[3];
 #ifdef PC_PORT
-    MessageWindow *bs_info[8]; /* the bestiary screen: the chosen species' name, then its seven elements */
+    MessageWindow *bs_info[8]; /* the bestiary screen: the chosen species' name, then its seven elements' names, */
+    MessageWindow *bs_icons[7];  /* their pictures */
+    MessageWindow *bs_states[7]; /* and states */
+    MessageWindow *bs_page;      /* "3/33" */
+    MessageWindow *bs_hint;      /* the page buttons */
 #endif
 } FieldmenuWindows; /* size 0xAC */
 
@@ -115,9 +132,14 @@ void fieldmenu_create_windows(Fieldmenu *obj, FieldmenuWindows *data) {
     }
 #ifdef PC_PORT
     if (obj->bestiary) {
-        for (j = 0; j < 8; j++) {
-            data->bs_info[j] = message_create_window(obj->layer_id, 1, 0x14, j * 14 + 0x1C);
+        data->bs_info[0] = message_create_window(obj->layer_id, 1, BS_TEXT_X, BS_NAME_Y);
+        for (j = 0; j < 7; j++) {
+            data->bs_icons[j] = message_create_window(obj->layer_id, 1, BS_TEXT_X, j * 14 + BS_ROW_Y);
+            data->bs_info[j + 1] = message_create_window(obj->layer_id, 1, BS_ELEM_X, j * 14 + BS_ROW_Y);
+            data->bs_states[j] = message_create_window(obj->layer_id, 1, BS_STATE_X, j * 14 + BS_ROW_Y);
         }
+        data->bs_page = message_create_window(obj->layer_id, 1, BS_PAGE_X, 0x13);
+        data->bs_hint = message_create_window(obj->layer_id, 1, BS_TEXT_X, BS_HINT_Y);
     }
 #endif
     data->cursor = message_create_cursor(obj->layer_id, 0, 0xB0, obj->cursor * 14 + 0x31);
@@ -190,37 +212,87 @@ s32 fieldmenu_get_map_region(void) {
 
 
 #ifdef PC_PORT
-/* A species' name in `win`: its SDIGIEDT record's name (line of text 0x4E), "???" while nothing of it is known. */
-static void fieldmenu_bestiary_name(MessageWindow *win, s32 index) {
+/* A species' name in `win`: its SDIGIEDT record's name (line of text 0x4E), "???" in grey while nothing of it is known;
+ * the chosen one in the highlight's orange. */
+static void fieldmenu_bestiary_name(MessageWindow *win, s32 index, s32 chosen) {
     if (def_bestiary_known(index) == 0) {
         win->set_text(win, (u8 *)def_str_Unknown, -1);
+        win->set_palette(win, chosen ? 3 : 7);
     } else {
         FightstgEnemyRecord *recs = (FightstgEnemyRecord *)cdload_module.files.get_file(0x1CF);
         win->set_text(win, cdload_module.files.get_file(records_language + 0x4E), recs[index].name);
+        win->set_palette(win, chosen ? 3 : 0);
     }
 }
 
 /* Fills the screen for the chosen species: its page of names in the options' windows, its elements in the info ones. */
 static void fieldmenu_bestiary_draw(Fieldmenu *obj, FieldmenuWindows *data) {
-    static const unsigned char *const elements[7] = { def_str_Fire,    def_str_Water,   def_str_Ice, def_str_Wind,
-                                                      def_str_Thunder, def_str_Machine, def_str_Dark };
+    static u8 page[10]; /* the window keeps the pointer */
+    FightstgEnemyRecord *recs = (FightstgEnemyRecord *)cdload_module.files.get_file(0x1CF);
     s32 first = obj->bs_sel / BS_ROWS * BS_ROWS;
-    s32 known = def_bestiary_known(obj->bs_sel);
+    s32 pages = (BS_SPECIES + BS_ROWS - 1) / BS_ROWS;
+    s32 palette;
+    s32 n;
     s32 i;
 
     for (i = 0; i < obj->option_count; i++) {
         if (i < BS_ROWS && first + i < BS_SPECIES) {
-            data->options[i]->set_palette(data->options[i], 0); /* MAP's grey, when it is off, is not a name's */
-            fieldmenu_bestiary_name(data->options[i], first + i);
+            fieldmenu_bestiary_name(data->options[i], first + i, first + i == obj->bs_sel);
         } else {
             data->options[i]->set_visible(data->options[i], 0);
         }
     }
-    fieldmenu_bestiary_name(data->bs_info[0], obj->bs_sel);
+    fieldmenu_bestiary_name(data->bs_info[0], obj->bs_sel, 0);
     for (i = 0; i < 7; i++) {
-        data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)((known >> i) & 1 ? elements[i] : def_str_Unknown), -1);
+        data->bs_icons[i]->set_text(data->bs_icons[i], (u8 *)def_element_icon(i), -1);
+        data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)def_inspect_element(i), -1);
+        data->bs_states[i]->set_text(data->bs_states[i], (u8 *)def_bestiary_state(&recs[obj->bs_sel], obj->bs_sel, i, &palette), -1);
+        data->bs_states[i]->set_palette(data->bs_states[i], palette);
     }
+    /* "page/pages" in the font's digits (glyph 4 is 0) */
+    i = first / BS_ROWS + 1;
+    n = 0;
+    if (i >= 10) {
+        page[n++] = 4 + i / 10;
+    }
+    page[n++] = 4 + i % 10;
+    for (i = 0; def_str_Slash[i] != 0; i++) {
+        page[n++] = def_str_Slash[i];
+    }
+    page[n++] = 4 + pages / 10;
+    page[n++] = 4 + pages % 10;
+    page[n] = 0;
+    data->bs_page->set_text(data->bs_page, page, -1);
     data->cursor->set_pos(data->cursor, 0xB0, (obj->bs_sel - first) * 14 + 0x31);
+}
+
+/* An opaque rectangle on the menu's layer. */
+static void fieldmenu_bestiary_rect(Fieldmenu *obj, s32 x, s32 y, s32 w, s32 h, u8 r, u8 g, u8 b) {
+    GfxLayer *layer = gfx_module.funcs.get_layer(obj->layer_id);
+    POLY_F4 *poly = gfx_module.funcs.get_packet();
+
+    setPolyF4(poly);
+    setRGB0(poly, r, g, b);
+    poly->x0 = poly->x2 = x;
+    poly->x1 = poly->x3 = x + w;
+    poly->y0 = poly->y1 = y;
+    poly->y2 = poly->y3 = y + h;
+    addPrim(layer->get_ot_entry(layer, obj->ot_depth), poly);
+    gfx_module.funcs.set_packet(poly + 1);
+}
+
+/* The chosen species' panel. The bank has none of this size (the member panels are three boxes with a name tab each),
+ * so it is drawn flat in the bank's panels' colours: the frame, the name's band, a rule between the lines. The layer
+ * draws what is added last first, so the fill goes last. */
+static void fieldmenu_bestiary_panel(Fieldmenu *obj) {
+    s32 i;
+
+    for (i = 1; i < 7; i++) {
+        fieldmenu_bestiary_rect(obj, BS_PANEL_X + 6, BS_ROW_Y + i * 14 - 1, BS_PANEL_W - 12, 1, 41, 41, 115);
+    }
+    fieldmenu_bestiary_rect(obj, BS_PANEL_X + 2, BS_PANEL_Y + 2, BS_PANEL_W - 4, BS_ROW_Y - 4 - BS_PANEL_Y, 0, 0, 74);
+    fieldmenu_bestiary_rect(obj, BS_PANEL_X + 1, BS_PANEL_Y + 1, BS_PANEL_W - 2, BS_PANEL_H - 2, 0, 0, 33);
+    fieldmenu_bestiary_rect(obj, BS_PANEL_X, BS_PANEL_Y, BS_PANEL_W, BS_PANEL_H, 107, 107, 214);
 }
 
 /* Opens the screen on the first species: the member panels' texts and the money give way to it. */
@@ -233,6 +305,8 @@ static void fieldmenu_bestiary_open(Fieldmenu *obj, FieldmenuWindows *data) {
     data->money_unit->set_visible(data->money_unit, 0);
     data->money->set_visible(data->money, 0);
     data->help->set_text(data->help, (u8 *)def_str_Bestiary, -1);
+    data->bs_hint->set_text(data->bs_hint, (u8 *)def_str_BestiaryHint, -1);
+    data->bs_hint->set_palette(data->bs_hint, 7);
     obj->bs_sel = 0;
     fieldmenu_bestiary_draw(obj, data);
 }
@@ -247,6 +321,12 @@ static s32 fieldmenu_bestiary_update(Fieldmenu *obj, FieldmenuWindows *data) {
         for (i = 0; i < 8; i++) {
             data->bs_info[i]->set_visible(data->bs_info[i], 0);
         }
+        for (i = 0; i < 7; i++) {
+            data->bs_icons[i]->set_visible(data->bs_icons[i], 0);
+            data->bs_states[i]->set_visible(data->bs_states[i], 0);
+        }
+        data->bs_page->set_visible(data->bs_page, 0);
+        data->bs_hint->set_visible(data->bs_hint, 0);
         for (i = 0; i < 3; i++) {
             fieldmenu_show_member(obj, data, i, 1);
         }
@@ -258,11 +338,12 @@ static s32 fieldmenu_bestiary_update(Fieldmenu *obj, FieldmenuWindows *data) {
             if (obj->save_entry && i == obj->extended + 5) {
                 data->options[i]->set_text(data->options[i], cdload_module.files.get_file(records_language + 0x78), 1);
             } else if (i == obj->option_count - 1) {
-                data->options[i]->set_text(data->options[i], (u8 *)def_str_Bestiary, -1);
+                data->options[i]->set_text(data->options[i], (u8 *)def_str_BestiaryMenu, -1);
             } else {
                 data->options[i]->set_text(data->options[i], cdload_module.files.get_file(records_language + 0xB0),
                                            fieldmenu_option_messages[obj->extended][i]);
             }
+            data->options[i]->set_palette(data->options[i], 0);
         }
         if (obj->map_enabled == 0) {
             data->options[2]->set_palette(data->options[2], 7);
@@ -361,7 +442,7 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                         continue;
                     }
                     if (obj->bestiary && obj->base.timer == obj->option_count - 1) {
-                        data->options[obj->base.timer]->set_text(data->options[obj->base.timer], (u8 *)def_str_Bestiary, -1);
+                        data->options[obj->base.timer]->set_text(data->options[obj->base.timer], (u8 *)def_str_BestiaryMenu, -1);
                         continue;
                     }
 #endif
@@ -517,7 +598,10 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 gfx.set_scale(0x1000, 0x1000, 0x1000);
             }
 #ifdef PC_PORT
-            if (obj->option_count >= 7) {
+            if (obj->bs_sel >= 0) {
+                /* the bestiary's page is six names whatever the menu has: the 6-entry panel as it is */
+                gfx.draw(cdload_module.get_subfile_by_id(0x2860000), 0x1B, 0xA8, 0x28);
+            } else if (obj->option_count >= 7) {
                 /* global_save's entry with the card case's: the bank has panels for 5 and 6 entries only (a 22 px top,
                  * 14 px rows, a 20 px bottom), so the 6-entry one (98 px) is stretched by 14 px per entry more
                  * (7: 112 px, 8: 126 px) from its top */
@@ -531,6 +615,12 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
             gfx.draw(cdload_module.get_subfile_by_id(0x2860000), 0x1C - obj->extended, 0xA8, 0x28);
 #endif
         }
+#ifdef PC_PORT
+        if (obj->bs_sel >= 0) {
+            fieldmenu_bestiary_panel(obj); /* in the member panels' and the money's place */
+            break;
+        }
+#endif
         if (obj->panel_anims[2].level != 0) {
             if (obj->panel_anims[2].level != 0x1000) {
                 gfx.set_scale(obj->panel_anims[2].level, 0x1000, 0x1000);

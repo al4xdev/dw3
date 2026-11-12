@@ -214,3 +214,6 @@ SKLINF 206: Lowers enemy defense.
 SKLINF 207: Lowers a resist of the enemy.
 SKLINF 208: Lowers two resists of the enemy.
 $Bestiary: Bestiary
+$BestiaryMenu: BESTIARY
+$BestiaryHint: L1/R1: Page
+$Slash: /

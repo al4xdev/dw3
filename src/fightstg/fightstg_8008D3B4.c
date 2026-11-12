@@ -3409,10 +3409,11 @@ void fightstg_command_menu_update(FightstgCommandMenu *obj, FightstgCommandMenuD
 typedef struct FightstgBattleMenuData {
     /* 0x00 */ MessageWindow *icons[7];
     /* 0x1C */ MessageWindow *labels[7];
-    /* 0x38 */ MessageWindow *inspect_names[7];  /* Inspect's panel: the element's name, */
-    /* 0x54 */ MessageWindow *inspect_states[7]; /* and Weak / Resist / - (empty while the panel is closed) */
+    /* 0x38 */ MessageWindow *inspect_names[7];  /* Inspect's panel: the element's picture, */
+    /* 0x54 */ MessageWindow *inspect_states[7]; /* and Weak / Resist / - / ??? (empty while the panel is closed) */
     /* 0x70 */ MessageWindow *twice;             /* "Enemy x2" while the enemy acts twice before our next turn */
-} FightstgBattleMenuData; /* size 0x74; only pointers: the block is run and scanned as objects */
+    /* 0x74 */ MessageWindow *inspect_title;     /* the panel's title: the enemy's name */
+} FightstgBattleMenuData; /* size 0x78; only pointers: the block is run and scanned as objects */
 
 /* The menu's object: FightstgCommandMenu's own fields, then what the animation needs (never in the data block). The
  * animation is the little the old list had (a highlight) made for a press: the actions slide in (8 ticks), the pressed
@@ -3593,34 +3594,62 @@ static void fightstg_battle_menu_paint(FightstgBattleMenuData *data, s32 i, u8 p
     data->labels[i]->set_palette(data->labels[i], palette);
 }
 
-/* Inspect (definitive combat, layer 2): the current enemy's seven elements as Weak / Resist / - (neutral), from its
- * resists as they stand now (buffs and debuffs included). Open: the text is set; closed: the windows are emptied. */
+/* Inspect (definitive combat, layer 2): the current enemy's seven elements as Weak / Resist / - (neutral) / ??? (not
+ * learnt), from its resists as they stand now (buffs and debuffs included). Open: the text is set; closed: the windows
+ * are emptied. The panel is a title (the enemy's name) over two columns of picture + state in the 14-pixel font (the
+ * 9-pixel one has two usable colours and reads badly at 320x240): Fire, Water, Ice, Wind | Thunder, Machine, Dark.
+ * It sits right of the buttons and under the gauges (x 104-232, y 160-235), left of the player's Digimon. */
 #define FIGHTSTG_INSPECT_X 108
-#define FIGHTSTG_INSPECT_Y 166
-#define FIGHTSTG_INSPECT_STATE_DX 52
-#define FIGHTSTG_INSPECT_LINE 9
+#define FIGHTSTG_INSPECT_Y 163       /* the title's line */
+#define FIGHTSTG_INSPECT_ROW_Y 178   /* the first element's */
+#define FIGHTSTG_INSPECT_LINE 14
+#define FIGHTSTG_INSPECT_ROWS 4      /* elements per column */
+#define FIGHTSTG_INSPECT_COL_DX 62
+#define FIGHTSTG_INSPECT_STATE_DX 18 /* the state's text, after the 15-pixel picture */
+#define FIGHTSTG_INSPECT_W 128
 #define FIGHTSTG_TWICE_X 108 /* the "Enemy x2" label: over the arena floor, under the gauges */
-#define FIGHTSTG_TWICE_Y 154
+#define FIGHTSTG_TWICE_Y 152
 static const u8 fightstg_inspect_empty[1] = { 0 };
 
 static void fightstg_battle_menu_inspect_set(FightstgBattleMenuData *data, s32 open) {
-    FightstgStats *enemy = NULL;
+    FightstgStats *enemy;
+    FightstgEnemyRecord *rec;
     s32 e;
     s32 n;
 
-    if (open) {
-        enemy = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
-    }
-    for (e = 0; e < 7; e++) {
-        if (!open) {
+    if (!open) {
+        data->inspect_title->set_text(data->inspect_title, (u8 *)fightstg_inspect_empty, -1);
+        for (e = 0; e < 7; e++) {
             data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)fightstg_inspect_empty, -1);
             data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)fightstg_inspect_empty, -1);
-            continue;
         }
-        data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)def_inspect_element(e), -1);
+        return;
+    }
+    enemy = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
+    rec = fightstg_enemy_records.get(fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon);
+    if (rec != NULL) {
+        data->inspect_title->set_text(data->inspect_title, cdload_module.files.get_file(records_language + 0x4E), rec->name);
+    }
+    for (e = 0; e < 7; e++) {
+        data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)def_element_icon(e), -1);
         data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)def_inspect_state(enemy->resists, e, &n), -1);
         data->inspect_states[e]->set_palette(data->inspect_states[e], n);
     }
+}
+
+/* The open panel's backdrop: the dark quad, a line under the title and a frame in the windows' blue. */
+static void fightstg_battle_menu_inspect_frame(void) {
+    s32 x = FIGHTSTG_INSPECT_X - 4;
+    s32 y = FIGHTSTG_INSPECT_Y - 3;
+    s32 w = FIGHTSTG_INSPECT_W;
+    s32 h = FIGHTSTG_INSPECT_ROW_Y + FIGHTSTG_INSPECT_LINE * FIGHTSTG_INSPECT_ROWS + 2 - y;
+
+    fightstg_battle_menu_quad(x, y, w, 1, 1, 40, 110, 220);
+    fightstg_battle_menu_quad(x, y + h - 1, w, 1, 1, 40, 110, 220);
+    fightstg_battle_menu_quad(x, y + 1, 1, h - 2, 1, 40, 110, 220);
+    fightstg_battle_menu_quad(x + w - 1, y + 1, 1, h - 2, 1, 40, 110, 220);
+    fightstg_battle_menu_quad(x + 3, FIGHTSTG_INSPECT_ROW_Y - 2, w - 6, 1, 1, 30, 70, 150);
+    fightstg_battle_menu_quad(x, y, w, h, 2, 190, 180, 130); /* added last: the layer draws it first, under the lines */
 }
 
 void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData *data) {
@@ -3658,11 +3687,12 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             data->labels[i]->set_text(data->labels[i], (u8 *)fightstg_bmenu_glyphs[i], -1);
             fightstg_battle_menu_paint(data, i, obj->grey[i] ? FIGHTSTG_BMENU_PAL_GREY : 0);
         }
+        data->inspect_title = message_create_window(0x1005, 1, FIGHTSTG_INSPECT_X, FIGHTSTG_INSPECT_Y);
         for (i = 0; i < 7; i++) {
-            data->inspect_names[i] = message_create_window(0x1005, 3, FIGHTSTG_INSPECT_X,
-                                                           FIGHTSTG_INSPECT_Y + FIGHTSTG_INSPECT_LINE * i);
-            data->inspect_states[i] = message_create_window(0x1005, 3, FIGHTSTG_INSPECT_X + FIGHTSTG_INSPECT_STATE_DX,
-                                                            FIGHTSTG_INSPECT_Y + FIGHTSTG_INSPECT_LINE * i);
+            x = FIGHTSTG_INSPECT_X + FIGHTSTG_INSPECT_COL_DX * (i / FIGHTSTG_INSPECT_ROWS);
+            y = FIGHTSTG_INSPECT_ROW_Y + FIGHTSTG_INSPECT_LINE * (i % FIGHTSTG_INSPECT_ROWS);
+            data->inspect_names[i] = message_create_window(0x1005, 1, x, y);
+            data->inspect_states[i] = message_create_window(0x1005, 1, x + FIGHTSTG_INSPECT_STATE_DX, y);
         }
         fightstg_battle_menu_inspect_set(data, 0);
         data->twice = message_create_window(0x1005, 3, FIGHTSTG_TWICE_X, FIGHTSTG_TWICE_Y);
@@ -3701,8 +3731,7 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             data->labels[3]->set_text(data->labels[3], (u8 *)(obj->tag_free ? fightstg_bmenu_tag_free_glyph : fightstg_bmenu_glyphs[3]), -1);
         }
         if (obj->inspect) {
-            fightstg_battle_menu_quad(FIGHTSTG_INSPECT_X - 3, FIGHTSTG_INSPECT_Y - 2, 96,
-                                      FIGHTSTG_INSPECT_LINE * 7 + 4, 2, 150, 140, 100);
+            fightstg_battle_menu_inspect_frame();
         }
         if (obj->press >= 0) {
             /* The choice is given when the nudge is done; the original gives it at once. */
@@ -4520,7 +4549,34 @@ typedef struct FightstgTechMenuData {
     /* 0x34 */ MessageWindow *description; /* the technique's description */
     /* 0x38 */ MessageWindow *cost_label;
     /* 0x3C */ MessageWindow *cost;      /* its cost */
+#ifdef PC_PORT
+    /* Definitive combat: each technique's element (what the enemy's weaknesses are about; the list's own icon is the
+     * technique's class). Its picture at the row's end, and picture + name beside the cost. NULL when !def_on(). */
+    MessageWindow *elem_icons[6];
+    MessageWindow *elem_icon;
+    MessageWindow *elem_name;
+#endif
 } FightstgTechMenuData; /* size 0x40 */
+#ifdef PC_PORT
+#define FIGHTSTG_TECH_ELEM_X 0x8E      /* a row's picture: after the longest name, inside the panel's frame */
+#define FIGHTSTG_TECH_ELEM_INFO_X 0xB4 /* the description box's: left of the cost, on its line */
+
+/* The element of technique `id` (0: none shown) in the windows `icon` and, when given, `name`. */
+static void fightstg_tech_menu_set_element(MessageWindow *icon, MessageWindow *name, s32 id, s32 palette) {
+    static const u8 empty[1] = { 0 };
+    s32 e = def_tech_element(id);
+
+    if (icon == NULL) {
+        return;
+    }
+    icon->set_text(icon, (u8 *)(e >= 0 ? def_element_icon(e) : empty), -1);
+    icon->set_palette(icon, palette);
+    if (name != NULL) {
+        name->set_text(name, (u8 *)(e >= 0 ? def_inspect_element(e) : empty), -1);
+        name->set_palette(name, palette);
+    }
+}
+#endif
 
 void fightstg_tech_menu_draw(FightstgTechMenu *obj) {
     Sprite sprite;
@@ -4595,6 +4651,15 @@ void fightstg_tech_menu_open(FightstgTechMenu *obj, FightstgTechMenuData *data) 
     data->description = message_create_window(0x1005, 1, 0x14, 0xC2);
     data->cost_label = message_create_window(0x1005, 1, 0x100, 0xD0);
     data->cost = message_create_window(0x1005, 1, 0x12B, 0xD0);
+#ifdef PC_PORT
+    if (def_on()) {
+        for (i = 0; i < 6; i++) {
+            data->elem_icons[i] = message_create_window(0x1005, 1, FIGHTSTG_TECH_ELEM_X, i * 14 + 0x45);
+        }
+        data->elem_icon = message_create_window(0x1005, 1, FIGHTSTG_TECH_ELEM_INFO_X, 0xD0);
+        data->elem_name = message_create_window(0x1005, 1, FIGHTSTG_TECH_ELEM_INFO_X + 17, 0xD0);
+    }
+#endif
 }
 
 void fightstg_tech_menu_show_page(FightstgTechMenu *obj, FightstgTechMenuData *data) {
@@ -4609,10 +4674,18 @@ void fightstg_tech_menu_show_page(FightstgTechMenu *obj, FightstgTechMenuData *d
             k = obj->page * 6 + i;
             if (obj->count - 1 < k) {
                 data->tech_windows[i]->set_visible(data->tech_windows[i], 0);
+#ifdef PC_PORT
+                fightstg_tech_menu_set_element(data->elem_icons[i], NULL, 0, 0);
+#endif
             } else {
                 id = obj->techniques[k];
                 data->tech_windows[i]->set_text(data->tech_windows[i], cdload_module.files.get_file(records_language + 0xA2), id & 0x1FFF);
                 cost = fightstg_rules.get_tech_cost(0, id);
+#ifdef PC_PORT
+                /* greyed with the name when the MP does not pay for it */
+                fightstg_tech_menu_set_element(data->elem_icons[i], NULL, id & 0x1FFF,
+                                               member->blasted == 0 && member->mp < cost ? 7 : 0);
+#endif
                 if (member->blasted != 0) {
                     if (id & 0x8000) {
                         data->tech_windows[i]->set_palette(data->tech_windows[i], 3);
@@ -4634,6 +4707,9 @@ void fightstg_tech_menu_show_page(FightstgTechMenu *obj, FightstgTechMenuData *d
         }
         cost = fightstg_rules.get_tech_cost(0, obj->techniques[obj->page * 6 + data->cursor->sel]);
         id = obj->techniques[obj->page * 6 + data->cursor->sel];
+#ifdef PC_PORT
+        fightstg_tech_menu_set_element(data->elem_icon, data->elem_name, id & 0x1FFF, 0);
+#endif
         if (member->blasted == 0 && member->mp < cost) {
             data->description->set_text(data->description, cdload_module.files.get_file(records_language + 0x7F), 0x54);
             data->cost_label->set_text(data->cost_label, cdload_module.files.get_file(records_language + 0x7F), 0xD);
