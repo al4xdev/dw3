@@ -666,3 +666,38 @@ int def_debuff_scale(int k, int amount) {
     }
     return amount;
 }
+
+/* ---- PRD 2, layer B: the stat modifiers count for magic. The engine has none for Spirit; get_special_damage (with
+ * fightstg_rules.stats filled: [0] the attacker, [1] the target, both with their modifiers in) asks for these:
+ *  - the attack: Spirit scaled as Strength is by its modifier (now / (now - modifier));
+ *  - the defence: the player's Defense (already modified: layer 7), or the enemy's Spirit scaled as its Defense is. The
+ *    final boss (state.type 6) sets its own Defense and Spirit modifiers: its Spirit is left as it comes. */
+static int scaled(int stat, int now, int modifier) {
+    int base = now - modifier;
+
+    if (modifier == 0 || base <= 0) {
+        return stat;
+    }
+    stat = stat * now / base;
+    return stat < 1 ? 1 : stat;
+}
+
+int def_magic_attack(u8 side) {
+    FightstgMember *m = &fightstg_battle.state.members[side != 0][fightstg_battle.state.current[side != 0]];
+    const FightstgStats *a = &fightstg_rules.stats[0];
+
+    return scaled(a->stats[2], a->stats[0], m->modifiers[0]);
+}
+
+int def_magic_defense(u8 side) {
+    FightstgMember *m = &fightstg_battle.state.members[side == 0][fightstg_battle.state.current[side == 0]];
+    const FightstgStats *t = &fightstg_rules.stats[1];
+
+    if (side != 0) {
+        return t->stats[1] < 1 ? 1 : t->stats[1];
+    }
+    if (fightstg_battle.state.type == 6) {
+        return t->stats[2] < 1 ? 1 : t->stats[2];
+    }
+    return scaled(t->stats[2], t->stats[1], m->modifiers[1]);
+}

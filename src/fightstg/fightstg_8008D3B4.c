@@ -8299,8 +8299,8 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id) {
         power = rec->power * records_state.enemies[member].stat_scale / 16;
     }
 #ifdef PC_PORT
-    if (def_on() && side != 0) { /* definitive combat, layer 7: the player's Defense stands against magic too */
-        base = power * (stats->stats[2] * 50 / target->stats[1] + 50) / 100;
+    if (def_on()) { /* definitive combat: Defense stands against magic (layer 7), buffs count for magic (PRD 2, B) */
+        base = power * (def_magic_attack(side) * 50 / def_magic_defense(side) + 50) / 100;
     } else
 #endif
     base = power * (stats->stats[2] * 50 / target->stats[2] + 50) / 100;

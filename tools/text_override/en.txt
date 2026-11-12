@@ -63,6 +63,10 @@ SKLNAM 207: Resist Down
 $MsgLibra: Weaknesses revealed!
 $MsgRelay: The next swap is free!
 $MsgBreak: Resistance lowered!
+$Bestiary: Bestiary
+$BestiaryMenu: BESTIARY
+$BestiaryHint: L1/R1: Page
+$Slash: /
 SKLINF 53: Fire attack.
 SKLINF 54: Physical attack. Crit chance.
 SKLINF 55: Physical attack.
@@ -203,17 +207,13 @@ SKLINF 194: Cures confusion on the user.
 SKLINF 195: Cures confusion on all allies.
 SKLINF 196: Cures all ailments on the user.
 SKLINF 197: Cures all ailments on all allies.
-SKLINF 198: Raises attack of the user.
-SKLINF 199: Raises attack of all allies.
-SKLINF 200: Raises defense of the user.
-SKLINF 201: Raises defense of all allies.
+SKLINF 198: User's attack up: phys and magic.
+SKLINF 199: Allies' attack up: phys and magic.
+SKLINF 200: User's defense up vs all damage.
+SKLINF 201: Allies' defense up vs all damage.
 SKLINF 202: Reveals the enemy's weaknesses.
 SKLINF 203: Relay: the next swap is free.
-SKLINF 205: Lowers enemy defense.
-SKLINF 206: Lowers enemy defense.
+SKLINF 205: Enemy defense down vs all damage.
+SKLINF 206: Enemy defense down vs all damage.
 SKLINF 207: Lowers a resist of the enemy.
 SKLINF 208: Lowers two resists of the enemy.
-$Bestiary: Bestiary
-$BestiaryMenu: BESTIARY
-$BestiaryHint: L1/R1: Page
-$Slash: /

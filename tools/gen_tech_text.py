@@ -52,7 +52,11 @@ def text_file(name):
 
 # The four techniques the owner remade (definitive combat PRD, layer 6), by ID: their new descriptions.
 REMADE = {202: "Reveals the enemy's weaknesses.", 203: "Relay: the next swap is free.",
-          207: "Lowers a resist of the enemy.", 208: "Lowers two resists of the enemy."}
+          207: "Lowers a resist of the enemy.", 208: "Lowers two resists of the enemy.",
+          # PRD 2, layer B: attack buffs count for magic, defence ones against both kinds of hit
+          198: "User's attack up: phys and magic.", 199: "Allies' attack up: phys and magic.",
+          200: "User's defense up vs all damage.", 201: "Allies' defense up vs all damage.",
+          205: "Enemy defense down vs all damage.", 206: "Enemy defense down vs all damage."}
 
 
 def describe(t):

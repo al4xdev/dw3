@@ -271,6 +271,10 @@ int def_on(void);
 /* PRD 2, layer A: records_state.blocked[k] as the definitive edition reads it (stat debuffs 8..10 never blocked), and a
  * debuff's amount scaled by DEF_BOSS_DEBUFF_PCT where the original would have blocked it. */
 int def_stat_blocked(int k);
+/* PRD 2, layer B: the Spirit a magic attack uses and the stat that defends against it, with the Strength and Defense
+ * modifiers counted (get_special_damage, with fightstg_rules.stats filled). */
+int def_magic_attack(u8 side);
+int def_magic_defense(u8 side);
 int def_debuff_scale(int k, int amount);
 void def_party_turn_begins(void);
 void def_action_resolved(u8 side, s32 id, s32 value);
