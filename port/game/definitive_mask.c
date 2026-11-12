@@ -108,3 +108,41 @@ int def_chain_take_extra(DefChain *c) {
     c->next_extra = 1;
     return 1;
 }
+
+/* ---- Layer 5: the multiplier. Fire and Wind count on their own resist, Water with Ice and Thunder with Machine on the
+ * pair's sum, Dark on its own; each is its ceiling times the share of the maximum (999 a stat). */
+static int stat_cap(int v) {
+    return v < 0 ? 0 : v > 999 ? 999 : v;
+}
+
+int def_affinity(int element, const short resists[7]) {
+    switch (element) {
+    case 0:
+    case 3:
+        return DEF_AFF_SINGLE_MAX * stat_cap(resists[element]) / 999;
+    case 1:
+    case 2:
+        return DEF_AFF_PAIR_MAX * (stat_cap(resists[1]) + stat_cap(resists[2])) / 1998;
+    case 4:
+    case 5:
+        return DEF_AFF_PAIR_MAX * (stat_cap(resists[4]) + stat_cap(resists[5])) / 1998;
+    case 6:
+        return DEF_AFF_DARK_MAX * stat_cap(resists[6]) / 999;
+    }
+    return 0;
+}
+
+int def_multiplier(int weak, int open, int resisted, int affinity) {
+    int m = DEF_MULT_ONE;
+
+    if (resisted) {
+        return DEF_MULT_RESISTED;
+    }
+    if (weak) {
+        m += DEF_MULT_WEAK + affinity;
+    }
+    if (open) {
+        m += DEF_MULT_STAGGER + affinity;
+    }
+    return m;
+}

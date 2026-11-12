@@ -20,6 +20,10 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id);
 
 /* ---- DW3_BATTLE_LOG=<file>: one plain-text line per battle event, appended. Read once; unset = every hook is a no-op.
  * The line order is the game's own, so two runs with the same seed and inputs write the same file. */
+/* Layer 5: the terms of the last multiplier, for the log line of the damage it made (0 when none applied). */
+static struct {
+    int weak, open, resisted, affinity, mult;
+} terms;
 static DefChain chain; /* layer 4: stagger, window, free swap (definitive_mask.c) */
 static int baton_paid; /* Baton Pass was chosen in the switch menu (its MP is paid there) */
 
@@ -51,6 +55,7 @@ void def_log_begin(void) {
     int i;
 
     port_hud_arm();
+    def_mp_hook();
     def_chain_reset(&chain);
     if (!log_on()) {
         return;
@@ -167,6 +172,10 @@ static s32 log_damage(u8 side, s32 id, s32 value, const char *what) {
         target = &fightstg_battle.state.members[side == 0][fightstg_battle.state.current[side == 0]];
         LOG("damage %s side %d tech %d value %d target_hp %d -> %d", what, side != 0, id, value, target->hp,
             target->hp > value ? target->hp - value : 0);
+        if (terms.mult != 0) {
+            LOG("  mult %d weak %d open %d resisted %d affinity %d", terms.mult, terms.weak, terms.open, terms.resisted,
+                terms.affinity);
+        }
     }
     return value;
 }
@@ -174,10 +183,12 @@ static s32 log_damage(u8 side, s32 id, s32 value, const char *what) {
 /* The rules table's get_damage / get_special_damage (fightstg_rules in fightstg_8008D3B4.c). Pass-through: the same
  * calls, in the same order, so the random stream is untouched. */
 s32 def_get_damage(u8 side, s32 id) {
+    terms.mult = 0;
     return log_damage(side, id, fightstg_rules_get_damage(side, id), "phys");
 }
 
 s32 def_get_special_damage(u8 side, s32 id) {
+    terms.mult = 0;
     return log_damage(side, id, fightstg_rules_get_special_damage(side, id), "magic");
 }
 
@@ -433,4 +444,56 @@ int def_idle_pose(u8 side) {
         return fightstg_battle.state.final_phase != 0 || chain.staggered[target_slot() % 3];
     }
     return chain.staggered[target_slot() % 3];
+}
+
+/* Layer 8: the rookies' MP rows (definitive_mp.c) into records_digimon, written every time (the reset restores the table). */
+void def_mp_apply(void);
+
+void def_mp_hook(void) {
+    if (def_on()) {
+        def_mp_apply();
+    }
+}
+
+/* ---- Layer 5: the damage of an elemental technique, by the multiplier of the PRD (definitive_mask.c). Called from the
+ * rules (scale_damage for physical techniques, get_special_damage for magic) with the stats of the call in
+ * fightstg_rules.stats ([0] the attacker, [1] the target). `terms` (above) is what the log prints. */
+
+/* The player's element on an enemy: the multiplier. An enemy's element on the player: the player counts as
+ * DEF_PLAYER_REF_RESIST, the scale the old formulas had. Returns the damage for the physical formula's step; `power` is
+ * the technique's element_power (the old formula's own term, still used against the player). */
+int def_scale_physical(u8 side, int element, int value, int power) {
+    if (side != 0) {
+        return value + value * power * 2 / DEF_PLAYER_REF_RESIST;
+    }
+    return def_scale_magic(side, element, value);
+}
+
+int def_scale_magic(u8 side, int element, int value) {
+    const short *own = fightstg_rules.stats[0].resists;
+    const short *foe = fightstg_rules.stats[1].resists;
+    int species = fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon;
+    int cls;
+
+    if (side != 0) {
+        return value; /* the old bands at the reference resist: 125 - 100 / 4 = 100 percent */
+    }
+    cls = target_class(element, foe, species);
+    terms.weak = cls == 1;
+    terms.resisted = cls == 3;
+    terms.open = chain.staggered[fightstg_battle.state.current[1] % 3];
+    terms.affinity = def_affinity(element, own);
+    terms.mult = def_multiplier(terms.weak, terms.open, terms.resisted, terms.affinity);
+    return value * terms.mult / DEF_MULT_ONE;
+}
+
+/* A blow with no element (a physical technique, a basic attack, a magic with none) on an open target: 1 + 0.2. */
+int def_open_bonus(u8 side, int defense_stat, int value) {
+    if (!def_on() || side != 0 || defense_stat >= 2 || !chain.staggered[fightstg_battle.state.current[1] % 3]) {
+        return value;
+    }
+    terms.weak = terms.resisted = terms.affinity = 0;
+    terms.open = 1;
+    terms.mult = DEF_MULT_ONE + DEF_MULT_STAGGER;
+    return value * terms.mult / DEF_MULT_ONE;
 }

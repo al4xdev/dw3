@@ -8076,10 +8076,18 @@ s32 fightstg_rules_scale_damage(side, id, base)
         value += value * stats->power_up / 64;
     }
     if (rec->defense_stat >= 2) {
+#ifdef PC_PORT
+        if (def_on()) { /* definitive combat: weakness, stagger and affinity replace the resist term (layer 5) */
+            value = def_scale_physical(side, rec->defense_stat - 2, value, rec->element_power);
+        } else
+#endif
         value += value * rec->element_power * 2 / target->resists[rec->defense_stat - 2];
     } else if (rec->anim_script != 0xB && rec->anim_script != 0xC && stats->attack_element != 0) {
         value += value * stats->attack_element_power * 2 / target->resists[stats->attack_element - 2];
     }
+#ifdef PC_PORT
+    value = def_open_bonus(side, rec->defense_stat, value);
+#endif
     if (rec->kind < 2 && stats->multi_hit != 0 && (rec->anim_script != 0xB && rec->anim_script != 0xC)) {
         value = value * 4 / 10;
     }
@@ -8166,15 +8174,25 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id) {
     value = base;
     value += fightstg_rules_get_field_bonus(value, rec->defense_stat);
     if (rec->defense_stat >= 2) {
-        defense = target->resists[rec->defense_stat - 2];
-        if (defense < 100) {
-            value = value * (400 - defense * 3) / 100;
-        } else if (defense >= 300) {
-            value = value * (65 - defense / 20) / 100;
-        } else {
-            value = value * (125 - defense / 4) / 100;
+#ifdef PC_PORT
+        if (def_on()) { /* definitive combat: the multiplier of layer 5 replaces the bands */
+            value = def_scale_magic(side, rec->defense_stat - 2, value);
+        } else
+#endif
+        {
+            defense = target->resists[rec->defense_stat - 2];
+            if (defense < 100) {
+                value = value * (400 - defense * 3) / 100;
+            } else if (defense >= 300) {
+                value = value * (65 - defense / 20) / 100;
+            } else {
+                value = value * (125 - defense / 4) / 100;
+            }
         }
     }
+#ifdef PC_PORT
+    value = def_open_bonus(side, rec->defense_stat, value);
+#endif
     if (rec->strong_type >= 2 && rec->strong_type == target->type) {
         value += value / 2;
     }

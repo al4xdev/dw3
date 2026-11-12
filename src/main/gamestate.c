@@ -730,6 +730,9 @@ void gamestate_init_records(void) {
     u16 *dst;
     u16 *s;
 
+#ifdef PC_PORT
+    def_mp_hook(); /* definitive combat, layer 8: a new game starts with the rookies' new MP */
+#endif
     font_init(&funcs);
     strcpy(gamestate_data.name, funcs.get_entry(cdload_module.files.get_file(records_language + 0x86), 11));
     gamestate_data.party[0] = -1;

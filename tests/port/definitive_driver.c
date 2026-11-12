@@ -91,6 +91,37 @@ static void chain_cases(void) {
     check("chain: three weakness elements in one window, three extras (no cap)", i == 3 && c.window_used == 7);
 }
 
+static void mult_case(const char *name, int got, int want) {
+    check(name, got == want);
+    if (got != want) {
+        printf("  got %d want %d\n", got, want);
+    }
+}
+
+static void multiplier_cases(void) {
+    const short none[7] = { 0, 0, 0, 0, 0, 0, 0 };
+    const short full[7] = { 999, 999, 999, 999, 999, 999, 999 };
+    const short water_only[7] = { 0, 999, 0, 0, 0, 0, 0 };
+    const short ice_only[7] = { 0, 0, 999, 0, 0, 0, 0 };
+    const short over[7] = { 5000, 0, 0, 0, 0, 0, 0 };
+
+    mult_case("mult: neutral is 1.0", def_multiplier(0, 0, 0, def_affinity(0, full)), 1000);
+    mult_case("mult: weak is 1.5", def_multiplier(1, 0, 0, 0), 1500);
+    mult_case("mult: weak and open, full Fire affinity: 1+.5+.2+.3+.3", def_multiplier(1, 1, 0, def_affinity(0, full)), 2300);
+    mult_case("mult: a pair 999+0 is 0.3 of affinity (water)", def_affinity(1, water_only), 300);
+    mult_case("mult: ... and the same for ice", def_affinity(2, ice_only), 300);
+    mult_case("mult: the pair at 999+999 is 0.6", def_affinity(1, full), 600);
+    mult_case("mult: Thunder with Machine, 999+999", def_affinity(4, full), 600);
+    mult_case("mult: Machine alone 0, Thunder 999: 0.3", def_affinity(5, (const short[7]){ 0, 0, 0, 0, 999, 0, 0 }), 300);
+    mult_case("mult: Wind full 0.3", def_affinity(3, full), 300);
+    mult_case("mult: Dark full 0.6", def_affinity(6, full), 600);
+    mult_case("mult: no resists, no affinity", def_affinity(0, none), 0);
+    mult_case("mult: a stat past 999 counts as 999", def_affinity(0, over), 300);
+    mult_case("mult: resisted is the resisted multiplier, no bonus", def_multiplier(1, 1, 1, 300), 500);
+    mult_case("mult: open alone with affinity: 1+.2+.3", def_multiplier(0, 1, 0, 300), 1500);
+    mult_case("mult: weak alone, half Fire affinity (499): 1+.5+.149", def_multiplier(1, 0, 0, def_affinity(0, (const short[7]){ 499, 0, 0, 0, 0, 0, 0 })), 1649);
+}
+
 int main(void) {
     const short equal[7] = { 100, 100, 100, 100, 100, 100, 100 };
     const short one[7] = { 60, 100, 100, 100, 100, 100, 100 };
@@ -130,5 +161,6 @@ int main(void) {
         printf("ok def_resisted\n");
     }
     chain_cases();
+    multiplier_cases();
     return failures ? 1 : 0;
 }

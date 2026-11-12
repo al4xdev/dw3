@@ -275,6 +275,12 @@ void def_events_before_take(void);
 void def_swap_chosen(void);
 void def_baton_paid(void);                 /* the switch menu's Baton Pass was confirmed and its MP paid */
 const unsigned char *def_baton_label(void);
+/* Layer 5 (definitive.c), called by the rules when def_on: the damage of an elemental technique (physical: with the old
+ * formula's own power term against the player; magic), and the open-target bonus of a blow with no element. */
+int def_scale_physical(u8 side, int element, int value, int power);
+int def_scale_magic(u8 side, int element, int value);
+int def_open_bonus(u8 side, int defense_stat, int value);
+void def_mp_hook(void); /* layer 8: the rookies' MP patch, at a new game and at each battle's start (not under a script) */
 int def_swap_free(void);       /* a swap would be free now: the HUD's Tag button shows it */
 int def_target_staggered(void); /* the current target is open */
 int def_idle_pose(u8 side);     /* the pose of a side, or -1 for the original rule */
