@@ -293,6 +293,18 @@ void pad_read_buttons(u8 id, u8 *data, u8 *rec) {
         }
 #endif
 #ifdef PC_PORT
+        /* A replay script (tests/replay/scripts, shared with the emulator) is written in the console's buttons: circle
+         * confirms and cross goes back only after records_language's rotation, which the port dropped for the player's
+         * pad map (62a7ff8). Under --script the player's map is not in play, so apply the console's rotation. */
+        {
+            extern int port_script_active;
+            if (port_script_active && records_language != 0) {
+                u16 raw = buttons;
+
+                buttons &= ~0x7000;
+                buttons |= ((raw >> 14) & 1) << 13 | ((raw >> 12) & 1) << 14 | ((raw >> 13) & 1) << 12;
+            }
+        }
         /* The player's own pad map (pad.map, through dw3_pad_permute): the handheld's SDL2 runtime has no pad map of its
          * own, and this is the one place every read of the pad passes through - the raw bit tests as much as the button
          * map's. No language rotation first: the map's places are the pad's own PS1 positions. */

@@ -312,7 +312,7 @@ def main():
         "out of range": ({"schema": 1, "video": {"scale": 17}}, "video.scale: an integer from 1 to 16"),
         "refresh 55": ({"schema": 1, "video": {"refresh": 55}}, "video.refresh: 50 (PAL) or 60"),
         "an unknown renderer": ({"schema": 1, "video": {"renderer": "vulkan"}},
-                                'video.renderer: "software" or "gpu", not "vulkan"'),
+                                'video.renderer: "software", "gpu" or "gles", not "vulkan"'),
         "a renderer not a string": ({"schema": 1, "video": {"renderer": 1}}, "video.renderer: a string, not a number"),
         "internal scale 9": ({"schema": 1, "video": {"internal_scale": 9}},
                              "video.internal_scale: an integer from 1 to 8"),
