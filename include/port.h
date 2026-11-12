@@ -280,7 +280,23 @@ const unsigned char *def_baton_label(void);
 int def_scale_physical(u8 side, int element, int value, int power);
 int def_scale_magic(u8 side, int element, int value);
 int def_open_bonus(u8 side, int defense_stat, int value);
+struct PortState;
+/* Layer 9 (definitive_bestiary.c): what the player has learnt of each enemy species, one byte each (bit = element index,
+ * Fire..Dark), saved per slot in the card's spare tail. `index` is the species' record in SDIGIEDT (0..192); the id of
+ * a FightstgEnemyRecord goes through def_bestiary_index. */
+void def_bestiary_reset(void);
+void def_bestiary_discover(int index, int element_mask);
+int def_bestiary_known(int index);
+int def_bestiary_index(int species_id);
+void def_bestiary_savestate(struct PortState *s);
 void def_mp_hook(void); /* layer 8: the rookies' MP patch, at a new game and at each battle's start (not under a script) */
+/* Layer 6 (definitive.c): the remade techniques. def_tech_effect runs one of Libra / Relay / Resist Down / Mega Break
+ * (0: not one of them, 1: done with a message, 2: no effect); def_apply_resist_mod lowers an enemy's resists as
+ * get_stats builds them; def_message is the text of message type 23. */
+struct FightstgStats;
+int def_tech_effect(u8 side, int tech, int *msg);
+void def_apply_resist_mod(int member, struct FightstgStats *out);
+const unsigned char *def_message(int i);
 int def_swap_free(void);       /* a swap would be free now: the HUD's Tag button shows it */
 int def_target_staggered(void); /* the current target is open */
 int def_idle_pose(u8 side);     /* the pose of a side, or -1 for the original rule */

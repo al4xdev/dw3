@@ -1,3 +1,68 @@
+
+# The battle HUD's own labels (Inspect panel): $NAME, no table entry.
+$Fire: Fire
+$Water: Water
+$Ice: Ice
+$Wind: Wind
+$Thunder: Thunder
+$Machine: Machine
+$Dark: Dark
+$Weak: Weak
+$Resist: Resist
+$Neutral: -
+$Unknown: ???
+$Twice: Enemy x2
+$BatonPass: Baton Pass
+STATUS 92: Fire Affinity increased by <5,1>.
+STATUS 93: Water Affinity increased by <5,1>.
+STATUS 94: Ice Affinity increased by <5,1>.
+STATUS 95: Wind Affinity increased by <5,1>.
+STATUS 96: Thunder Affinity increased by <5,1>.
+STATUS 97: Machine Affinity increased by <5,1>.
+STATUS 98: Dark Affinity increased by <5,1>.
+TRAINI 29: Fire Affinity
+TRAINI 30: Water Affinity
+TRAINI 31: Ice Affinity
+TRAINI 32: Wind Affinity
+TRAINI 33: Thunder Aff.
+TRAINI 34: Machine Aff.
+TRAINI 35: Dark Affinity
+TRAINI 36: S Fire Affinity
+TRAINI 37: S Water Affinity
+TRAINI 38: S Ice Affinity
+TRAINI 39: S Wind Affinity
+TRAINI 40: S Thunder Aff.
+TRAINI 41: S Machine Aff.
+TRAINI 42: S Dark Affinity
+TRAINI 85: Fire Affinity
+TRAINI 86: Water Affinity
+TRAINI 87: Ice Affinity
+TRAINI 88: Wind Affinity
+TRAINI 89: Thunder Affinity
+TRAINI 90: Machine Affinity
+TRAINI 91: Dark Affinity
+TRAINI 99: Results:<1>Fire Affinity is up by <5,1>!<2,2>
+TRAINI 100: Results:<1>Water Affinity is up by <5,1>!<2,2>
+TRAINI 101: Results:<1>Ice Affinity is up by <5,1>!<2,2>
+TRAINI 102: Results:<1>Wind Affinity is up by <5,1>!<2,2>
+TRAINI 103: Results:<1>Thunder Affinity is up by <5,1>!<2,2>
+TRAINI 104: Results:<1>Machine Affinity is up by <5,1>!<2,2>
+TRAINI 105: Results:<1>Dark Affinity is up by <5,1>!<2,2>
+TRAINI 106: Results:<2,2><3>Fire Affinity is up by <5,1>!<1>Maximum MP is up by <5,2>!<2,2>
+TRAINI 107: Results:<2,2><3>Water Affinity is up by <5,1>!<1>Defense is down by <5,2>...<2,2>
+TRAINI 108: Results:<2,2><3>Ice Affinity is up by <5,1>!<1>Speed is down by <5,2>...<2,2>
+TRAINI 109: Results:<2,2><3>Wind Affinity is up by <5,1>!<1>Strength is down by <5,2>...<2,2>
+TRAINI 110: Results:<2,2><3>Thunder Affinity is up by <5,1>!<1>Wisdom is down by <5,2>...<2,2>
+TRAINI 111: Results:<2,2><3>Machine Affinity is up by <5,1>!<1>Max HP is up by <5,2>!<2,2>
+TRAINI 112: Results:<2,2><3>Dark Affinity is up by <5,1>!<1>Spirit is down by <5,2>...<2,2>
+
+# Layer 6: the remade techniques' names and battle messages (shown by message type 23, fightstg_message_show).
+SKLNAM 202: Libra
+SKLNAM 203: Relay
+SKLNAM 207: Resist Down
+$MsgLibra: Weaknesses revealed!
+$MsgRelay: The next swap is free!
+$MsgBreak: Resistance lowered!
 SKLINF 53: Fire attack.
 SKLINF 54: Physical attack. Crit chance.
 SKLINF 55: Physical attack.
@@ -142,66 +207,10 @@ SKLINF 198: Raises attack of the user.
 SKLINF 199: Raises attack of all allies.
 SKLINF 200: Raises defense of the user.
 SKLINF 201: Raises defense of all allies.
-SKLINF 202: Raises speed of the user.
-SKLINF 203: Raises speed of all allies.
+SKLINF 202: Reveals the enemy's weaknesses.
+SKLINF 203: Relay: the next swap is free.
 SKLINF 205: Lowers enemy defense.
 SKLINF 206: Lowers enemy defense.
-SKLINF 207: Lowers enemy speed.
-SKLINF 208: Lowers enemy speed.
-
-# The battle HUD's own labels (Inspect panel): $NAME, no table entry.
-$Fire: Fire
-$Water: Water
-$Ice: Ice
-$Wind: Wind
-$Thunder: Thunder
-$Machine: Machine
-$Dark: Dark
-$Weak: Weak
-$Resist: Resist
-$Neutral: -
-$Unknown: ???
-$Twice: Enemy x2
-$BatonPass: Baton Pass
-STATUS 92: Fire Affinity increased by <5,1>.
-STATUS 93: Water Affinity increased by <5,1>.
-STATUS 94: Ice Affinity increased by <5,1>.
-STATUS 95: Wind Affinity increased by <5,1>.
-STATUS 96: Thunder Affinity increased by <5,1>.
-STATUS 97: Machine Affinity increased by <5,1>.
-STATUS 98: Dark Affinity increased by <5,1>.
-TRAINI 29: Fire Affinity
-TRAINI 30: Water Affinity
-TRAINI 31: Ice Affinity
-TRAINI 32: Wind Affinity
-TRAINI 33: Thunder Aff.
-TRAINI 34: Machine Aff.
-TRAINI 35: Dark Affinity
-TRAINI 36: S Fire Affinity
-TRAINI 37: S Water Affinity
-TRAINI 38: S Ice Affinity
-TRAINI 39: S Wind Affinity
-TRAINI 40: S Thunder Aff.
-TRAINI 41: S Machine Aff.
-TRAINI 42: S Dark Affinity
-TRAINI 85: Fire Affinity
-TRAINI 86: Water Affinity
-TRAINI 87: Ice Affinity
-TRAINI 88: Wind Affinity
-TRAINI 89: Thunder Affinity
-TRAINI 90: Machine Affinity
-TRAINI 91: Dark Affinity
-TRAINI 99: Results:<1>Fire Affinity is up by <5,1>!<2,2>
-TRAINI 100: Results:<1>Water Affinity is up by <5,1>!<2,2>
-TRAINI 101: Results:<1>Ice Affinity is up by <5,1>!<2,2>
-TRAINI 102: Results:<1>Wind Affinity is up by <5,1>!<2,2>
-TRAINI 103: Results:<1>Thunder Affinity is up by <5,1>!<2,2>
-TRAINI 104: Results:<1>Machine Affinity is up by <5,1>!<2,2>
-TRAINI 105: Results:<1>Dark Affinity is up by <5,1>!<2,2>
-TRAINI 106: Results:<2,2><3>Fire Affinity is up by <5,1>!<1>Maximum MP is up by <5,2>!<2,2>
-TRAINI 107: Results:<2,2><3>Water Affinity is up by <5,1>!<1>Defense is down by <5,2>...<2,2>
-TRAINI 108: Results:<2,2><3>Ice Affinity is up by <5,1>!<1>Speed is down by <5,2>...<2,2>
-TRAINI 109: Results:<2,2><3>Wind Affinity is up by <5,1>!<1>Strength is down by <5,2>...<2,2>
-TRAINI 110: Results:<2,2><3>Thunder Affinity is up by <5,1>!<1>Wisdom is down by <5,2>...<2,2>
-TRAINI 111: Results:<2,2><3>Machine Affinity is up by <5,1>!<1>Max HP is up by <5,2>!<2,2>
-TRAINI 112: Results:<2,2><3>Dark Affinity is up by <5,1>!<1>Spirit is down by <5,2>...<2,2>
+SKLINF 207: Lowers a resist of the enemy.
+SKLINF 208: Lowers two resists of the enemy.
+$Bestiary: Bestiary

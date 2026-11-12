@@ -16,6 +16,10 @@
 #define DEF_AFF_PAIR_MAX 600    /* of Water+Ice and of Thunder+Machine (the pair's sum 1998) */
 #define DEF_AFF_DARK_MAX 600    /* of Dark (999) */
 #define DEF_PLAYER_REF_RESIST 100 /* the resist the player counts as when an enemy's element hits it: the old formulas' scale */
+#define DEF_RELAY_MP 50         /* MP the Relay technique (Mega Boost, remade) costs */
+#define DEF_BREAK_SLOW_DELTA 80 /* how far Slow Down (remade) lowers the enemy's resist of the user's best element */
+#define DEF_BREAK_MEGA_DELTA 100 /* how far Mega Break lowers each of the user's two best elements */
+#define DEF_BREAK_TURNS 3       /* the enemy's turns a lowered resist lasts */
 #define DEF_RESIST_MIN 250      /* resist value from which an element is "resisted" */
 #define DEF_SND_EFFECTIVE 0x800450BD /* sound id of a hit on a weakness (the menus' accept chime) */
 #define DEF_SND_NEUTRAL 0x4001C      /* of a neutral hit (the menus' confirm blip) */
@@ -42,11 +46,13 @@ typedef struct DefChain {
     unsigned char extra_pending; /* an extra action is owed: the next turn event is made immediate */
     unsigned char next_extra;    /* the next party turn is that extra action */
     unsigned char cur_extra;     /* the party turn now running is an extra action */
+    unsigned char relay;         /* Relay was used: the next swap is free (layer 6) */
 } DefChain;
 void def_chain_reset(DefChain *c);
 /* The player's action resolved on `target`: it `hit` (damage > 0); `elem` the element index of an elemental technique,
  * -1 for a physical blow or a crest's element (they never open); `weak` it hit a weakness. */
 void def_chain_player_hit(DefChain *c, int target, int hit, int elem, int weak);
+void def_chain_relay_set(DefChain *c);           /* the Relay technique: the next swap is free */
 void def_chain_enemy_acts(DefChain *c, int slot); /* an enemy's turn begins: it closes */
 void def_chain_party_turn(DefChain *c);           /* a party turn begins: an extra one, or a normal one (new window) */
 int def_chain_swap_free(const DefChain *c, int target);
@@ -93,3 +99,30 @@ extern const int def_mp_row_count;
 void def_mp_apply(void);
 
 #endif /* PORT_DEFINITIVE_H */
+
+/* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */
+#define DEF_BESTIARY_SPECIES 193      /* species in SDIGIEDT (file 0x1CF): the table's size */
+#define DEF_BESTIARY_ELEMENTS 7       /* elements in a byte of the table (bits 0..6) */
+#define DEF_BESTIARY_SLOTS 3          /* the game's save slots: one record each */
+#define DEF_BESTIARY_RECORD_SIZE 0x100 /* bytes of a slot's record on the card (two 0x80 card frames) */
+#define DEF_BESTIARY_RECORD_AT 0x7800 /* file offset of slot 0's record: the card file is 0x8000, the game uses up to here */
+#define DEF_BESTIARY_PART 5           /* memcard_read/_write part of the record; the slot rides in part >> 8 */
+#define DEF_BESTIARY_VERSION 1        /* the record's layout version; an unknown one reads as an empty table */
+#define DEF_BESTIARY_ROWS 6           /* species listed per page on the bestiary screen */
+
+void def_bestiary_reset(void);
+void def_bestiary_discover(int index, int element_mask);
+int def_bestiary_known(int index);
+int def_bestiary_index(int species_id);
+struct PortState;
+void def_bestiary_savestate(struct PortState *s);
+/* The card record of a slot (the host test drives these two): `out`/`in` are DEF_BESTIARY_RECORD_SIZE bytes. An empty
+ * table writes all zeros (a card nothing was discovered on stays byte-identical); a missing, wrongly versioned or
+ * badly summed record (or NULL) reads as an empty table. */
+void def_bestiary_record_write(unsigned char *out);
+void def_bestiary_record_read(const unsigned char *in);
+/* 1 when the screen and the card record are in use: never in a replay script (shared with the emulator), unless
+ * DW3_DEFINITIVE is set, as the rest of the layers (DW3_BESTIARY: this layer alone). */
+int def_bestiary_active(void);
+/* The record's buffer for the card transfers (a static one: the slot's 0x2700 buffer has no room). */
+unsigned char *def_bestiary_buffer(void);

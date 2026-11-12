@@ -80,6 +80,18 @@ static void chain_cases(void) {
     check("swap: free again in the next window", def_chain_swap_free(&c, 0) == 1);
 
     def_chain_reset(&c);
+    def_chain_relay_set(&c);
+    check("relay: the next swap is free with no open target", def_chain_swap_free(&c, 0) == 1);
+    def_chain_swap_chosen(&c, 0);
+    check("relay: it gives an extra action and is spent", c.extra_pending == 1 && c.relay == 0 && def_chain_swap_free(&c, 0) == 0);
+    def_chain_reset(&c);
+    turn(&c, 1, 0, 1);
+    def_chain_party_turn(&c);
+    def_chain_relay_set(&c);
+    def_chain_swap_chosen(&c, 0);
+    check("relay: it leaves the window's own free swap for later", c.swap_used == 0 && def_chain_swap_free(&c, 0) == 1);
+
+    def_chain_reset(&c);
     for (i = 0; i < 3; i++) { /* all but the weakness elements: each in its own window gives one */
         def_chain_party_turn(&c);
         def_chain_player_hit(&c, 0, 1, i, 1);

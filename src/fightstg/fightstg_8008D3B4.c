@@ -1694,6 +1694,23 @@ void fightstg_tech_update(FightstgTech *obj, FightstgMessage **data) {
                     break;
                 case 5:
                     *data = fightstg_message_create();
+#ifdef PC_PORT
+                    {
+                        s32 def_msg;
+                        s32 def_done = def_tech_effect(obj->side, obj->tech, &def_msg);
+
+                        if (def_done == 1) { /* Libra, Relay, Resist Down, Mega Break (definitive combat, layer 6) */
+                            obj->args[0] = def_msg;
+                            obj->args[1] = obj->side;
+                            (*data)->show(*data, 23, obj->args);
+                            break;
+                        } else if (def_done == 2) { /* immune: the original's "no effect" */
+                            obj->args[0] = 0x2F;
+                            (*data)->show(*data, 1, obj->args);
+                            break;
+                        }
+                    }
+#endif
                     switch (obj->tech) {
                     case 0xC6:
                     case 0xC8:
@@ -5861,6 +5878,14 @@ void fightstg_message_show(FightstgMessage *obj, s32 msg, s32 *args) {
         obj->window_count = 2;
         fightstg_message_set_name(obj, data, args[1], fightstg_battle.state.current[args[1] != 0]);
         break;
+#ifdef PC_PORT
+    case 23: /* definitive combat: the user's name, then a text of the port's own (args[0]: def_message) */
+        data->windows[0]->set_text(data->windows[0], cdload_module.files.get_file(records_language + 0x7F), 0x16);
+        data->windows[1]->set_text(data->windows[1], (u8 *)def_message(args[0]), -1);
+        obj->window_count = 2;
+        fightstg_message_set_name(obj, data, args[1], fightstg_battle.state.current[args[1] != 0]);
+        break;
+#endif
     case 3:
         data->windows[0]->set_text(data->windows[0], cdload_module.files.get_file(records_language + 0x7F), 0x16);
         data->windows[1]->set_text(data->windows[1], cdload_module.files.get_file(records_language + 0x7F), 9);
@@ -8016,6 +8041,9 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
     } else {
         m = &fightstg_battle.state.members[1][member];
         fightstg_rules_get_enemy_stats(out, m, member);
+#ifdef PC_PORT
+        def_apply_resist_mod(member, out); /* definitive combat: Resist Down / Mega Break */
+#endif
     }
     if (first) {
         return &fightstg_rules.stats[0];

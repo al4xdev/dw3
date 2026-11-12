@@ -55,7 +55,7 @@ void def_chain_reset(DefChain *c) {
     for (i = 0; i < 3; i++) {
         c->staggered[i] = 0;
     }
-    c->window_used = c->swap_used = c->extra_pending = c->next_extra = c->cur_extra = 0;
+    c->window_used = c->swap_used = c->extra_pending = c->next_extra = c->cur_extra = c->relay = 0;
 }
 
 void def_chain_player_hit(DefChain *c, int target, int hit, int elem, int weak) {
@@ -90,10 +90,19 @@ void def_chain_party_turn(DefChain *c) {
 }
 
 int def_chain_swap_free(const DefChain *c, int target) {
-    return target >= 0 && target <= 2 && c->staggered[target] && !c->swap_used;
+    return c->relay || (target >= 0 && target <= 2 && c->staggered[target] && !c->swap_used);
+}
+
+void def_chain_relay_set(DefChain *c) {
+    c->relay = 1; /* Relay (layer 6): the next swap is free, stagger or not */
 }
 
 void def_chain_swap_chosen(DefChain *c, int target) {
+    if (c->relay) { /* the relay's swap does not use the window's own */
+        c->relay = 0;
+        c->extra_pending = 1;
+        return;
+    }
     if (def_chain_swap_free(c, target)) {
         c->swap_used = 1;
         c->extra_pending = 1;

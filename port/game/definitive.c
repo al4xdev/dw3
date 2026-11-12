@@ -2,6 +2,7 @@
  * layer 1: the text overrides; layer 2: Inspect, the hit sounds, the "enemy acts twice" test. The game's C calls the def_* hooks under #ifdef PC_PORT; everything else lives here. */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cdload.h"
 #include "common.h"
@@ -25,6 +26,8 @@ static struct {
     int weak, open, resisted, affinity, mult;
 } terms;
 static DefChain chain; /* layer 4: stagger, window, free swap (definitive_mask.c) */
+static short resist_mod[3][7]; /* layer 6: per enemy slot, what the lowering took off each element */
+static unsigned char resist_turns[3]; /* and the enemy turns it still lasts */
 static int baton_paid; /* Baton Pass was chosen in the switch menu (its MP is paid there) */
 
 static FILE *log_file;
@@ -57,6 +60,8 @@ void def_log_begin(void) {
     port_hud_arm();
     def_mp_hook();
     def_chain_reset(&chain);
+    memset(resist_mod, 0, sizeof(resist_mod));
+    memset(resist_turns, 0, sizeof(resist_turns));
     if (!log_on()) {
         return;
     }
@@ -320,6 +325,8 @@ extern s32 wfightmn_update_idle_anim(u8 side, s32 amount);
 void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, chain);
     PORT_STATE_VAR(s, baton_paid);
+    PORT_STATE_VAR(s, resist_mod);
+    PORT_STATE_VAR(s, resist_turns);
     PORT_STATE_VAR(s, hit_class);
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
@@ -368,6 +375,12 @@ void def_enemy_turn_begins(void) {
 
     if (!def_on()) {
         return;
+    }
+    if (resist_turns[target % 3] != 0 && --resist_turns[target % 3] == 0) { /* the lowered resists wear off */
+        memset(resist_mod[target % 3], 0, sizeof(resist_mod[0]));
+        if (log_on()) {
+            LOG("resist down worn off slot %d", target);
+        }
     }
     if (chain.staggered[target]) {
         def_chain_enemy_acts(&chain, target);
@@ -446,12 +459,103 @@ int def_idle_pose(u8 side) {
     return chain.staggered[target_slot() % 3];
 }
 
+/* ---- Layer 6: the remade techniques. Libra (202, was Speed Up) learns the target's weaknesses, Relay (203, was Mega Boost)
+ * makes the next swap free, Resist Down / Mega Break (207, 208, were Slow Down / Mega Break) lower the elements the
+ * user is best at on the target for a few of its turns; a boss is immune to the last two (records_state.blocked[10], the
+ * speed-down immunity they replace). The effects run in fightstg_tech_update (class 5), before the original's own. */
+
+/* Layer 9's table (definitive_bestiary.c) when it is linked; these stand in until then. */
+__attribute__((weak)) void def_bestiary_discover(int index, int element_mask) {
+    (void)index;
+    (void)element_mask;
+}
+__attribute__((weak)) int def_bestiary_index(int species_id) {
+    (void)species_id;
+    return -1;
+}
+
+void def_apply_resist_mod(int member, FightstgStats *out) {
+    int e;
+
+    if (!def_on() || member < 0 || member > 2 || resist_turns[member] == 0) {
+        return;
+    }
+    for (e = 0; e < 7; e++) {
+        out->resists[e] += resist_mod[member][e];
+        if (out->resists[e] < 1) {
+            out->resists[e] = 1; /* the old formulas divide by it */
+        }
+    }
+}
+
+/* 0: not one of the four; 1: done, `*msg` the message (0 Libra, 1 Relay, 2 resist lowered); 2: no effect (immune). */
+int def_tech_effect(u8 side, int tech, int *msg) {
+    int slot = fightstg_battle.state.current[1] % 3;
+    int e, n, best, k;
+    short taken[7] = { 0, 0, 0, 0, 0, 0, 0 };
+    FightstgStats *me;
+
+    if (!def_on() || side != 0 || (tech != 202 && tech != 203 && tech != 207 && tech != 208)) {
+        return 0;
+    }
+    if (tech == 202) {
+        def_bestiary_discover(def_bestiary_index(fightstg_battle.state.members[1][slot].digimon), 0x7F);
+        *msg = 0;
+        if (log_on()) {
+            LOG("libra slot %d", slot);
+        }
+        return 1;
+    }
+    if (tech == 203) {
+        def_chain_relay_set(&chain);
+        *msg = 1;
+        return 1;
+    }
+    if (records_state.blocked[10] != 0) {
+        return 2;
+    }
+    me = fightstg_rules.get_stats(0, 1, fightstg_battle.state.current[0]);
+    for (n = tech == 208 ? 2 : 1, k = 0; k < n; k++) {
+        best = -1;
+        for (e = 0; e < 7; e++) {
+            if (!taken[e] && me->resists[e] > 0 && (best < 0 || me->resists[e] > me->resists[best])) {
+                best = e;
+            }
+        }
+        if (best < 0) {
+            break;
+        }
+        taken[best] = 1;
+        resist_mod[slot][best] -= tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA;
+        if (log_on()) {
+            LOG("resist down slot %d element %d now %d", slot, best, resist_mod[slot][best]);
+        }
+    }
+    resist_turns[slot] = DEF_BREAK_TURNS;
+    *msg = 2;
+    return 1;
+}
+
+const unsigned char *def_message(int i) {
+    extern const unsigned char def_str_MsgLibra[], def_str_MsgRelay[], def_str_MsgBreak[];
+    static const unsigned char *const m[3] = { def_str_MsgLibra, def_str_MsgRelay, def_str_MsgBreak };
+
+    return m[i];
+}
+
+/* The records the four techniques change (written with the MP rows, every time: the reset restores the table). */
+static void patch_techniques(void) {
+    records_techniques[202 - 1].target = 2;            /* Libra reads the enemy */
+    records_techniques[203 - 1].mp_cost = DEF_RELAY_MP;
+}
+
 /* Layer 8: the rookies' MP rows (definitive_mp.c) into records_digimon, written every time (the reset restores the table). */
 void def_mp_apply(void);
 
 void def_mp_hook(void) {
     if (def_on()) {
         def_mp_apply();
+        patch_techniques();
     }
 }
 

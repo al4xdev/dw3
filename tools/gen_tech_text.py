@@ -50,6 +50,11 @@ def text_file(name):
     return [dt.decode(d, o, tables, latin=False)[0].replace("−", "-").replace("’", "'") for o in offs]
 
 
+# The four techniques the owner remade (definitive combat PRD, layer 6), by ID: their new descriptions.
+REMADE = {202: "Reveals the enemy's weaknesses.", 203: "Relay: the next swap is free.",
+          207: "Lowers a resist of the enemy.", 208: "Lowers two resists of the enemy."}
+
+
 def describe(t):
     """The new description of record `t`, or None to keep the disc's."""
     k, cls, tg = t["kind"], t["element"], t["target"]
@@ -89,7 +94,7 @@ def main():
         o = old[tid]
         if len(o) <= 1:  # "a" placeholders (1..52, a few unused) and empty entries stay as they are
             continue
-        new = describe(recs[tid - 1])
+        new = REMADE.get(tid) or describe(recs[tid - 1])
         if new is None:
             continue
         if len(new) > MAX:
