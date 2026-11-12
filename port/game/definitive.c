@@ -510,8 +510,8 @@ int def_idle_pose(u8 side) {
 
 /* ---- Layer 6: the remade techniques. Libra (202, was Speed Up) learns the target's weaknesses, Relay (203, was Mega Boost)
  * makes the next swap free, Resist Down / Mega Break (207, 208, were Slow Down / Mega Break) lower the elements the
- * user is best at on the target for a few of its turns; a boss is immune to the last two (records_state.blocked[10], the
- * speed-down immunity they replace). The effects run in fightstg_tech_update (class 5), before the original's own. */
+ * user is best at on the target for a few of its turns; on a boss that blocked the speed-down they replace
+ * (records_state.blocked[10]) they are scaled by DEF_BOSS_DEBUFF_PCT, like every stat debuff (PRD 2, layer A). The effects run in fightstg_tech_update (class 5), before the original's own. */
 
 void def_apply_resist_mod(int member, FightstgStats *out) {
     int e;
@@ -550,9 +550,6 @@ int def_tech_effect(u8 side, int tech, int *msg) {
         *msg = 1;
         return 1;
     }
-    if (records_state.blocked[10] != 0) {
-        return 2;
-    }
     me = fightstg_rules.get_stats(0, 1, fightstg_battle.state.current[0]);
     for (n = tech == 208 ? 2 : 1, k = 0; k < n; k++) {
         best = -1;
@@ -565,7 +562,7 @@ int def_tech_effect(u8 side, int tech, int *msg) {
             break;
         }
         taken[best] = 1;
-        resist_mod[slot][best] -= tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA;
+        resist_mod[slot][best] -= def_debuff_scale(10, tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA);
         if (log_on()) {
             LOG("resist down slot %d element %d now %d", slot, best, resist_mod[slot][best]);
         }
@@ -639,4 +636,20 @@ int def_open_bonus(u8 side, int defense_stat, int value) {
     terms.open = 1;
     terms.mult = DEF_MULT_ONE + DEF_MULT_STAGGER;
     return value * terms.mult / DEF_MULT_ONE;
+}
+
+/* ---- PRD 2, layer A: a boss is immune to status (blocked[0..4], [7]), not to stat debuffs (blocked[8..10]: Strength,
+ * Defense, Speed down). With def_on the flag no longer blocks; where it would have, the debuff is scaled. */
+int def_stat_blocked(int k) {
+    if (def_on() && k >= 8 && k <= 10) {
+        return 0;
+    }
+    return records_state.blocked[k];
+}
+
+int def_debuff_scale(int k, int amount) {
+    if (def_on() && k >= 8 && k <= 10 && records_state.blocked[k] != 0) {
+        return amount * DEF_BOSS_DEBUFF_PCT / 100;
+    }
+    return amount;
 }

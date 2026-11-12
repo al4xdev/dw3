@@ -2,6 +2,15 @@
 #ifdef PC_PORT
 #include "port/game/definitive.h" /* the definitive combat's constants (DEF_BATON_PASS_MP) */
 #endif
+/* blocked[8..10] (Strength, Defense, Speed down): the definitive edition lets them through (def_stat_blocked: a boss is
+ * immune to status, not to debuffs); the PS1 build reads the flag as the original does. */
+#ifdef PC_PORT
+#define FIGHTSTG_STAT_BLOCKED(k) def_stat_blocked(k)
+#define FIGHTSTG_DEBUFF(k, amount) def_debuff_scale((k), (amount))
+#else
+#define FIGHTSTG_STAT_BLOCKED(k) records_state.blocked[k]
+#define FIGHTSTG_DEBUFF(k, amount) (amount)
+#endif
 
 #include "object.h"
 #include "heap.h"
@@ -491,7 +500,7 @@ s32 fightstg_item_run_script(FightstgItem *obj, FightstgScript **data) {
             member = &fightstg_battle.state.members[1][fightstg_battle.state.current[1]];
             p = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
             if (p->stats[0] > p->stats[1]) {
-                if (records_state.blocked[8] == 0) {
+                if (FIGHTSTG_STAT_BLOCKED(8) == 0) {
                     obj->lowered = 1;
                     a = p->stats[0];
                     b = p->stats[1];
@@ -504,7 +513,7 @@ s32 fightstg_item_run_script(FightstgItem *obj, FightstgScript **data) {
                         member->modifiers[0] = lim;
                     }
                 }
-            } else if (p->stats[0] < p->stats[1] && records_state.blocked[9] == 0) {
+            } else if (p->stats[0] < p->stats[1] && FIGHTSTG_STAT_BLOCKED(9) == 0) {
                 obj->lowered = 2;
                 a = p->stats[0];
                 b = p->stats[1];
@@ -994,7 +1003,7 @@ void fightstg_item_update(FightstgItem *obj, FightstgMessage **data) {
                 break;
             }
             case 0x57:
-                if (records_state.blocked[9] == 0) {
+                if (FIGHTSTG_STAT_BLOCKED(9) == 0) {
                     FightstgMember *member = &fightstg_battle.state.members[1][fightstg_battle.state.current[1]];
                     FightstgStats *p = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
                     s32 a = p->stats[0];
@@ -1057,7 +1066,7 @@ void fightstg_item_update(FightstgItem *obj, FightstgMessage **data) {
                 obj->base.next_step(obj);
                 break;
             case 0x59:
-                if (records_state.blocked[10] == 0) {
+                if (FIGHTSTG_STAT_BLOCKED(10) == 0) {
                     RecordsUsable *item = records_funcs.get_item(obj->item)->data;
                     FightstgMember *member = &fightstg_battle.state.members[1][fightstg_battle.state.current[1]];
                     FightstgStats *p = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
@@ -1735,14 +1744,20 @@ void fightstg_tech_update(FightstgTech *obj, FightstgMessage **data) {
                         side = obj->side >> 4;
                         if (e->factor <= 0) {
                             side ^= 1;
-                            if (obj->side == 0 && records_state.blocked[e->stat + 8] != 0) {
+                            if (obj->side == 0 && FIGHTSTG_STAT_BLOCKED(e->stat + 8) != 0) {
                                 obj->args[0] = 0x2F;
                                 (*data)->show(*data, 1, obj->args);
                                 ok = 0;
                             }
                         }
                         if (ok) {
+#ifdef PC_PORT
+                            fightstg_rules.change_modifier(side << 4, fightstg_battle.state.current[side], e->stat,
+                                                           e->factor > 0 || obj->side != 0 ? e->factor * rec->effect_power
+                                                               : FIGHTSTG_DEBUFF(e->stat + 8, e->factor * rec->effect_power));
+#else
                             fightstg_rules.change_modifier(side << 4, fightstg_battle.state.current[side], e->stat, e->factor * rec->effect_power);
+#endif
                             fightstg_events_start_modifier(side << 4, fightstg_battle.state.current[side], e->stat, obj->tech);
                             obj->args[0] = e->message;
                             obj->args[1] = side << 4;
@@ -7428,9 +7443,14 @@ void fightstg_action_lower_attack(void) {
     s16 enemy = state->side != 0;
     RecordsTechnique *rec;
 
-    if (enemy || records_state.blocked[8] == 0) {
+    if (enemy || FIGHTSTG_STAT_BLOCKED(8) == 0) {
         rec = &records_techniques[state->tech - 1];
+#ifdef PC_PORT
+        fightstg_rules.change_modifier(0x10 - state->side, fightstg_battle.state.current[1 - enemy], 0,
+                                       enemy ? -rec->effect_power : FIGHTSTG_DEBUFF(8, -rec->effect_power));
+#else
         fightstg_rules.change_modifier(0x10 - state->side, fightstg_battle.state.current[1 - enemy], 0, -rec->effect_power);
+#endif
         fightstg_events_start_modifier(0x10 - state->side, fightstg_battle.state.current[1 - enemy], 0, state->tech);
         state->effects[rec->kind] = rec->effect_power;
     }
@@ -8293,9 +8313,7 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id) {
 #ifdef PC_PORT
         if (def_on()) { /* definitive combat: the multiplier of layer 5 replaces the bands */
             value = def_scale_magic(side, rec->defense_stat - 2, value);
-        } else
-#endif
-        {
+        } else {
             defense = target->resists[rec->defense_stat - 2];
             if (defense < 100) {
                 value = value * (400 - defense * 3) / 100;
@@ -8305,6 +8323,16 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id) {
                 value = value * (125 - defense / 4) / 100;
             }
         }
+#else
+        defense = target->resists[rec->defense_stat - 2];
+        if (defense < 100) {
+            value = value * (400 - defense * 3) / 100;
+        } else if (defense >= 300) {
+            value = value * (65 - defense / 20) / 100;
+        } else {
+            value = value * (125 - defense / 4) / 100;
+        }
+#endif
     }
 #ifdef PC_PORT
     value = def_open_bonus(side, rec->defense_stat, value);

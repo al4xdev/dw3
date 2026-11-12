@@ -25,8 +25,8 @@ substituída por este arquivo). Dados extraídos: `.dumps/tasks/persona/data.jso
    de override no port. `src/main/records.c` (técnicas, Digimon) está no repo, mas é fonte matching: mudanças de dado
    entram por patch aplicado no boot do port, não editando a tabela.
 6. **Todo número é constante** em `port/game/definitive.h`, com comentário de uma linha dizendo o que controla.
-7. Compatibilidade de save: save antigo abre e joga. MP do jogador continua limitado. Chefe é imune a debuff, nunca a
-   dano elemental.
+7. Compatibilidade de save: save antigo abre e joga. MP do jogador continua limitado. Chefe é imune a **status**
+   (veneno, sono...), não a debuff de stat (corrigido pelo dono no PRD 2, camada A), nem a dano elemental.
 8. Código novo fica em `port/game/definitive.c` sempre que possível; no código do jogo entram só ganchos curtos.
    Estado de batalha novo entra em `game_savestate` (`port/game/game_mods.c:679`).
 9. Remoção de arquivo: mover para `/tmp/`, nunca `rm`. Python com `uv`/`tools/venv`.
@@ -225,7 +225,7 @@ Refeitas (decididas pelo dono):
 | 207 Slow Down | −velocidade | debuff de resistência elemental do alvo (muda a fraqueza na hora) |
 | 208 Mega Break | −velocidade forte | o mesmo, mais forte ou em mais elementos |
 
-Os dois debuffs respeitam `blocked[]`: não funcionam em chefe. Qual elemento cada um baixa: decisão do implementador,
+Os dois debuffs funcionam em chefe (PRD 2, camada A: `DEF_BOSS_DEBUFF_PCT` onde o original bloquearia). Qual elemento cada um baixa: decisão do implementador,
 proponha e mostre ao dono.
 
 Candidatas a virar técnica elemental (lista para proposta, o dono aprova antes): 129, 130 (vazias); 194, 195

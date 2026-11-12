@@ -20,6 +20,7 @@
 #define DEF_BREAK_SLOW_DELTA 80 /* how far Slow Down (remade) lowers the enemy's resist of the user's best element */
 #define DEF_BREAK_MEGA_DELTA 100 /* how far Mega Break lowers each of the user's two best elements */
 #define DEF_BREAK_TURNS 3       /* the enemy's turns a lowered resist lasts */
+#define DEF_BOSS_DEBUFF_PCT 100 /* strength of a stat debuff in a battle whose boss the original made immune to it */
 #define DEF_RESIST_MIN 250      /* resist value from which an element is "resisted" */
 #define DEF_SND_EFFECTIVE 0x800450BD /* sound id of a hit on a weakness (the menus' accept chime) */
 #define DEF_SND_NEUTRAL 0x4001C      /* of a neutral hit (the menus' confirm blip) */
