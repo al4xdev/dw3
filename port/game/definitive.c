@@ -11,6 +11,7 @@
 #include "records.h"
 
 #include "port_runtime.h"
+#include "savestate.h"
 
 #include "definitive.h"
 
@@ -19,6 +20,9 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id);
 
 /* ---- DW3_BATTLE_LOG=<file>: one plain-text line per battle event, appended. Read once; unset = every hook is a no-op.
  * The line order is the game's own, so two runs with the same seed and inputs write the same file. */
+static DefChain chain; /* layer 4: stagger, window, free swap (definitive_mask.c) */
+static int baton_paid; /* Baton Pass was chosen in the switch menu (its MP is paid there) */
+
 static FILE *log_file;
 static int log_armed;
 static int log_seq;        /* events since the battle began */
@@ -47,6 +51,7 @@ void def_log_begin(void) {
     int i;
 
     port_hud_arm();
+    def_chain_reset(&chain);
     if (!log_on()) {
         return;
     }
@@ -106,6 +111,7 @@ void def_log_action(int side, int kind, int arg) {
 /* Layer 2: how the last damage the player dealt with an elemental technique met the target (0 none, 1 effective,
  * 2 neutral, 3 resisted); def_hit_feedback plays its sound when the hit's own sound does. */
 static int hit_class;
+static int hit_elem; /* its element index, valid with hit_class */
 static s32 hit_id;
 
 /* Layer 3: the species' Dark mark (the row table), 0 for a species with no row. */
@@ -137,6 +143,7 @@ static void classify(u8 side, s32 id) {
     }
     hit_class = target_class(rec->defense_stat - 2, fightstg_rules.stats[1].resists,
                              fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon);
+    hit_elem = rec->defense_stat - 2;
     hit_id = id;
 }
 
@@ -282,4 +289,148 @@ void def_enemy_override(FightstgEnemyRecord *rec) {
             return;
         }
     }
+}
+
+/* ---- Layer 4: turns, stagger, the chain, the free swap (the rules are in definitive_mask.c's DefChain). Everything here
+ * is the game's side of it. A replay script (shared with the emulator) keeps the original rules: def_on is 0 under
+ * --script unless DW3_DEFINITIVE is set (the tests that drive the new rules by script). */
+
+int def_on(void) {
+    static int on = -1;
+
+    if (on < 0) {
+        on = !port_script_active || getenv("DW3_DEFINITIVE") != NULL;
+    }
+    return on;
+}
+
+extern s32 wfightmn_update_idle_anim(u8 side, s32 amount);
+
+void def_savestate(struct PortState *s) {
+    PORT_STATE_VAR(s, chain);
+    PORT_STATE_VAR(s, baton_paid);
+    PORT_STATE_VAR(s, hit_class);
+    PORT_STATE_VAR(s, hit_elem);
+    PORT_STATE_VAR(s, hit_id);
+}
+
+static int target_slot(void) {
+    return fightstg_battle.state.current[1];
+}
+
+/* The current target is open: its pose is the tired one, and layer 5 gives the player's next blow its bonus. */
+int def_target_staggered(void) {
+    return def_on() && chain.staggered[target_slot() % 3];
+}
+
+/* A party turn begins (wfightmn_party_turn): an extra action keeps the window, a normal one starts a new one. */
+void def_party_turn_begins(void) {
+    if (!def_on()) {
+        return;
+    }
+    def_chain_party_turn(&chain);
+    if (log_on()) {
+        LOG("window %s", chain.cur_extra ? "extra action" : "new (normal action)");
+    }
+}
+
+/* The player's action was resolved on the current target (wfightmn, before the pose is set): `value` > 0 is a hit. */
+void def_action_resolved(u8 side, s32 id, s32 value) {
+    int target = target_slot();
+    int weak = hit_class == 1 && hit_id == id;
+    int was;
+
+    if (!def_on() || side != 0) {
+        return;
+    }
+    was = chain.staggered[target];
+    def_chain_player_hit(&chain, target, value > 0, weak ? hit_elem : -1, weak);
+    if (log_on() && value > 0) {
+        LOG("hit target %d weak %d stagger %d -> %d extra_pending %d", target, weak, was, chain.staggered[target],
+            chain.extra_pending);
+    }
+}
+
+/* An enemy's turn begins (wfightmn_run_events, event 3): it closes. */
+void def_enemy_turn_begins(void) {
+    int target = target_slot();
+
+    if (!def_on()) {
+        return;
+    }
+    if (chain.staggered[target]) {
+        def_chain_enemy_acts(&chain, target);
+        wfightmn_update_idle_anim(0x10, 0); /* back to its normal pose */
+        if (log_on()) {
+            LOG("stagger closed by the enemy's turn (slot %d)", target);
+        }
+    }
+}
+
+/* About to take the next event of the queue (wfightmn_run_events): an owed extra action makes the party's turn the next. */
+void def_events_before_take(void) {
+    int e;
+
+    if (!def_on() || !def_chain_take_extra(&chain)) {
+        return;
+    }
+    e = fightstg_events.find(2);
+    if (e >= 0) {
+        fightstg_events.events[e].delay = 0;
+        if (log_on()) {
+            LOG("extra action granted");
+        }
+    } else {
+        chain.next_extra = 0;
+    }
+}
+
+void def_baton_paid(void) {
+    baton_paid = 1;
+}
+
+const unsigned char *def_baton_label(void) {
+    extern const unsigned char def_str_BatonPass[];
+    return def_str_BatonPass;
+}
+
+/* The player chose Tag (party command 5): free when an enemy is open and the window's swap is unspent; a Baton Pass
+ * (paid in the menu) is free too. */
+void def_swap_chosen(void) {
+    if (!def_on()) {
+        return;
+    }
+    if (baton_paid) {
+        baton_paid = 0;
+        chain.extra_pending = 1;
+        if (log_on()) {
+            LOG("baton pass");
+        }
+        return;
+    }
+    if (def_chain_swap_free(&chain, target_slot())) {
+        def_chain_swap_chosen(&chain, target_slot());
+        if (log_on()) {
+            LOG("free swap");
+        }
+    }
+}
+
+int def_swap_free(void) {
+    return def_on() && def_chain_swap_free(&chain, target_slot());
+}
+
+/* The pose of a side (wfightmn_update_idle_anim): the tired one for an open enemy, never for the player (HP no longer
+ * decides it); the final boss's is its phase or an open one. -1: the original rule holds. */
+int def_idle_pose(u8 side) {
+    if (!def_on()) {
+        return -1;
+    }
+    if (side != 0x10) {
+        return 0;
+    }
+    if (fightstg_battle.state.type == 6) {
+        return fightstg_battle.state.final_phase != 0 || chain.staggered[target_slot() % 3];
+    }
+    return chain.staggered[target_slot() % 3];
 }

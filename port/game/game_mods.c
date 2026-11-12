@@ -725,6 +725,7 @@ void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, bmb);
     PORT_STATE_VAR(s, bmb_n);
     PORT_STATE_VAR(s, bm_memory);
+    def_savestate(s); /* the definitive combat's battle state (port/game/definitive.c) */
 }
 
 /* ---- handheld features (R36S). Each is an if. A miss is logged once. ---- */

@@ -366,6 +366,9 @@ void wfightmn_main_update(WfightmnMain *obj, WfightmnMainData *data) {
                 def_log_begin();
 #endif
                 member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
+#ifdef PC_PORT
+                if (!def_on())
+#endif
                 if (member->max_hp / 4 >= member->hp) {
                     data->slots->set_idle_anim(data->slots, 0, 1);
                 }
@@ -401,7 +404,13 @@ void wfightmn_main_update(WfightmnMain *obj, WfightmnMainData *data) {
                     stats = fightstg_rules.get_stats(0, 1, fightstg_battle.state.current[0]);
                     chance = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1])->stats[4] * 8 /
                              stats->stats[4];
+#ifdef PC_PORT
+                    /* definitive combat: no draw by speed, the player opens (an ambush, above, still gives the enemy
+                     * the first turn). Speed counts only in the delay of the turns. */
+                    if (!def_on() && pad_random.next() % 128 < chance) {
+#else
                     if (pad_random.next() % 128 < chance) {
+#endif
                         fightstg_events_add_enemy_turn(0);
                         fightstg_events_add_party_turn(fightstg_events.get_delay(0, 0) / 2);
                         fightstg_command_set_phase(1);
@@ -484,6 +493,7 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
          * start of the next party turn, so the buffed member is protected for exactly one enemy turn. */
         dw3_evo_shield_member = -1;
         def_log_turn(0);
+        def_party_turn_begins();
 #endif
         event = fightstg_events.find_member(8, 0, fightstg_battle.state.current[0]);
         if (event >= 0) {
@@ -546,6 +556,9 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
                 wfightmn_check_final_phase_end(0);
                 break;
             case 5:
+#ifdef PC_PORT
+                def_swap_chosen(); /* free with an open enemy: an extra action is owed after the swap */
+#endif
                 obj->base.set_step(obj, 5);
                 wfightmn_check_final_phase_end(0);
                 break;
@@ -1504,6 +1517,9 @@ void wfightmn_run_events(WfightmnMain *obj) {
             wfightmn_handlers[obj->base.step](obj, data);
         } else {
             obj->base.set_step(obj, 1);
+#ifdef PC_PORT
+            def_events_before_take();
+#endif
             if ((obj->base.substep = fightstg_events.take_next()) == 0) {
                 fightstg_events_add_party_turn(0);
                 fightstg_events_add_enemy_turn(fightstg_events.get_delay(0, 0) / 2);
@@ -1513,6 +1529,9 @@ void wfightmn_run_events(WfightmnMain *obj) {
         break;
     case 0:
         obj->base.set_step(obj, 1);
+#ifdef PC_PORT
+        def_events_before_take(); /* an owed extra action makes the party's turn the next event */
+#endif
         obj->base.substep = fightstg_events.take_next();
         break;
     case 1:
@@ -1524,6 +1543,9 @@ void wfightmn_run_events(WfightmnMain *obj) {
             obj->base.set_step(obj, 7);
             break;
         case 3:
+#ifdef PC_PORT
+            def_enemy_turn_begins(); /* an open enemy that acts is closed */
+#endif
             if (fightstg_battle.state.type == 5) {
                 data->wait.obj = fightstg_scripted_turn_create();
                 obj->base.set_step(obj, 2);
@@ -1847,6 +1869,9 @@ void *wfightmn_tech_script_create(u8 side, s32 id) {
         }
     }
 
+#ifdef PC_PORT
+    def_action_resolved(side, id, value); /* definitive combat: stagger and the chain of extra actions */
+#endif
     if (tech->element == 2 || tech->element == 3) {
         wfightmn_note_copied_tech(side, id);
         wfightmn_count_boss_hits(side, value);
@@ -1868,6 +1893,16 @@ s32 wfightmn_update_idle_anim(u8 side, s32 amount) {
 
     s = side >> 4;
     data = (WfightmnMainData *)heap_objects.find(0xC, -1, -1)->children;
+#ifdef PC_PORT
+    {
+        s32 pose = def_idle_pose(side); /* definitive combat: the tired pose is the stagger's, never HP's */
+
+        if (pose >= 0) {
+            data->slots->set_idle_anim(data->slots, side, pose);
+            return pose;
+        }
+    }
+#endif
 
     if (side == 0x10 && fightstg_battle.state.type == 6) {
         data->slots->set_idle_anim(data->slots, side, fightstg_battle.state.final_phase);

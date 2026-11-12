@@ -1,4 +1,7 @@
 #include "common.h"
+#ifdef PC_PORT
+#include "port/game/definitive.h" /* the definitive combat's constants (DEF_BATON_PASS_MP) */
+#endif
 
 #include "object.h"
 #include "heap.h"
@@ -296,6 +299,9 @@ typedef struct FightstgSwitchMenuData {
     /* 0x10 */ MessageWindow *names[4];  /* the entries' names */
     /* 0x20 */ MessageWindow *action_windows[5];
     /* 0x34 */ MessageWindow *mp_windows[4];
+#ifdef PC_PORT
+    MessageWindow *baton[3]; /* Baton Pass's row (definitive combat): its name, "MP" and its cost */
+#endif
 } FightstgSwitchMenuData; /* size 0x44 */
 
 /* fightstg_message_create's object: the battle message box (two windows, shown one after the other). */
@@ -3415,6 +3421,7 @@ typedef struct FightstgBattleMenu {
     u8 panel_w[7];
     u8 panel_h[7];
     s32 inspect; /* the Inspect panel is open */
+    s32 tag_free; /* the Tag button shows the free swap's picture (an enemy is open and the window's swap is unspent) */
 } FightstgBattleMenu;
 
 #define FIGHTSTG_BMENU_SLIDE 8
@@ -3434,6 +3441,8 @@ static const u8 fightstg_bmenu_glyphs[7][6] = {
     { 1, 0x25, 0 }, { 1, 0x33, 0 }, { 1, 0x27, 0 }, { 1, 0x35, 0 }, { 1, 0x28, 0 }, { 1, 0x31, 0 },
     { 1, 0x2C, 0 }, /* Inspect: the sparkle */
 };
+/* Tag's picture while the swap is free (the enemy is open): the red disc in place of the gear. */
+static const u8 fightstg_bmenu_tag_free_glyph[3] = { 1, 0x2F, 0 };
 static const u8 fightstg_bmenu_glyph_w[7] = { 15, 15, 15, 15, 15, 15, 15 };
 
 /* 3x3 layout matching the physical pad, packed. The button's symbol is in the 9-pixel font (3), the picture in the
@@ -3667,6 +3676,10 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
                 glow = 2;
             }
             fightstg_battle_menu_show(obj, data, i, dx, dy, glow);
+        }
+        if (obj->tag_free != def_swap_free()) { /* the free swap came or went: Tag's picture follows */
+            obj->tag_free = def_swap_free();
+            data->labels[3]->set_text(data->labels[3], (u8 *)(obj->tag_free ? fightstg_bmenu_tag_free_glyph : fightstg_bmenu_glyphs[3]), -1);
         }
         if (obj->inspect) {
             fightstg_battle_menu_quad(FIGHTSTG_INSPECT_X - 3, FIGHTSTG_INSPECT_Y - 2, 96,
@@ -5049,6 +5062,14 @@ void fightstg_switch_menu_open(FightstgSwitchMenu *obj, FightstgSwitchMenuData *
     for (i = 0; i < 4; i++) {
         data->mp_windows[i] = message_create_window(0x1005, 3, fightstg_switch_menu_window_x[i].vx, 0x39);
     }
+#ifdef PC_PORT
+    data->baton[0] = message_create_window(0x1005, 1, 0xBB, 0xCB);
+    data->baton[1] = message_create_window(0x1005, 3, 0x10E, 0xCD);
+    data->baton[2] = message_create_window(0x1005, 3, 0x133, 0xCD);
+    for (i = 0; i < 3; i++) {
+        data->baton[i]->set_visible(data->baton[i], 0);
+    }
+#endif
 }
 
 void fightstg_switch_menu_show_forms(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data, s32 show) {
@@ -5070,6 +5091,66 @@ void fightstg_switch_menu_show_forms(FightstgSwitchMenu *obj, FightstgSwitchMenu
         }
     }
 }
+
+#ifdef PC_PORT
+void fightstg_switch_menu_show_actions(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data, s32 show);
+/* Baton Pass's row of the second step (definitive combat): a swap that does not spend the turn and costs
+ * DEF_BATON_PASS_MP; greyed while the stagger already makes the swap free, or without the MP, or while swaps are sealed. */
+static void fightstg_baton_show(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data, s32 show) {
+    u8 *text = cdload_module.files.get_file(records_language + 0x7F);
+    FightstgMember *self = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
+    FightstgMember *partner = &fightstg_battle.state.members[0][obj->member];
+    s32 y = obj->action != 0 ? 0xCB : 0xB8;
+    s32 i;
+    u8 palette;
+
+    if (!def_on() || !show) {
+        for (i = 0; i < 3; i++) {
+            data->baton[i]->set_visible(data->baton[i], 0);
+        }
+        return;
+    }
+    palette = (self->mp < DEF_BATON_PASS_MP || (self->status & 0x10) || (partner->status & 0x10) || def_swap_free()) ? 7 : 0;
+    data->baton[0]->set_pos(data->baton[0], 0xBB, y);
+    data->baton[1]->set_pos(data->baton[1], 0x10E, y + 2);
+    data->baton[2]->set_pos(data->baton[2], 0x133, y + 2);
+    data->baton[0]->set_text(data->baton[0], (u8 *)def_baton_label(), -1);
+    data->baton[1]->set_text(data->baton[1], text, 0xD);
+    data->baton[2]->set_line_number(data->baton[2], 0, DEF_BATON_PASS_MP);
+    data->baton[2]->measure(data->baton[2], 1);
+    for (i = 0; i < 3; i++) {
+        data->baton[i]->set_palette(data->baton[i], palette);
+        data->baton[i]->set_visible(data->baton[i], 1);
+    }
+}
+
+/* The confirm press on Baton Pass's row (before the original's own handling): pays and answers as a plain switch.
+ * Returns 1 when it took the frame. */
+static s32 fightstg_baton_intercept(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data) {
+    FightstgMember *self;
+    FightstgMember *partner;
+
+    if (!def_on() || obj->base.state != OBJECT_STATE_RUN || obj->base.step != 1 || obj->base.substep != 1 ||
+        data->cursor_2 == NULL || data->cursor_2->locked || data->cursor_2->sel != (obj->action != 0 ? 2 : 1) ||
+        !(pad_state.get_pressed(0) & 0x2000)) {
+        return 0;
+    }
+    self = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
+    partner = &fightstg_battle.state.members[0][obj->member];
+    sound_module.play(0x4001C);
+    if (self->mp < DEF_BATON_PASS_MP || (self->status & 0x10) || (partner->status & 0x10) || def_swap_free()) {
+        return 1; /* refused: the press is spent, the menu stays */
+    }
+    self->mp -= DEF_BATON_PASS_MP;
+    def_baton_paid();
+    *obj->result = 0;
+    *obj->result |= obj->entries[obj->picked] << 4;
+    obj->base.set_step(obj, 0);
+    fightstg_switch_menu_show_actions(obj, data, 0);
+    data->cursor_2->locked = 1;
+    return 1;
+}
+#endif
 
 void fightstg_switch_menu_show_actions(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data, s32 show) {
     u8 *text = cdload_module.files.get_file(records_language + 0x7F);
@@ -5122,6 +5203,9 @@ void fightstg_switch_menu_show_actions(FightstgSwitchMenu *obj, FightstgSwitchMe
             }
         }
     }
+#ifdef PC_PORT
+    fightstg_baton_show(obj, data, show);
+#endif
 }
 
 /* The list's and the second step's parameters (fightstg_switch_menu_update). */
@@ -5138,6 +5222,11 @@ void fightstg_switch_menu_update(FightstgSwitchMenu *obj, FightstgSwitchMenuData
     s32 pad;
     s32 changed;
 
+#ifdef PC_PORT
+    if (fightstg_baton_intercept(obj, data)) {
+        return;
+    }
+#endif
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
@@ -5219,6 +5308,11 @@ void fightstg_switch_menu_update(FightstgSwitchMenu *obj, FightstgSwitchMenuData
                     }
                 }
                 fightstg_switch_menu_cursors[1].count = obj->action != 0 ? 2 : 1;
+#ifdef PC_PORT
+                if (def_on()) {
+                    fightstg_switch_menu_cursors[1].count++; /* Baton Pass is the last row */
+                }
+#endif
                 data->cursor_2 = fightstg_cursor_create(&fightstg_switch_menu_cursors[1]);
                 if (data->cursor != NULL) {
                     data->cursor->base.set_state(data->cursor, OBJECT_STATE_END);

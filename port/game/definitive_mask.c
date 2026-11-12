@@ -44,3 +44,67 @@ int def_weakness_mask(const short resists[7], int dark_weak) {
 int def_resisted(int resist) {
     return resist >= DEF_RESIST_MIN;
 }
+
+/* ---- Layer 4: stagger, the chain of extra actions and the free swap, as a state machine on its own (the game feeds it
+ * events: definitive.c). A weakness hit with an elemental technique opens the target; the next blow it takes, or its own
+ * action, closes it. Each weakness element hit gives one extra action per window; the window starts again with every
+ * normal action of the player (an extra one does not start it). While a target is open one swap is free per window. */
+void def_chain_reset(DefChain *c) {
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        c->staggered[i] = 0;
+    }
+    c->window_used = c->swap_used = c->extra_pending = c->next_extra = c->cur_extra = 0;
+}
+
+void def_chain_player_hit(DefChain *c, int target, int hit, int elem, int weak) {
+    if (!hit || target < 0 || target > 2) {
+        return;
+    }
+    c->staggered[target] = 0; /* it takes this blow (the bonus is the caller's); the weakness below opens it again */
+    if (weak && elem >= 0 && elem < 7) {
+        c->staggered[target] = 1;
+        if (!(c->window_used & (1 << elem))) {
+            c->window_used |= 1 << elem;
+            c->extra_pending = 1;
+        }
+    }
+}
+
+void def_chain_enemy_acts(DefChain *c, int slot) {
+    if (slot >= 0 && slot <= 2) {
+        c->staggered[slot] = 0;
+    }
+}
+
+void def_chain_party_turn(DefChain *c) {
+    if (c->next_extra) {
+        c->cur_extra = 1;
+        c->next_extra = 0;
+    } else {
+        c->cur_extra = 0;
+        c->window_used = 0;
+        c->swap_used = 0;
+    }
+}
+
+int def_chain_swap_free(const DefChain *c, int target) {
+    return target >= 0 && target <= 2 && c->staggered[target] && !c->swap_used;
+}
+
+void def_chain_swap_chosen(DefChain *c, int target) {
+    if (def_chain_swap_free(c, target)) {
+        c->swap_used = 1;
+        c->extra_pending = 1;
+    }
+}
+
+int def_chain_take_extra(DefChain *c) {
+    if (!c->extra_pending) {
+        return 0;
+    }
+    c->extra_pending = 0;
+    c->next_extra = 1;
+    return 1;
+}

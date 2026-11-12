@@ -265,6 +265,21 @@ s32 dw3_objective_spot(s32 region);
  * DW3_BATTLE_LOG=<file> appends one line per battle event; unset, every hook returns at once. def_get_damage and
  * def_get_special_damage are fightstg_rules.get_damage / .get_special_damage wrapped: same value, one line logged. */
 void def_log_begin(void);
+/* Layer 4 (definitive.c): the rules the game's turns follow. def_on is 0 under a replay script (the scripts are shared
+ * with the emulator) unless DW3_DEFINITIVE is set. */
+int def_on(void);
+void def_party_turn_begins(void);
+void def_action_resolved(u8 side, s32 id, s32 value);
+void def_enemy_turn_begins(void);
+void def_events_before_take(void);
+void def_swap_chosen(void);
+void def_baton_paid(void);                 /* the switch menu's Baton Pass was confirmed and its MP paid */
+const unsigned char *def_baton_label(void);
+int def_swap_free(void);       /* a swap would be free now: the HUD's Tag button shows it */
+int def_target_staggered(void); /* the current target is open */
+int def_idle_pose(u8 side);     /* the pose of a side, or -1 for the original rule */
+struct PortState;
+void def_savestate(struct PortState *s);
 void port_hud_arm(void); /* game_mods.c: the battle HUD defaults, at each battle start (not under a replay script) */
 void def_log_turn(int side);
 void def_log_action(int side, int kind, int arg);

@@ -162,3 +162,4 @@ $Resist: Resist
 $Neutral: -
 $Unknown: ???
 $Twice: Enemy x2
+$BatonPass: Baton Pass
