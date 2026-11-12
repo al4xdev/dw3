@@ -19,7 +19,7 @@ def main():
         return 1
     bad = 0
     for n, line in enumerate((ROOT / "tools/text_override/en.txt").read_text().splitlines(), 1):
-        if line.strip() and not line.lstrip().startswith("#"):
+        if line.startswith("SKLINF "):  # the technique descriptions have a window; the other texts are the game's own widths
             text = line.split(":", 1)[1].strip()
             if len(text) > MAX:
                 print(f"text_override: en.txt:{n}: {len(text)} characters, the limit is {MAX}: {text}")
