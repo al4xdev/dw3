@@ -13,6 +13,7 @@ at run time (port/game/definitive.c, def_text_override, called by font_get_entry
 The encoding is checked by round trip against the disc's own entries before anything is written.
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -37,13 +38,29 @@ def inverse(tables):
     return inv
 
 
+CONTROL = re.compile(r"<(\d+(?:,\d+)*)>")
+
+
 def encode(text, inv):
+    """ASCII plus the game's control codes in dump_text's notation: `<5,1>` is bytes 02 05 01 (code 5, argument 1), `<1>` a
+    line break (02 01). The length of each code is checked against message_code_lengths."""
     out = bytearray()
-    for ch in text:
-        ch = ALIAS.get(ch, ch)
+    i = 0
+    while i < len(text):
+        m = CONTROL.match(text, i)
+        if m:
+            nums = [int(x) for x in m.group(1).split(",")]
+            want = dt.CODE_LENGTHS[nums[0]] if nums[0] < len(dt.CODE_LENGTHS) and dt.CODE_LENGTHS[nums[0]] >= 2 else 2
+            if len(nums) + 1 != want:
+                sys.exit(f"{SRC.name}: control code <{m.group(1)}> must have {want - 2} argument(s): {text!r}")
+            out += bytes([2] + nums)
+            i = m.end()
+            continue
+        ch = ALIAS.get(text[i], text[i])
         if ch not in inv:
             sys.exit(f"{SRC.name}: no glyph for {ch!r} in {text!r}")
         out += inv[ch]
+        i += 1
     return bytes(out)
 
 
@@ -71,20 +88,21 @@ def load_source():
 
 
 def roundtrip(tables, inv):
-    """Every entry of the disc's ENG text files that is plain glyph bytes re-encodes to the same bytes."""
+    """Every entry of the disc's ENG text files named below that is plain glyphs and control codes re-encodes to the same
+    bytes (the encoder is checked against the game's own text before anything is written)."""
     bad = 0
-    for name in ("SKLINF", "SKLNAM"):
+    for name in ("SKLINF", "SKLNAM", "STATUS", "TRAINI"):
         d = (df.DISC / dt.find_file(name, "ENG").path).read_bytes()
         (_, offs), = dt.tables_of(d)
         for o in offs:
-            end = d.index(0, o)
-            raw = d[o:end]
-            if 2 in raw or 3 in raw:
-                continue
+            raw = d[o:d.index(0, o)]
             text, b = dt.decode(d, o, tables, latin=False)
-            if b == 0 and all(ord(c) < 128 or c in "\u2212\u2019" for c in text):
-                text = text.replace("−", "-").replace("’", "'")
-                if encode(text, inv) != raw:
+            text = text.replace("\n    ", "").replace("\u2212", "-").replace("\u2019", "'")
+            if b == 0 and all(ord(c) < 128 for c in text.replace("\u2192", "")):
+                try:
+                    if encode(text, inv) != raw:
+                        bad += 1
+                except SystemExit:
                     bad += 1
     return bad
 
