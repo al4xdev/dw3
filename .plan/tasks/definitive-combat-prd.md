@@ -128,14 +128,21 @@ já modificados por buffs/debuffs:
 **Override dos inimigos:** tabela por ID de espécie com os 7 resists, aplicada em `fightstg_enemy_find_record` /
 `fightstg_enemy_records.get` (`fightstg_8008D3B4.c:6381`). Gere a tabela com um script versionado em `tools/`,
 determinístico (semente fixa), com estas regras:
-- toda espécie termina com exatamente 2 fraquezas (valor 60) e exatamente 1 resistência forte (≥ 250), o resto neutro
-  (~100–115, mantendo o valor atual quando já estiver nessa faixa);
+- **Arquétipos (pedido do dono, estilo Persona; supera "2 fracos + 1 forte" para todos):** `plain` 2 fracos + 1 forte;
+  `wall` (mob fraco, ~20% dos de nível ≤ 30) 1 fraco + 2 fortes, a fraqueza é tudo; `late` (nível ≥ 45) 2 + 2; `boss`
+  (lutas de chefe) 2 + 3; `final` (Galacticmon) 2 + 4. Fraco = 60, forte ≥ 250 (300), resto neutro (~100–115, mantendo
+  o valor atual quando já estiver nessa faixa). **Cuidado com a mediana:** com 3 ou mais fortes entre os seis, os neutros
+  passam a valer "fraqueza"; só combinações com 2 fracos (o teto os esconde) ou até 2 fortes são seguras. O gerador
+  confere cada espécie pela regra do jogo;
 - preservar o que já existe quando já obedece; quando há fraquezas ou fortes demais, manter as mais coerentes com o tema;
 - tema: o `type` da espécie e o elemento das técnicas dela dão o elemento "da casa", que nunca vira fraqueza e é o
   candidato natural a resistência forte;
 - variedade: equilibrar a contagem global por elemento (hoje Fogo é o menor em 87 espécies) e evitar que inimigos da
   mesma batalha (`fieldstg_battles[]`) tenham o mesmo par de fraquezas;
 - chefes também com 2, incluindo Galacticmon (hoje 505 em tudo);
+- **Resistir a Trevas é tão raro quanto ser fraco a ele** (regra do dono, 2026-11-12): poucos inimigos resistem a Trevas,
+  para Trevas continuar um elemento útil. No gerador: só 8 espécies (demônios e mortos-vivos) têm Trevas como resistência
+  forte; as outras recebem outro elemento. Fraquezas a Trevas: 8 (4 só-Trevas, 4 extra).
 - Trevas: marcar poucas espécies raras e alguns chefes; em 3 a 5 delas, Trevas é a ÚNICA fraqueza (as outras duas
   viram neutras).
 - Saída: a tabela C e um `.dumps/tasks/persona/fraquezas.md` legível (espécie, antes, depois) **para o dono aprovar

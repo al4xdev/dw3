@@ -3590,7 +3590,7 @@ static void fightstg_battle_menu_inspect_set(FightstgBattleMenuData *data, s32 o
             continue;
         }
         data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)def_inspect_element(e), -1);
-        data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)def_inspect_state(enemy->resists[e], &n), -1);
+        data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)def_inspect_state(enemy->resists, e, &n), -1);
         data->inspect_states[e]->set_palette(data->inspect_states[e], n);
     }
 }
@@ -6453,6 +6453,9 @@ FightstgEnemyRecord *fightstg_enemy_get_record(s32 id) {
     s32 i;
 
     if ((i = fightstg_enemy_find_record(id)) >= 0) {
+#ifdef PC_PORT
+        def_enemy_override(&recs[i]); /* the port's table, in memory only: the disc's record is not edited */
+#endif
         return &recs[i];
     }
     return NULL;

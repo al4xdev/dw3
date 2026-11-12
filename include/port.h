@@ -272,12 +272,15 @@ void def_log_end(int result);
 /* Layer 1: the replacement for entry `i` of the text file loaded at `data` (font_get_entry), or NULL. */
 void *def_text_override(void *data, s32 i);
 /* Layer 2, Inspect: the glyph-byte label of element `e` (0..6: Fire, Water, Ice, Wind, Thunder, Machine, Dark), and the
- * label for a resist value (Weak / Resist / -), with the palette the label is drawn in in *palette. */
+ * label for element `e` of a target with these resists (Weak / Resist / -), with its palette in *palette. */
 const unsigned char *def_inspect_element(int e);
-const unsigned char *def_inspect_state(int resist, int *palette);
+const unsigned char *def_inspect_state(const short *resists, int e, int *palette);
 /* Layer 2: the sound that tells a hit on a weakness, a neutral one or a resisted one (the player's elemental
  * techniques), played where the hit's own sound plays (fightstg_script_run_sound). */
 void def_hit_feedback(void);
+/* Layer 3: overrides the resists of an enemy record (FightstgEnemyRecord) by the port's table, if the species has a row. */
+struct FightstgEnemyRecord;
+void def_enemy_override(struct FightstgEnemyRecord *rec);
 /* Layer 2: 1 when the enemy acts twice before our next turn (call with the command menu open, never mid-calculation),
  * and the label shown then. */
 int def_enemy_acts_twice(void);

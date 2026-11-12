@@ -108,6 +108,26 @@ void def_log_action(int side, int kind, int arg) {
 static int hit_class;
 static s32 hit_id;
 
+/* Layer 3: the species' Dark mark (the row table), 0 for a species with no row. */
+static int dark_mark(int species) {
+    int i;
+
+    for (i = 0; i < def_enemy_row_count; i++) {
+        if (def_enemy_rows[i].id == species) {
+            return def_enemy_rows[i].dark;
+        }
+    }
+    return 0;
+}
+
+/* Element `e` against a target whose resists (modifiers included) are `resists`: 1 weak, 2 neutral, 3 resisted. */
+static int target_class(int e, const short *resists, int species) {
+    if (def_resisted(resists[e])) {
+        return 3;
+    }
+    return (def_weakness_mask(resists, dark_mark(species)) >> e) & 1 ? 1 : 2;
+}
+
 static void classify(u8 side, s32 id) {
     RecordsTechnique *rec = &records_techniques[id - 1];
 
@@ -115,12 +135,9 @@ static void classify(u8 side, s32 id) {
     if (side != 0 || rec->defense_stat < 2 || rec->defense_stat > 8) {
         return;
     }
-    {
-        int resist = fightstg_rules.stats[1].resists[rec->defense_stat - 2];
-
-        hit_class = resist >= DEF_RESIST_MIN ? 3 : resist <= DEF_PROV_WEAK_MAX ? 1 : 2;
-        hit_id = id;
-    }
+    hit_class = target_class(rec->defense_stat - 2, fightstg_rules.stats[1].resists,
+                             fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon);
+    hit_id = id;
 }
 
 void def_hit_feedback(void) {
@@ -203,8 +220,7 @@ void *def_text_override(void *data, s32 i) {
     return NULL;
 }
 
-/* ---- Inspect and the hit sounds (layer 2). Provisional rule until layer 3's def_weakness_mask: weak at DEF_PROV_WEAK_MAX
- * or below, resisted from DEF_RESIST_MIN, neutral between. */
+/* ---- Inspect and the hit sounds (layer 2), by layer 3's rule (def_weakness_mask, def_resisted). */
 extern const unsigned char def_str_Fire[], def_str_Water[], def_str_Ice[], def_str_Wind[], def_str_Thunder[],
     def_str_Machine[], def_str_Dark[], def_str_Weak[], def_str_Resist[], def_str_Neutral[];
 
@@ -239,15 +255,31 @@ const unsigned char *def_inspect_element(int e) {
     return names[e];
 }
 
-const unsigned char *def_inspect_state(int resist, int *palette) {
-    if (resist >= DEF_RESIST_MIN) {
+const unsigned char *def_inspect_state(const short *resists, int e, int *palette) {
+    switch (target_class(e, resists, fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon)) {
+    case 3:
         *palette = 7;
         return def_str_Resist;
-    }
-    if (resist <= DEF_PROV_WEAK_MAX) {
+    case 1:
         *palette = 3;
         return def_str_Weak;
+    default:
+        *palette = 0;
+        return def_str_Neutral;
     }
-    *palette = 0;
-    return def_str_Neutral;
+}
+
+/* ---- Layer 3: the enemy table. Applied each time the game asks for the record (idempotent), so it holds after a reload
+ * of SDIGIEDT and a load state alike. */
+void def_enemy_override(FightstgEnemyRecord *rec) {
+    int i, e;
+
+    for (i = 0; i < def_enemy_row_count; i++) {
+        if (def_enemy_rows[i].id == rec->id) {
+            for (e = 0; e < 7; e++) {
+                rec->resists[e] = def_enemy_rows[i].resists[e];
+            }
+            return;
+        }
+    }
 }
