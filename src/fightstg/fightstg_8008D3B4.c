@@ -1703,10 +1703,12 @@ void fightstg_tech_update(FightstgTech *obj, FightstgMessage **data) {
                             obj->args[0] = def_msg;
                             obj->args[1] = obj->side;
                             (*data)->show(*data, 23, obj->args);
+                            obj->base.next_step(obj); /* as the original's cases end, else the turn never goes on */
                             break;
                         } else if (def_done == 2) { /* immune: the original's "no effect" */
                             obj->args[0] = 0x2F;
                             (*data)->show(*data, 1, obj->args);
+                            obj->base.next_step(obj);
                             break;
                         }
                     }
@@ -3712,6 +3714,11 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         }
         /* Nothing is read on the frame of the INIT above, as the original's: a press that closed a submenu is gone. */
         buffered = port_bm_take_action();
+        if (pad_state.get_pressed(0) & 0x8) { /* Start: the battle memory, the same panel as Inspect */
+            sound_module.play(0x4001C);
+            obj->inspect = !obj->inspect;
+            fightstg_battle_menu_inspect_set(data, obj->inspect);
+        }
         for (i = 0; i < 7; i++) {
             if (i == buffered || port_battle_menu_pressed(i) || (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i)))) {
                 sound_module.play(0x4001C);
@@ -5111,8 +5118,8 @@ void fightstg_switch_menu_show_forms(FightstgSwitchMenu *obj, FightstgSwitchMenu
 
 #ifdef PC_PORT
 void fightstg_switch_menu_show_actions(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data, s32 show);
-/* Baton Pass's row of the second step (definitive combat): a swap that does not spend the turn and costs
- * DEF_BATON_PASS_MP; greyed while the stagger already makes the swap free, or without the MP, or while swaps are sealed. */
+/* Baton Pass's row of the second step (definitive combat): a swap that does not spend the turn, costing
+ * DEF_BATON_PASS_MP; there only while the enemy is open (def_swap_free), greyed without the MP or while swaps are sealed. */
 static void fightstg_baton_show(FightstgSwitchMenu *obj, FightstgSwitchMenuData *data, s32 show) {
     u8 *text = cdload_module.files.get_file(records_language + 0x7F);
     FightstgMember *self = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
@@ -5121,13 +5128,13 @@ static void fightstg_baton_show(FightstgSwitchMenu *obj, FightstgSwitchMenuData 
     s32 i;
     u8 palette;
 
-    if (!def_on() || !show) {
+    if (!def_on() || !show || !def_swap_free()) {
         for (i = 0; i < 3; i++) {
             data->baton[i]->set_visible(data->baton[i], 0);
         }
         return;
     }
-    palette = (self->mp < DEF_BATON_PASS_MP || (self->status & 0x10) || (partner->status & 0x10) || def_swap_free()) ? 7 : 0;
+    palette = (self->mp < DEF_BATON_PASS_MP || (self->status & 0x10) || (partner->status & 0x10)) ? 7 : 0;
     data->baton[0]->set_pos(data->baton[0], 0xBB, y);
     data->baton[1]->set_pos(data->baton[1], 0x10E, y + 2);
     data->baton[2]->set_pos(data->baton[2], 0x133, y + 2);
@@ -5137,7 +5144,7 @@ static void fightstg_baton_show(FightstgSwitchMenu *obj, FightstgSwitchMenuData 
     data->baton[2]->measure(data->baton[2], 1);
     for (i = 0; i < 3; i++) {
         data->baton[i]->set_palette(data->baton[i], palette);
-        data->baton[i]->set_visible(data->baton[i], 1);
+        data->baton[i]->set_visible(data->baton[i], i == 0 || DEF_BATON_PASS_MP > 0); /* no "MP 0" for a free one */
     }
 }
 
@@ -5147,7 +5154,7 @@ static s32 fightstg_baton_intercept(FightstgSwitchMenu *obj, FightstgSwitchMenuD
     FightstgMember *self;
     FightstgMember *partner;
 
-    if (!def_on() || obj->base.state != OBJECT_STATE_RUN || obj->base.step != 1 || obj->base.substep != 1 ||
+    if (!def_on() || !def_swap_free() || obj->base.state != OBJECT_STATE_RUN || obj->base.step != 1 || obj->base.substep != 1 ||
         data->cursor_2 == NULL || data->cursor_2->locked || data->cursor_2->sel != (obj->action != 0 ? 2 : 1) ||
         !(pad_state.get_pressed(0) & 0x2000)) {
         return 0;
@@ -5155,7 +5162,7 @@ static s32 fightstg_baton_intercept(FightstgSwitchMenu *obj, FightstgSwitchMenuD
     self = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
     partner = &fightstg_battle.state.members[0][obj->member];
     sound_module.play(0x4001C);
-    if (self->mp < DEF_BATON_PASS_MP || (self->status & 0x10) || (partner->status & 0x10) || def_swap_free()) {
+    if (self->mp < DEF_BATON_PASS_MP || (self->status & 0x10) || (partner->status & 0x10)) {
         return 1; /* refused: the press is spent, the menu stays */
     }
     self->mp -= DEF_BATON_PASS_MP;
@@ -5326,8 +5333,8 @@ void fightstg_switch_menu_update(FightstgSwitchMenu *obj, FightstgSwitchMenuData
                 }
                 fightstg_switch_menu_cursors[1].count = obj->action != 0 ? 2 : 1;
 #ifdef PC_PORT
-                if (def_on()) {
-                    fightstg_switch_menu_cursors[1].count++; /* Baton Pass is the last row */
+                if (def_swap_free()) {
+                    fightstg_switch_menu_cursors[1].count++; /* Baton Pass is the last row, while the enemy is open */
                 }
 #endif
                 data->cursor_2 = fightstg_cursor_create(&fightstg_switch_menu_cursors[1]);

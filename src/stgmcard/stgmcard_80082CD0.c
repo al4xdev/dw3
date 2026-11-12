@@ -228,6 +228,15 @@ extern MemcardState memcard_state;
 static s32 stgmcard_icon_frame;
 #define STGMCARD_MEMCARD_FUNCS memcard_funcs
 #define STGMCARD_ICON_FRAME stgmcard_icon_frame
+
+/* The bestiary's card record (port/game/definitive_bestiary.c, layer 9): a 0x100-byte record per slot at the end of the
+ * save file, memcard.c's part 5 with the slot in part >> 8 (same numbers as definitive.h's DEF_BESTIARY_*). */
+#define DEF_BESTIARY_RECORD_SIZE 0x100
+#define DEF_BESTIARY_PART 5
+int def_bestiary_active(void);
+unsigned char *def_bestiary_buffer(void);
+void def_bestiary_record_write(unsigned char *out);
+void def_bestiary_record_read(const unsigned char *in);
 #endif
 extern StgmcardContentsWindow stgmcard_contents_windows[19];
 extern s32 stgmcard_party_anims[8][7]; /* frames of the save files' sprite animations, ended by -1 */
@@ -1247,6 +1256,12 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                     port_global_save_restore(stgmcard_module.save); /* the map's state from the slot's tail, if any */
                 }
 #endif
+#ifdef PC_PORT
+                if (def_bestiary_active()) {
+                    obj->base.step = 0x48; /* the bestiary's record next, then the rest of this branch */
+                    break;
+                }
+#endif
                 data->frame->open(data->frame, 2, 0x14);
                 obj->base.step = 0x1F4;
                 data->slots->base.step = 0;
@@ -1255,6 +1270,23 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         }
         break;
     }
+#ifdef PC_PORT
+    case 0x48: {
+        s32 ret;
+
+        /* The slot's bestiary record (memcard.c part 5): any failure reads as an empty table, never an error screen */
+        ret = STGMCARD_MEMCARD_FUNCS.read(obj->port, def_bestiary_buffer(), DEF_BESTIARY_RECORD_SIZE,
+                                          DEF_BESTIARY_PART | (stgmcard_module.slot << 8));
+        if (ret != 0) {
+            def_bestiary_record_read(ret == 1 ? def_bestiary_buffer() : NULL);
+            data->frame->open(data->frame, 2, 0x14);
+            obj->base.step = 0x1F4;
+            data->slots->base.step = 0;
+            obj->from_title = 0;
+        }
+        break;
+    }
+#endif
     case 0x28: {
         s32 ret;
 
@@ -1330,6 +1362,11 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
             port_global_save_record(stgmcard_module.save); /* the map's state into the slot's unused tail */
         }
 #endif
+#ifdef PC_PORT
+        if (def_bestiary_active()) {
+            def_bestiary_record_write(def_bestiary_buffer()); /* step 0x36 writes it after the slot */
+        }
+#endif
         strcpy(card->name, stgmcard_module.save->name);
         card->area = obj->parent->area;
         card->map_name = obj->parent->map_name;
@@ -1368,6 +1405,12 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {
+#ifdef PC_PORT
+                if (def_bestiary_active()) {
+                    obj->base.step = 0x36;
+                    break;
+                }
+#endif
                 data->frame->open(data->frame, 2, 0x14);
                 obj->base.step = 0x1F4;
             } else {
@@ -1377,6 +1420,25 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         }
         break;
     }
+#ifdef PC_PORT
+    case 0x36: {
+        s32 ret;
+
+        ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, def_bestiary_buffer(), DEF_BESTIARY_RECORD_SIZE,
+                                           DEF_BESTIARY_PART | (stgmcard_module.slot << 8));
+        obj->status = ret;
+        if (ret != 0) {
+            if (ret == 1) {
+                data->frame->open(data->frame, 2, 0x14);
+                obj->base.step = 0x1F4;
+            } else {
+                obj->status = ret - 1;
+                stgmcard_screen_report_after_slots(obj, data);
+            }
+        }
+        break;
+    }
+#endif
     case 0x1F4:
         if (data->frame->is_open != 0) {
             if (obj->parent->loading == 0) {

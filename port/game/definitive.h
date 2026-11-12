@@ -7,7 +7,7 @@
 /* Layer 0 has no tunable numbers; layers 3+ add theirs here (the PRD's table). */
 #define DEF_WEAK_COUNT 2        /* most weaknesses a target has (Dark, when marked, comes on top) */
 #define DEF_WEAK_GAP 20         /* how far below the median of the six a value must be to count as a weakness */
-#define DEF_BATON_PASS_MP 12    /* MP the Baton Pass swap costs (a swap that does not spend the turn, outside a stagger) */
+#define DEF_BATON_PASS_MP 0     /* MP Baton Pass costs (offered only while the enemy is open; Persona's is free) */
 #define DEF_MULT_ONE 1000       /* the fixed-point unit of every multiplier and affinity below (thousandths) */
 #define DEF_MULT_WEAK 500       /* bonus for hitting a weakness */
 #define DEF_MULT_STAGGER 200    /* bonus for hitting a target that is open (staggered) */

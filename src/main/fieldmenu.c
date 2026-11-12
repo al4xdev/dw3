@@ -10,6 +10,20 @@
 #include "cdload.h"
 #include "pad.h"
 #include "window_anim.h"
+#ifdef PC_PORT
+#include "fightstg.h"
+
+/* The bestiary screen (definitive combat, layer 9; port/game/definitive_bestiary.c): a last entry of the field's menu that
+ * lists the species of SDIGIEDT with what the player learned of their elements. It reuses the menu's own windows: the
+ * option windows carry a page of names, the three member panels' space carries the chosen species' elements. */
+extern const unsigned char def_str_Fire[], def_str_Water[], def_str_Ice[], def_str_Wind[], def_str_Thunder[],
+    def_str_Machine[], def_str_Dark[], def_str_Unknown[], def_str_Bestiary[];
+int def_bestiary_known(int index);
+int def_bestiary_active(void);
+#define BS_SPECIES 193 /* species in the table (DEF_BESTIARY_SPECIES) */
+#define BS_ROWS 6      /* names per page (DEF_BESTIARY_ROWS): the options' panel holds at least six rows */
+#define BS_STEP 100    /* fieldmenu_update's step of the open screen (the PS1 menu has 0..7) */
+#endif
 
 /* A window's position and message: a party member's name (fieldmenu_name_pos), the labels (fieldmenu_label_pos) and
  * the values (fieldmenu_value_pos), each y + 46 per party member. fieldmenu_create_windows matches only with the labels
@@ -55,12 +69,15 @@ typedef struct FieldmenuWindows {
     /* 0x04 */ MessageWindow *money_unit; /* "BIT" */
     /* 0x08 */ MessageWindow *money;    /* the money */
 #ifdef PC_PORT
-    /* 0x0C */ MessageWindow *options[7]; /* the options; [6]: the global_save mod's SAVE entry (the PS1 has 6) */
+    /* 0x0C */ MessageWindow *options[8]; /* the options; [6], [7]: the SAVE entry (global_save) and the bestiary (the PS1 has 6) */
 #else
     /* 0x0C */ MessageWindow *options[6]; /* the options */
 #endif
     /* 0x24 */ MessageCursor *cursor;    /* the cursor */
     /* 0x28 */ FieldmenuMemberWindows members[3];
+#ifdef PC_PORT
+    MessageWindow *bs_info[8]; /* the bestiary screen: the chosen species' name, then its seven elements */
+#endif
 } FieldmenuWindows; /* size 0xAC */
 
 typedef struct Fieldmenu {
@@ -74,6 +91,11 @@ typedef struct Fieldmenu {
     /* 0x68 */ s32 anim_palette; /* state 2's animation: the palette of the picture being faded in */
     /* 0x6C */ s32 anim_time; /* gfx_module.funcs.get_time() at the last step */
     /* 0x70 */ WindowAnim panel_anims[3]; /* per party member's panel; [0] also the title, [1] the options, [2] the money */
+#ifdef PC_PORT
+    s32 save_entry; /* the global_save mod's SAVE entry is there (option extended + 5) */
+    s32 bestiary;   /* the bestiary entry is there (the last option) */
+    s32 bs_sel;     /* the bestiary screen's chosen species, or -1 while it is closed */
+#endif
 } Fieldmenu; /* size 0xA0 */
 
 void fieldmenu_create_windows(Fieldmenu *obj, FieldmenuWindows *data);
@@ -91,6 +113,13 @@ void fieldmenu_create_windows(Fieldmenu *obj, FieldmenuWindows *data) {
     for (j = 0; j < obj->option_count; j++) {
         data->options[j] = message_create_window(obj->layer_id, 1, 0xBD, j * 14 + 0x31);
     }
+#ifdef PC_PORT
+    if (obj->bestiary) {
+        for (j = 0; j < 8; j++) {
+            data->bs_info[j] = message_create_window(obj->layer_id, 1, 0x14, j * 14 + 0x1C);
+        }
+    }
+#endif
     data->cursor = message_create_cursor(obj->layer_id, 0, 0xB0, obj->cursor * 14 + 0x31);
     data->cursor->show(data->cursor, 0);
     data->money_unit = message_create_window(obj->layer_id, 3, 0x46, 0xA6);
@@ -159,6 +188,107 @@ s32 fieldmenu_get_map_region(void) {
     return x >= 0x270;
 }
 
+
+#ifdef PC_PORT
+/* A species' name in `win`: its SDIGIEDT record's name (line of text 0x4E), "???" while nothing of it is known. */
+static void fieldmenu_bestiary_name(MessageWindow *win, s32 index) {
+    if (def_bestiary_known(index) == 0) {
+        win->set_text(win, (u8 *)def_str_Unknown, -1);
+    } else {
+        FightstgEnemyRecord *recs = (FightstgEnemyRecord *)cdload_module.files.get_file(0x1CF);
+        win->set_text(win, cdload_module.files.get_file(records_language + 0x4E), recs[index].name);
+    }
+}
+
+/* Fills the screen for the chosen species: its page of names in the options' windows, its elements in the info ones. */
+static void fieldmenu_bestiary_draw(Fieldmenu *obj, FieldmenuWindows *data) {
+    static const unsigned char *const elements[7] = { def_str_Fire,    def_str_Water,   def_str_Ice, def_str_Wind,
+                                                      def_str_Thunder, def_str_Machine, def_str_Dark };
+    s32 first = obj->bs_sel / BS_ROWS * BS_ROWS;
+    s32 known = def_bestiary_known(obj->bs_sel);
+    s32 i;
+
+    for (i = 0; i < obj->option_count; i++) {
+        if (i < BS_ROWS && first + i < BS_SPECIES) {
+            data->options[i]->set_palette(data->options[i], 0); /* MAP's grey, when it is off, is not a name's */
+            fieldmenu_bestiary_name(data->options[i], first + i);
+        } else {
+            data->options[i]->set_visible(data->options[i], 0);
+        }
+    }
+    fieldmenu_bestiary_name(data->bs_info[0], obj->bs_sel);
+    for (i = 0; i < 7; i++) {
+        data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)((known >> i) & 1 ? elements[i] : def_str_Unknown), -1);
+    }
+    data->cursor->set_pos(data->cursor, 0xB0, (obj->bs_sel - first) * 14 + 0x31);
+}
+
+/* Opens the screen on the first species: the member panels' texts and the money give way to it. */
+static void fieldmenu_bestiary_open(Fieldmenu *obj, FieldmenuWindows *data) {
+    s32 i;
+
+    for (i = 0; i < 3; i++) {
+        fieldmenu_show_member(obj, data, i, 0);
+    }
+    data->money_unit->set_visible(data->money_unit, 0);
+    data->money->set_visible(data->money, 0);
+    data->help->set_text(data->help, (u8 *)def_str_Bestiary, -1);
+    obj->bs_sel = 0;
+    fieldmenu_bestiary_draw(obj, data);
+}
+
+/* One frame of the open screen: up/down move, L1/R1 turn the page, triangle/circle/cross close it (returns 1). */
+static s32 fieldmenu_bestiary_update(Fieldmenu *obj, FieldmenuWindows *data) {
+    s32 sel = obj->bs_sel;
+    s32 i;
+
+    if (PAD_PRESSED(12) || PAD_PRESSED(13) || PAD_PRESSED(14)) {
+        sound_module.play(0x800450BD);
+        for (i = 0; i < 8; i++) {
+            data->bs_info[i]->set_visible(data->bs_info[i], 0);
+        }
+        for (i = 0; i < 3; i++) {
+            fieldmenu_show_member(obj, data, i, 1);
+        }
+        data->money_unit->set_text(data->money_unit, cdload_module.files.get_file(records_language + 0xB0), 5);
+        data->money->set_line_number(data->money, 0, gamestate_data.money);
+        data->money->measure(data->money, 1);
+        data->help->set_text(data->help, cdload_module.files.get_file(records_language + 0xB0), 0x13);
+        for (i = 0; i < obj->option_count; i++) {
+            if (obj->save_entry && i == obj->extended + 5) {
+                data->options[i]->set_text(data->options[i], cdload_module.files.get_file(records_language + 0x78), 1);
+            } else if (i == obj->option_count - 1) {
+                data->options[i]->set_text(data->options[i], (u8 *)def_str_Bestiary, -1);
+            } else {
+                data->options[i]->set_text(data->options[i], cdload_module.files.get_file(records_language + 0xB0),
+                                           fieldmenu_option_messages[obj->extended][i]);
+            }
+        }
+        if (obj->map_enabled == 0) {
+            data->options[2]->set_palette(data->options[2], 7);
+        }
+        data->cursor->set_pos(data->cursor, 0xB0, obj->cursor * 14 + 0x31);
+        obj->bs_sel = -1;
+        return 1;
+    }
+    if (PAD_PRESSED(4) || PAD_REPEAT(4)) {
+        sel = (sel + BS_SPECIES - 1) % BS_SPECIES;
+    } else if (PAD_PRESSED(6) || PAD_REPEAT(6)) {
+        sel = (sel + 1) % BS_SPECIES;
+    } else if (PAD_PRESSED(10) || PAD_REPEAT(10)) {
+        sel = sel >= BS_ROWS ? sel - BS_ROWS : 0;
+    } else if (PAD_PRESSED(11) || PAD_REPEAT(11)) {
+        sel = sel + BS_ROWS < BS_SPECIES ? sel + BS_ROWS : BS_SPECIES - 1;
+    }
+    if (sel != obj->bs_sel) {
+        obj->bs_sel = sel;
+        sound_module.play(0x8004513E);
+        fieldmenu_bestiary_draw(obj, data);
+    }
+    return 0;
+}
+#endif
+
 /* The object's function. State 0 sets up; state 1 runs the menu (obj->base.step: open the windows,
  * choose, close them) and draws its frames; state 2 plays the picture animation, then changes the map. */
 void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
@@ -190,6 +320,15 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
          * is what consumes it. A stale one from a cancelled menu is cleared by the next START (fieldstg). */
         if (port_mod_global_save != 0 && gamestate_data.funcs.get_map() != 0x1000) {
             obj->option_count++; /* global_save: a SAVE entry last, in the field's menu only (docs/LAUNCHER.md) */
+            obj->save_entry = 1;
+        } else {
+            obj->save_entry = 0;
+        }
+        /* The bestiary, after SAVE, in the field's menu only; not in a replay script (shared with the emulator) */
+        obj->bestiary = def_bestiary_active() && gamestate_data.funcs.get_map() != 0x1000;
+        obj->bs_sel = -1;
+        if (obj->bestiary) {
+            obj->option_count++;
         }
 #endif
         if (fieldmenu_get_map_region() >= 0) {
@@ -215,10 +354,14 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 fieldmenu_show_member(obj, data, 1, 1);
                 for (obj->base.timer = 0; obj->base.timer < obj->option_count; obj->base.timer++) {
 #ifdef PC_PORT
-                    if (obj->base.timer == obj->extended + 5) {
+                    if (obj->save_entry && obj->base.timer == obj->extended + 5) {
                         /* global_save's SAVE entry: the save screen's title (?SMEMCRD entry 1, in every language) */
                         data->options[obj->base.timer]->set_text(data->options[obj->base.timer],
                                                                 cdload_module.files.get_file(records_language + 0x78), 1);
+                        continue;
+                    }
+                    if (obj->bestiary && obj->base.timer == obj->option_count - 1) {
+                        data->options[obj->base.timer]->set_text(data->options[obj->base.timer], (u8 *)def_str_Bestiary, -1);
                         continue;
                     }
 #endif
@@ -265,6 +408,13 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 if (obj->map_enabled == 0 && obj->cursor == 2) {
                     break;
                 }
+#ifdef PC_PORT
+                if (obj->bestiary && obj->cursor == obj->option_count - 1) {
+                    fieldmenu_bestiary_open(obj, data);
+                    obj->base.step = BS_STEP;
+                    break;
+                }
+#endif
                 done = 1;
                 if (gamestate_data.funcs.get_map() == 0x1000) {
                     obj->base.substep = 1;
@@ -292,6 +442,13 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 obj->base.step++;
             }
             break;
+#ifdef PC_PORT
+        case BS_STEP:
+            if (fieldmenu_bestiary_update(obj, data)) {
+                obj->base.step = 3;
+            }
+            break;
+#endif
         case 4:
             if (window_anim_update(&obj->panel_anims[2])) {
                 fieldmenu_show_member(obj, data, 1, 0);
@@ -327,6 +484,11 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         gfx.set_follow_scroll(0);
         for (i = 0; i < 3; i++) {
             level = obj->panel_anims[i].level;
+#ifdef PC_PORT
+            if (obj->bs_sel >= 0) {
+                break; /* the bestiary screen has no member panels: its element list takes their space */
+            }
+#endif
             if (level != 0) {
                 if (level != 0x1000) {
                     gfx.set_scale(level, 0x1000, 0x1000);
@@ -355,10 +517,11 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 gfx.set_scale(0x1000, 0x1000, 0x1000);
             }
 #ifdef PC_PORT
-            if (obj->option_count == 7) {
+            if (obj->option_count >= 7) {
                 /* global_save's entry with the card case's: the bank has panels for 5 and 6 entries only (a 22 px top,
-                 * 14 px rows, a 20 px bottom), so the 6-entry one (98 px) is stretched to 112 px from its top */
-                gfx.set_scale(obj->panel_anims[1].level, 0x1249, 0x1000);
+                 * 14 px rows, a 20 px bottom), so the 6-entry one (98 px) is stretched by 14 px per entry more
+                 * (7: 112 px, 8: 126 px) from its top */
+                gfx.set_scale(obj->panel_anims[1].level, 0x1000 + (obj->option_count - 6) * 0x249, 0x1000);
                 gfx.set_pivot(0x140, 0x28);
                 gfx.draw(cdload_module.get_subfile_by_id(0x2860000), 0x1B, 0xA8, 0x28);
             } else {
@@ -413,7 +576,7 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
             break;
         case 6:
 #ifdef PC_PORT
-            if (obj->option_count == obj->extended + 6 && obj->cursor == obj->extended + 5) {
+            if (obj->save_entry && obj->cursor == obj->extended + 5) {
                 port_global_save_open(); /* global_save's SAVE: STGMCARD in save mode instead of STSTATUS */
                 obj->base.step++;
                 break;

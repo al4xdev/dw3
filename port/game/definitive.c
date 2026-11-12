@@ -279,7 +279,14 @@ const unsigned char *def_inspect_element(int e) {
 }
 
 const unsigned char *def_inspect_state(const short *resists, int e, int *palette) {
-    switch (target_class(e, resists, fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon)) {
+    extern const unsigned char def_str_Unknown[];
+    int species = fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon;
+
+    if (!((def_bestiary_known(def_bestiary_index(species)) >> e) & 1)) { /* not learnt yet: Libra or a hit on it tells */
+        *palette = 7;
+        return def_str_Unknown;
+    }
+    switch (target_class(e, resists, species)) {
     case 3:
         *palette = 7;
         return def_str_Resist;
@@ -327,6 +334,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, baton_paid);
     PORT_STATE_VAR(s, resist_mod);
     PORT_STATE_VAR(s, resist_turns);
+    def_bestiary_savestate(s);
     PORT_STATE_VAR(s, hit_class);
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
@@ -363,6 +371,9 @@ void def_action_resolved(u8 side, s32 id, s32 value) {
     }
     was = chain.staggered[target];
     def_chain_player_hit(&chain, target, value > 0, weak ? hit_elem : -1, weak);
+    if (value > 0 && hit_id == id && (hit_class == 1 || hit_class == 3)) { /* a weakness or a resistance found out */
+        def_bestiary_discover(def_bestiary_index(fightstg_battle.state.members[1][target].digimon), 1 << hit_elem);
+    }
     if (log_on() && value > 0) {
         LOG("hit target %d weak %d stagger %d -> %d extra_pending %d", target, weak, was, chain.staggered[target],
             chain.extra_pending);
@@ -418,30 +429,33 @@ const unsigned char *def_baton_label(void) {
     return def_str_BatonPass;
 }
 
-/* The player chose Tag (party command 5): free when an enemy is open and the window's swap is unspent; a Baton Pass
- * (paid in the menu) is free too. */
+/* The player chose Tag (party command 5). Owner's rule (2026-11-12): only Baton Pass, offered only while the enemy is
+ * open (and once a window), keeps the turn; a plain Switch spends it, unless Relay made the next swap free. */
 void def_swap_chosen(void) {
     if (!def_on()) {
         return;
     }
     if (baton_paid) {
         baton_paid = 0;
-        chain.extra_pending = 1;
+        def_chain_swap_chosen(&chain, target_slot()); /* spends the window's swap, owes the extra action */
         if (log_on()) {
             LOG("baton pass");
         }
         return;
     }
-    if (def_chain_swap_free(&chain, target_slot())) {
+    if (chain.relay) {
         def_chain_swap_chosen(&chain, target_slot());
         if (log_on()) {
-            LOG("free swap");
+            LOG("relay swap");
         }
     }
 }
 
+/* Baton Pass is offered: the enemy is open and this window's swap is unspent (the HUD's Tag picture shows it). */
 int def_swap_free(void) {
-    return def_on() && def_chain_swap_free(&chain, target_slot());
+    int t = target_slot() % 3;
+
+    return def_on() && chain.staggered[t] && !chain.swap_used;
 }
 
 /* The pose of a side (wfightmn_update_idle_anim): the tired one for an open enemy, never for the player (HP no longer
@@ -463,16 +477,6 @@ int def_idle_pose(u8 side) {
  * makes the next swap free, Resist Down / Mega Break (207, 208, were Slow Down / Mega Break) lower the elements the
  * user is best at on the target for a few of its turns; a boss is immune to the last two (records_state.blocked[10], the
  * speed-down immunity they replace). The effects run in fightstg_tech_update (class 5), before the original's own. */
-
-/* Layer 9's table (definitive_bestiary.c) when it is linked; these stand in until then. */
-__attribute__((weak)) void def_bestiary_discover(int index, int element_mask) {
-    (void)index;
-    (void)element_mask;
-}
-__attribute__((weak)) int def_bestiary_index(int species_id) {
-    (void)species_id;
-    return -1;
-}
 
 void def_apply_resist_mod(int member, FightstgStats *out) {
     int e;

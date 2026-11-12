@@ -732,6 +732,7 @@ void gamestate_init_records(void) {
 
 #ifdef PC_PORT
     def_mp_hook(); /* definitive combat, layer 8: a new game starts with the rookies' new MP */
+    def_bestiary_reset(); /* layer 9: and with nothing learnt of the enemies */
 #endif
     font_init(&funcs);
     strcpy(gamestate_data.name, funcs.get_entry(cdload_module.files.get_file(records_language + 0x86), 11));

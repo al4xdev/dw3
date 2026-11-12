@@ -8,6 +8,13 @@
 
 MemcardState memcard_state = { 0 };
 
+#ifdef PC_PORT
+/* The bestiary's record (port/game/definitive_bestiary.c): part 5, the slot in part >> 8, at the file's last 0x800
+ * bytes (0x8000 file, the game uses up to 0x7800), 0x100 per slot. Same numbers as DEF_BESTIARY_PART/_RECORD_AT. */
+#define MEMCARD_PART_BESTIARY 5
+#define MEMCARD_PART_BESTIARY_AT 0x7800
+#endif
+
 extern s32 memcard_sync_commands[]; /* MemCardSync command per memcard_run_command mode */
 
 void memcard_set_file_name(void);
@@ -183,6 +190,11 @@ s32 memcard_read(s32 chan, void *buf, s32 size, s32 part) {
         switch (memcard_state.result) {
         case 0:
             memcard_state.done = 0;
+#ifdef PC_PORT
+            if ((part & 0xFF) == MEMCARD_PART_BESTIARY) {
+                memcard_state.offset = MEMCARD_PART_BESTIARY_AT + (part >> 8) * 0x100;
+            } else
+#endif
             switch (part) {
             case 0:
             default:
@@ -263,6 +275,11 @@ s32 memcard_write(s32 chan, void *buf, s32 size, s32 part) {
         case 0:
             memcard_state.done = 0;
             switch (part & 0xFF) {
+#ifdef PC_PORT
+            case MEMCARD_PART_BESTIARY:
+                memcard_state.offset = MEMCARD_PART_BESTIARY_AT + (part >> 8) * 0x100;
+                break;
+#endif
             case 0:
             default:
                 memcard_state.offset = part >> 8;

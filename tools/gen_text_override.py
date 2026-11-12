@@ -113,6 +113,8 @@ def render(rows, tables, inv):
     over = [r for r in rows if not r[0].startswith("$")]
     for i, (name, idx, text) in enumerate(rows):
         b = encode(text, inv) + b"\0"
+        if name.startswith("$"):  # the port's own labels are drawn in the HUD's 9-pixel font, which has no glyph 0xE6
+            b = b.replace(b"\xe6", b"\x01\x09")  # ('?'): the extra glyph draws it
         sym = f"def_str_{name[1:]}" if name.startswith("$") else f"def_text_{i}"
         lines.append(f"{'' if name.startswith('$') else 'static '}const unsigned char {sym}[] = {{ "
                      + ", ".join(f"0x{x:02X}" for x in b) + " };" + (f" /* {text} */" if name.startswith("$") else ""))
