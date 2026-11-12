@@ -278,31 +278,66 @@ const unsigned char *def_inspect_element(int e) {
     return names[e];
 }
 
-const unsigned char *def_inspect_state(const short *resists, int e, int *palette) {
-    extern const unsigned char def_str_Unknown[];
-    int species = fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon;
+/* The font's coloured picture of each element (extra glyphs `01 xx` of the 14-pixel font, drawn with palette 0): flame,
+ * drop, crystal, wing, bolt, gear, dark star. The same picture stands for the element on every screen. */
+const unsigned char *def_element_icon(int e) {
+    static const unsigned char icons[7][3] = { { 1, 0x2D, 0 }, { 1, 0x2E, 0 }, { 1, 0x30, 0 }, { 1, 0x31, 0 },
+                                               { 1, 0x33, 0 }, { 1, 0x35, 0 }, { 1, 0x36, 0 } };
+    return icons[e];
+}
 
-    if (!((def_bestiary_known(def_bestiary_index(species)) >> e) & 1)) { /* not learnt yet: Libra or a hit on it tells */
+int def_tech_element(int tech) {
+    int stat = tech >= 1 ? records_techniques[tech - 1].defense_stat : 0;
+
+    return stat >= 2 && stat <= 8 ? stat - 2 : -1;
+}
+
+/* The label and the 14-pixel font's palette of a target_class (0: not learnt yet): the weakness is the line to find, so
+ * it gets the warm colour, a resist the cold one, and what says nothing the grey. */
+static const unsigned char *state_label(int cls, int *palette) {
+    extern const unsigned char def_str_Unknown[];
+
+    switch (cls) {
+    case 0:
         *palette = 7;
         return def_str_Unknown;
-    }
-    switch (target_class(e, resists, species)) {
     case 3:
-        *palette = 7;
+        *palette = 1;
         return def_str_Resist;
     case 1:
         *palette = 3;
         return def_str_Weak;
     default:
-        *palette = 0;
+        *palette = 7;
         return def_str_Neutral;
     }
+}
+
+const unsigned char *def_inspect_state(const short *resists, int e, int *palette) {
+    int species = fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon;
+
+    if (!((def_bestiary_known(def_bestiary_index(species)) >> e) & 1)) { /* not learnt yet: Libra or a hit on it tells */
+        return state_label(0, palette);
+    }
+    return state_label(target_class(e, resists, species), palette);
+}
+
+const unsigned char *def_bestiary_state(FightstgEnemyRecord *rec, int index, int e, int *palette) {
+    if (!((def_bestiary_known(index) >> e) & 1)) {
+        return state_label(0, palette);
+    }
+    def_enemy_override(rec); /* the field reads SDIGIEDT itself: the record may not have gone through the battle's get */
+    return state_label(target_class(e, rec->resists, rec->id), palette);
 }
 
 /* ---- Layer 3: the enemy table. Applied each time the game asks for the record (idempotent), so it holds after a reload
  * of SDIGIEDT and a load state alike. */
 void def_enemy_override(FightstgEnemyRecord *rec) {
     int i, e;
+
+    if (!def_on()) { /* a replay script keeps the disc's enemies (its state is the emulator's) */
+        return;
+    }
 
     for (i = 0; i < def_enemy_row_count; i++) {
         if (def_enemy_rows[i].id == rec->id) {
