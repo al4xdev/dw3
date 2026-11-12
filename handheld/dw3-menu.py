@@ -263,7 +263,7 @@ def write_settings(s, disc):
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s.get("btext", 2) != 0), BTEXT_MODES[s.get("btext", 2)] if s.get("btext", 2) else "async", b(s["saveany"]), b(s["party"]), s["share"],
        b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(xb_card_boost), b(s["evo"]),
-       b(s.get("bmenu", 1)),
+       "true",  # the battle HUD is always on now (definitive combat); "enabled" only makes its options apply
        s.get("bm_fight", "east"), s.get("bm_tech", "l1"), s.get("bm_digivolve", "north"),
        s.get("bm_tag", "south"), s.get("bm_item", "r1"), s.get("bm_run", "west"),
        b(s.get("bmem", 1)), BBUF_MODES[s.get("bbuf", 1) % 3],
@@ -416,7 +416,7 @@ GROUPS = [
 ]
 
 LOG_LEVELS = ["off", "soft", "heavy"]
-BBUF_MODES = ["off", "short", "long"]  # the battle_menu mod's buffer_input: 0 / 0.6 s / 1.0 s
+BBUF_MODES = ["off", "short", "long"]  # the battle_menu mod's buffer_input: 0 / 1.0 s / 1.5 s
 BTEXT_MODES = ["off", "skip", "async"]  # the battle_text mod's modes; async is the default
 
 
@@ -470,13 +470,15 @@ def field_text(s, key):
     if key == "btext":
         return BTEXT_MODES[s.get("btext", 2) % 3].upper()
     if key == "bmem":
-        return on(s.get("bmem", 1)) if s.get("bmenu", 1) else "off"
+        return on(s.get("bmem", 1)) if True else "off"
     if key == "bbuf":
-        return BBUF_MODES[s.get("bbuf", 1) % 3].upper() if s.get("bmenu", 1) else "off"
+        return BBUF_MODES[s.get("bbuf", 1) % 3].upper() if True else "off"
     if key == "hit":
         return on(s["hit"]) if s["battles"] else "off"
-    if key in ("skip", "battles", "saveany", "evo", "bmenu"):
-        return on(s.get(key, 1) if key == "bmenu" else s[key])
+    if key == "bmenu":
+        return "ALWAYS"
+    if key in ("skip", "battles", "saveany", "evo"):
+        return on(s[key])
     return ""
 
 
@@ -560,8 +562,8 @@ def field_toggle(s, key, direction=1):
             s["all_forms"] ^= 1
     elif key == "card_boost":
         s["card_boost"] = 0 if s.get("card_boost", 1) else 1
-    elif key in ("skip", "battles", "saveany", "evo", "bmenu"):
-        s[key] = (0 if s.get(key, 1) else 1) if key == "bmenu" else s[key] ^ 1
+    elif key in ("skip", "battles", "saveany", "evo"):
+        s[key] ^= 1
 
 
 def group_screen(name):
@@ -1119,7 +1121,7 @@ def draw_bmenu_remap(screen, s, pad, sel, capture):
     here = (sel == 0)
     screen.text(16, y, ">" if here else " ", C_KEY)
     screen.text(40, y, "ENABLED", C_KEY if here else C_TEXT)
-    on_txt = "ON" if s.get("bmenu", 1) else "off"
+    on_txt = "ALWAYS"  # the definitive combat's HUD is not optional
     screen.text(40 + 20 * 6 * screen.scale, y, on_txt, C_KEY if here else (C_ON if on_txt == "ON" else C_DIM))
     y += 10 * screen.scale
 
@@ -1176,7 +1178,7 @@ def remap_bmenu(screen, s, pad):
             sel = (sel + 1) % n
         elif key in ("left", "right"):
             if sel == 0:
-                s["bmenu"] = 0 if s.get("bmenu", 1) else 1
+                pass  # always on: nothing to toggle
             else:
                 action_key = BM_KEYS[sel - 1]
                 step = -1 if key == "left" else 1
@@ -1190,7 +1192,7 @@ def remap_bmenu(screen, s, pad):
                 s[action_key] = nxt
         elif key == "a":
             if sel == 0:
-                s["bmenu"] = 0 if s.get("bmenu", 1) else 1
+                pass
             else:
                 capture = True
         elif key in ("play", "b"):

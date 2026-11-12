@@ -477,7 +477,7 @@ static const u8 bm_default_places[BM_COUNT] = { 3, 4, 2, 0, 5, 1 }; /* east l1 n
 #define BM_OPTION(name, default_place) \
     { .id = name, .type = PORT_MOD_ENUM, .def = default_place, .values = bm_places, .applies = "live" }
 static const char *const bm_buffers[] = { "off", "short", "long", NULL };
-static const int bm_buffer_ms[] = { 0, 600, 1000 };
+static const int bm_buffer_ms[] = { 0, 1000, 1500 }; /* off, short, long (the owner played with 1.0 s: now the default) */
 static const PortModOption bm_options[BM_OPTIONS] = {
     BM_OPTION("fight", "\"east\""),  BM_OPTION("tech", "\"l1\""),   BM_OPTION("digivolve", "\"north\""),
     BM_OPTION("tag", "\"south\""),   BM_OPTION("item", "\"r1\""),   BM_OPTION("run", "\"west\""),

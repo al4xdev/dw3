@@ -416,6 +416,13 @@ void wfightmn_main_update(WfightmnMain *obj, WfightmnMainData *data) {
                         fightstg_command_set_phase(1);
                     } else {
                         fightstg_events_add_party_turn(0);
+#ifdef PC_PORT
+                        /* definitive combat: the enemy's first turn comes after its own full delay, not half the
+                         * player's, so a faster party gets its extra actions from the start (owner's request) */
+                        if (def_on()) {
+                            fightstg_events_add_enemy_turn(fightstg_events.get_delay(0x10, 0));
+                        } else
+#endif
                         fightstg_events_add_enemy_turn(fightstg_events.get_delay(0, 0) / 2);
                     }
                     obj->base.next_state(obj);
@@ -557,7 +564,7 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
                 break;
             case 5:
 #ifdef PC_PORT
-                def_swap_chosen(); /* free with an open enemy: an extra action is owed after the swap */
+                def_swap_chosen(); /* Baton Pass or a Relay swap: an extra action is owed after the swap */
 #endif
                 obj->base.set_step(obj, 5);
                 wfightmn_check_final_phase_end(0);

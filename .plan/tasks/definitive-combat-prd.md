@@ -157,6 +157,11 @@ aprovada pelo dono; inspecionar e sons passam a usar a função.
 turno ao INIMIGO) continua igual. Fora dela, some o sorteio por velocidade: o jogador sempre abre. Velocidade segue
 valendo só pelo atraso de turno (até 2 ações por turno do outro lado).
 
+**Decisões do dono depois do primeiro teste (2026-11-12):** o primeiro turno do inimigo vem depois do atraso inteiro
+dele (`get_delay(0x10, 0)`), não da metade do atraso do jogador: quem é mais rápido ganha as ações a mais desde o
+início. O Baton Pass só aparece enquanto o inimigo está em stagger (uma vez por janela, custo `DEF_BATON_PASS_MP` = 0);
+a troca normal gasta o turno (a não ser depois do Relay). Isso substitui a "troca grátis" automática abaixo.
+
 **Stagger:** flag própria por inimigo (`def_staggered[3]`), sem relação com HP.
 - Abre quando o jogador acerta uma fraqueza com técnica elemental (`defense_stat ≥ 2`). Ataque físico sem elemento e o
   elemento vindo de crest ("coringa", `attack_element`) não abrem.
