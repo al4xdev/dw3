@@ -8969,8 +8969,13 @@ FightstgModels fightstg_models = {
 
 FightstgRules fightstg_rules = {
     .get_stats = fightstg_rules_get_stats,
+#ifdef PC_PORT
+    .get_damage = def_get_damage, /* definitive.c: the same call, logged (DW3_BATTLE_LOG) */
+    .get_special_damage = def_get_special_damage,
+#else
     .get_damage = fightstg_rules_get_damage,
     .get_special_damage = fightstg_rules_get_special_damage,
+#endif
     .get_poison_damage = fightstg_rules_get_poison_damage,
     .get_counter_damage = fightstg_rules_get_counter_damage,
     .get_heal = fightstg_rules_get_heal,

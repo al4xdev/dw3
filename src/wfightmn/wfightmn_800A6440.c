@@ -362,6 +362,9 @@ void wfightmn_main_update(WfightmnMain *obj, WfightmnMainData *data) {
                 data->slots->add(data->slots, 0x10, records_state.enemies[0].digimon, 1);
                 data->slots->reset_pos(data->slots, 0x10);
                 wfightmn_init_members(leader);
+#ifdef PC_PORT
+                def_log_begin();
+#endif
                 member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
                 if (member->max_hp / 4 >= member->hp) {
                     data->slots->set_idle_anim(data->slots, 0, 1);
@@ -480,6 +483,7 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
         /* evo_buff: the shield (Guard at the ceiling) lasts the enemy turn after the evolution; clear it at the
          * start of the next party turn, so the buffed member is protected for exactly one enemy turn. */
         dw3_evo_shield_member = -1;
+        def_log_turn(0);
 #endif
         event = fightstg_events.find_member(8, 0, fightstg_battle.state.current[0]);
         if (event >= 0) {
@@ -515,6 +519,9 @@ void wfightmn_party_turn(WfightmnMain *obj, WfightmnMainData *data) {
         break;
     case 2:
         if (fightstg_command_is_open() == 0) {
+#ifdef PC_PORT
+            def_log_action(0, data->command->command, data->command->arg);
+#endif
             switch (data->command->command) {
             case 1:
                 fightstg_battle.state.escapes++;
@@ -709,6 +716,9 @@ void wfightmn_battle_end(WfightmnMain *obj, WfightmnMainData *data) {
     default:
         if (data->intro_camera == NULL || data->intro_camera->state == OBJECT_STATE_DONE) {
             count = 0;
+#ifdef PC_PORT
+            def_log_end(fightstg_events.result);
+#endif
             if (fightstg_events.result != 0) {
                 records_battle_results.battle = records_state.battle;
                 records_battle_results.member = fightstg_battle.state.current[0];

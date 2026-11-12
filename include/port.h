@@ -261,6 +261,16 @@ void dw3_fast_travel_remember(s32 map, s32 x, s32 y, s32 dir);
 /* Layout index of the story step's area on this map half, or 0. */
 s32 dw3_objective_spot(s32 region);
 
+/* Definitive combat (port/game/definitive.c; .plan/tasks/definitive-combat-prd.md). Layer 0, the battle log:
+ * DW3_BATTLE_LOG=<file> appends one line per battle event; unset, every hook returns at once. def_get_damage and
+ * def_get_special_damage are fightstg_rules.get_damage / .get_special_damage wrapped: same value, one line logged. */
+void def_log_begin(void);
+void def_log_turn(int side);
+void def_log_action(int side, int kind, int arg);
+void def_log_end(int result);
+s32 def_get_damage(u8 side, s32 id);
+s32 def_get_special_damage(u8 side, s32 id);
+
 #endif /* PC_PORT */
 
 #endif /* PORT_H */
