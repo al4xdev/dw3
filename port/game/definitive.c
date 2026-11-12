@@ -26,8 +26,8 @@ static struct {
     int weak, open, resisted, affinity, mult;
 } terms;
 static DefChain chain; /* layer 4: stagger, window, free swap (definitive_mask.c) */
-static short resist_mod[3][7]; /* layer 6: per enemy slot, what the lowering took off each element */
-static unsigned char resist_turns[3]; /* and the enemy turns it still lasts */
+static short resist_mod[2][3][7]; /* layer 6: per side (0 party, 1 enemy) and slot, what Resist Down took off each element */
+static unsigned char resist_turns[2][3]; /* and the turns of that side it still lasts */
 static int baton_paid; /* Baton Pass was chosen in the switch menu (its MP is paid there) */
 
 static FILE *log_file;
@@ -386,8 +386,14 @@ int def_target_staggered(void) {
 
 /* A party turn begins (wfightmn_party_turn): an extra action keeps the window, a normal one starts a new one. */
 void def_party_turn_begins(void) {
+    int m;
+
     if (!def_on()) {
         return;
+    }
+    m = fightstg_battle.state.current[0] % 3;
+    if (resist_turns[0][m] != 0 && --resist_turns[0][m] == 0) { /* an enemy's Resist Down on us wears off */
+        memset(resist_mod[0][m], 0, sizeof(resist_mod[0][0]));
     }
     def_chain_party_turn(&chain);
     if (log_on()) {
@@ -422,8 +428,8 @@ void def_enemy_turn_begins(void) {
     if (!def_on()) {
         return;
     }
-    if (resist_turns[target % 3] != 0 && --resist_turns[target % 3] == 0) { /* the lowered resists wear off */
-        memset(resist_mod[target % 3], 0, sizeof(resist_mod[0]));
+    if (resist_turns[1][target % 3] != 0 && --resist_turns[1][target % 3] == 0) { /* the lowered resists wear off */
+        memset(resist_mod[1][target % 3], 0, sizeof(resist_mod[1][0]));
         if (log_on()) {
             LOG("resist down worn off slot %d", target);
         }
@@ -513,14 +519,15 @@ int def_idle_pose(u8 side) {
  * user is best at on the target for a few of its turns; on a boss that blocked the speed-down they replace
  * (records_state.blocked[10]) they are scaled by DEF_BOSS_DEBUFF_PCT, like every stat debuff (PRD 2, layer A). The effects run in fightstg_tech_update (class 5), before the original's own. */
 
-void def_apply_resist_mod(int member, FightstgStats *out) {
+void def_apply_resist_mod(int side, int member, FightstgStats *out) {
     int e;
 
-    if (!def_on() || member < 0 || member > 2 || resist_turns[member] == 0) {
+    side = side != 0;
+    if (!def_on() || member < 0 || member > 2 || resist_turns[side][member] == 0) {
         return;
     }
     for (e = 0; e < 7; e++) {
-        out->resists[e] += resist_mod[member][e];
+        out->resists[e] += resist_mod[side][member][e];
         if (out->resists[e] < 1) {
             out->resists[e] = 1; /* the old formulas divide by it */
         }
@@ -529,15 +536,17 @@ void def_apply_resist_mod(int member, FightstgStats *out) {
 
 /* 0: not one of the four; 1: done, `*msg` the message (0 Libra, 1 Relay, 2 resist lowered); 2: no effect (immune). */
 int def_tech_effect(u8 side, int tech, int *msg) {
-    int slot = fightstg_battle.state.current[1] % 3;
+    int enemy = side != 0;
+    int victim = enemy ? 0 : 1;                                 /* the side whose resists go down */
+    int slot = fightstg_battle.state.current[victim] % 3;
     int e, n, best, k;
     short taken[7] = { 0, 0, 0, 0, 0, 0, 0 };
     FightstgStats *me;
 
-    if (!def_on() || side != 0 || (tech != 202 && tech != 203 && tech != 207 && tech != 208)) {
+    if (!def_on() || (tech != 202 && tech != 203 && tech != 207 && tech != 208)) {
         return 0;
     }
-    if (tech == 202) {
+    if (!enemy && tech == 202) {
         def_bestiary_discover(def_bestiary_index(fightstg_battle.state.members[1][slot].digimon), 0x7F);
         *msg = 0;
         if (log_on()) {
@@ -545,12 +554,14 @@ int def_tech_effect(u8 side, int tech, int *msg) {
         }
         return 1;
     }
-    if (tech == 203) {
+    if (!enemy && tech == 203) {
         def_chain_relay_set(&chain);
         *msg = 1;
         return 1;
     }
-    me = fightstg_rules.get_stats(0, 1, fightstg_battle.state.current[0]);
+    /* Resist Down / Mega Break, and in an enemy's hands all four (owner's choice: Libra and Relay mean nothing to an
+     * enemy): the target's resists of the user's best elements go down. On the player they are its affinities. */
+    me = fightstg_rules.get_stats(side, 1, fightstg_battle.state.current[enemy]);
     for (n = tech == 208 ? 2 : 1, k = 0; k < n; k++) {
         best = -1;
         for (e = 0; e < 7; e++) {
@@ -562,12 +573,14 @@ int def_tech_effect(u8 side, int tech, int *msg) {
             break;
         }
         taken[best] = 1;
-        resist_mod[slot][best] -= def_debuff_scale(10, tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA);
+        resist_mod[victim][slot][best] -=
+            enemy ? (tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA)
+                  : def_debuff_scale(10, tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA);
         if (log_on()) {
-            LOG("resist down slot %d element %d now %d", slot, best, resist_mod[slot][best]);
+            LOG("resist down side %d slot %d element %d now %d", victim, slot, best, resist_mod[victim][slot][best]);
         }
     }
-    resist_turns[slot] = DEF_BREAK_TURNS;
+    resist_turns[victim][slot] = DEF_BREAK_TURNS;
     *msg = 2;
     return 1;
 }

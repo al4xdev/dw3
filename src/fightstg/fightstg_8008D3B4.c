@@ -8141,11 +8141,14 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
                 out->steal = item->value;
             }
         }
+#ifdef PC_PORT
+        def_apply_resist_mod(0, member, out); /* an enemy's Resist Down lowers the party's affinities */
+#endif
     } else {
         m = &fightstg_battle.state.members[1][member];
         fightstg_rules_get_enemy_stats(out, m, member);
 #ifdef PC_PORT
-        def_apply_resist_mod(member, out); /* definitive combat: Resist Down / Mega Break */
+        def_apply_resist_mod(1, member, out); /* definitive combat: Resist Down / Mega Break */
 #endif
     }
     if (first) {
