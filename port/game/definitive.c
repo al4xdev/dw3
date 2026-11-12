@@ -701,3 +701,32 @@ int def_magic_defense(u8 side) {
     }
     return scaled(t->stats[2], t->stats[1], m->modifiers[1]);
 }
+
+/* ---- PRD 2, layer D: the game's side of the TP bands (the rule is definitive_progression.c). */
+static unsigned char tp_lost[8]; /* per partner: the last level-up lost TP to the ceiling (the report's message) */
+
+s16 def_level_tp(s32 digimon, s16 tp, s16 level) {
+    int lost;
+    int now = def_tp_add(tp, level, &lost);
+
+    if (lost > 0 && digimon >= 0 && digimon < 8) {
+        tp_lost[digimon] = 1;
+    }
+    return (s16)now;
+}
+
+int def_tp_lost_take(s32 digimon) {
+    int was;
+
+    if (!def_on() || digimon < 0 || digimon >= 8) {
+        return 0;
+    }
+    was = tp_lost[digimon];
+    tp_lost[digimon] = 0;
+    return was;
+}
+
+const unsigned char *def_tp_full_text(void) {
+    extern const unsigned char def_str_LevelTpFull[];
+    return def_str_LevelTpFull;
+}

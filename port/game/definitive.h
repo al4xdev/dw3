@@ -99,6 +99,16 @@ extern const int def_mp_row_count;
 /* Writes the rows into records_digimon (the boot patch; the src/ table stays as the matching build has it). */
 void def_mp_apply(void);
 
+/* ---- PRD 2 (definitive_progression.c) ---- */
+#define DEF_TP_GAIN_LV_2_20 7     /* TP a level gives, levels 2..20 */
+#define DEF_TP_GAIN_LV_21_40 9    /* levels 21..40 */
+#define DEF_TP_GAIN_LV_41_50 30   /* levels 41..50 */
+#define DEF_TP_GAIN_LV_51_UP 0    /* after 50 only the Train Chip gives TP */
+#define DEF_TP_CAP 99             /* the TP ceiling, the original's on purpose: no hoarding for the last gym */
+int def_tp_gain(int level);
+int def_tp_total(int level);
+int def_tp_add(int tp, int level, int *lost);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

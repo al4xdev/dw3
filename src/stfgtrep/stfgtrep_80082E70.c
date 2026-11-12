@@ -596,6 +596,11 @@ void stfgtrep_member_run(StfgtrepMember *obj, StfgtrepMemberData *data) {
             }
             obj->voice = sound_module.play(0x4000B);
             obj->sound_playing = 0x4000B;
+#ifdef PC_PORT
+            if (def_tp_lost_take(id)) { /* "Level N! TP full: train!": the level's TP did not fit under the ceiling */
+                data->messages->set_text(data->messages, (u8 *)def_tp_full_text(), -1);
+            } else
+#endif
             data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 7);
             data->messages->set_line_text(data->messages, (u8 *)rec, -1, 1);
             data->messages->set_line_number(data->messages, 2, rec->stats.values[0]);
@@ -1344,10 +1349,21 @@ s32 stfgtrep_add_exp(s32 digimon, s32 exp) {
             } else {
                 rec->stats.values[0] = 99;
             }
+#ifdef PC_PORT
+            if (def_on()) { /* definitive edition (PRD 2, layer D): TP by level band; what the ceiling eats is noted */
+                rec->stats.values[1] = def_level_tp(digimon, rec->stats.values[1], rec->stats.values[0]);
+            } else {
+                rec->stats.values[1] += 5;
+                if (rec->stats.values[1] >= 100) {
+                    rec->stats.values[1] = 99;
+                }
+            }
+#else
             rec->stats.values[1] += 5;
             if (rec->stats.values[1] >= 100) {
                 rec->stats.values[1] = 99;
             }
+#endif
             more = up = 1;
         } else {
             more = 0;
