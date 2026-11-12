@@ -2755,7 +2755,7 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
                     }
                     if (data->children[1] == NULL) {
 #ifdef PC_PORT
-                        if (port_mod_battle_menu != 0) {
+                        if (port_mod_battle_menu != 0) { /* always, but under a replay script (game_mods.c) */
                             data->children[1] = fightstg_battle_menu_create(obj->last, &obj->choice);
                         } else
 #endif
@@ -3382,9 +3382,12 @@ void fightstg_command_menu_update(FightstgCommandMenu *obj, FightstgCommandMenuD
  * cannot Digivolve). Each action is an icon window (the button's glyph, which dw3_button_glyph turns into the player's
  * own letter) and the entry's label window, placed where the button is on the player's pad. */
 typedef struct FightstgBattleMenuData {
-    /* 0x00 */ MessageWindow *icons[6];
-    /* 0x18 */ MessageWindow *labels[6];
-} FightstgBattleMenuData; /* size 0x30; only pointers: the block is run and scanned as objects */
+    /* 0x00 */ MessageWindow *icons[7];
+    /* 0x1C */ MessageWindow *labels[7];
+    /* 0x38 */ MessageWindow *inspect_names[7];  /* Inspect's panel: the element's name, */
+    /* 0x54 */ MessageWindow *inspect_states[7]; /* and Weak / Resist / - (empty while the panel is closed) */
+    /* 0x70 */ MessageWindow *twice;             /* "Enemy x2" while the enemy acts twice before our next turn */
+} FightstgBattleMenuData; /* size 0x74; only pointers: the block is run and scanned as objects */
 
 /* The menu's object: FightstgCommandMenu's own fields, then what the animation needs (never in the data block). The
  * animation is the little the old list had (a highlight) made for a press: the actions slide in (8 ticks), the pressed
@@ -3399,18 +3402,20 @@ typedef struct FightstgBattleMenu {
     /* 0x60 */ s32 press_age;
     /* 0x64 */ s32 refused; /* the action last refused, -1: none */
     /* 0x68 */ s32 refused_age;
-    /* 0x6C */ s16 x[6];    /* each action's anchor: its picture's corner in the cross's middle column, else its cell's */
-    /* 0x78 */ s16 y[6];
-    /* 0x84 */ u8 grey[6];  /* the Digimon cannot do it now */
-    /* 0x8A */ s8 sym_x[6]; /* from the anchor: the button's symbol (9-pixel font) */
-    /* 0x90 */ s8 sym_y[6];
-    /* 0x96 */ s8 pic_x[6]; /* the picture */
-    /* 0x9C */ s8 pic_y[6];
-    /* 0xA2 */ s8 panel_x[6]; /* the dark panel's rectangle */
-    /* 0xA8 */ s8 panel_y[6];
-    /* 0xAE */ u8 panel_w[6];
-    /* 0xB4 */ u8 panel_h[6];
-} FightstgBattleMenu; /* size 0xBA */
+    /* Action 6 is Inspect (definitive combat): a button like the others, but it opens a panel instead of a result. */
+    s16 x[7];    /* each action's anchor: its picture's corner in the cross's middle column, else its cell's */
+    s16 y[7];
+    u8 grey[7];  /* the Digimon cannot do it now */
+    s8 sym_x[7]; /* from the anchor: the button's symbol (9-pixel font) */
+    s8 sym_y[7];
+    s8 pic_x[7]; /* the picture */
+    s8 pic_y[7];
+    s8 panel_x[7]; /* the dark panel's rectangle */
+    s8 panel_y[7];
+    u8 panel_w[7];
+    u8 panel_h[7];
+    s32 inspect; /* the Inspect panel is open */
+} FightstgBattleMenu;
 
 #define FIGHTSTG_BMENU_SLIDE 8
 #define FIGHTSTG_BMENU_PRESS 7
@@ -3425,10 +3430,11 @@ typedef struct FightstgBattleMenu {
  * same cost as a letter): Fight a fist, Tech a lightning bolt, Digivolve the glowing figure, Tag a gear, Item a
  * book, Run a wing. All are framed 15-pixel pictures (the bare arrows 0x37/0x38 are not: they looked bigger and
  * unframed beside the others). Zero-ended; their width is the advance of what is in them. */
-static const u8 fightstg_bmenu_glyphs[6][6] = {
+static const u8 fightstg_bmenu_glyphs[7][6] = {
     { 1, 0x25, 0 }, { 1, 0x33, 0 }, { 1, 0x27, 0 }, { 1, 0x35, 0 }, { 1, 0x28, 0 }, { 1, 0x31, 0 },
+    { 1, 0x2C, 0 }, /* Inspect: the sparkle */
 };
-static const u8 fightstg_bmenu_glyph_w[6] = { 15, 15, 15, 15, 15, 15 };
+static const u8 fightstg_bmenu_glyph_w[7] = { 15, 15, 15, 15, 15, 15, 15 };
 
 /* 3x3 layout matching the physical pad, packed. The button's symbol is in the 9-pixel font (3), the picture in the
  * 14-pixel one (1). Left and right (X, A, and the shoulders) are a cell, symbol then picture: 27 wide, a shoulder's
@@ -3442,8 +3448,9 @@ static const u8 fightstg_bmenu_glyph_w[6] = { 15, 15, 15, 15, 15, 15 };
  * The cross sits in the screen's bottom-left corner (x 4-99, y 166-234, a margin of about 6 pixels for the handhelds'
  * overscan), under the player's Digimon and over the arena floor, so neither the Digimon nor the gauge (y 135-150,
  * x 104 on) is covered; the old list was higher (y 109-204). */
-static const s16 fightstg_battle_menu_slots[6][2] = {
+static const s16 fightstg_battle_menu_slots[7][2] = {
     { 44, 177 }, { 17, 193 }, { 58, 193 }, { 44, 209 }, { 4, 177 }, { 65, 177 },
+    { 65, 209 }, /* Inspect: under R1, right of the cross's foot */
 };
 
 /* The game's text for the button of an action: direct letter from the configured place if mapped,
@@ -3523,7 +3530,7 @@ static void fightstg_battle_menu_show(FightstgBattleMenu *obj, FightstgBattleMen
  * 3 Tag -> slot 3 (Bottom of cross)
  * 4 Item -> slot 5 (Top-Right wing)
  * 5 Run -> slot 1 (Left of cross) */
-static const u8 fightstg_bmenu_action_slot[6] = { 2, 4, 0, 3, 5, 1 };
+static const u8 fightstg_bmenu_action_slot[7] = { 2, 4, 0, 3, 5, 1, 6 };
 
 /* Where an action's symbol, picture and panel go from its anchor (see fightstg_battle_menu_slots). `face`: the symbol
  * is one letter (a shoulder button's is two); `slot` 0 and 3 are the cross's up and down arms, drawn as a column. */
@@ -3540,7 +3547,7 @@ static void fightstg_battle_menu_cell(FightstgBattleMenu *obj, s32 i, s32 slot, 
         obj->panel_h[i] = 26;
     } else {
         /* the right side (A, R1) is the left side mirrored: the picture toward the middle, the symbol outside */
-        s32 right = slot == 2 || slot == 5;
+        s32 right = slot == 2 || slot == 5 || slot == 6;
 
         obj->sym_x[i] = right ? fightstg_bmenu_glyph_w[i] : 0;
         obj->sym_y[i] = FIGHTSTG_BMENU_SYMBOL_DY;
@@ -3558,10 +3565,39 @@ static void fightstg_battle_menu_paint(FightstgBattleMenuData *data, s32 i, u8 p
     data->labels[i]->set_palette(data->labels[i], palette);
 }
 
+/* Inspect (definitive combat, layer 2): the current enemy's seven elements as Weak / Resist / - (neutral), from its
+ * resists as they stand now (buffs and debuffs included). Open: the text is set; closed: the windows are emptied. */
+#define FIGHTSTG_INSPECT_X 108
+#define FIGHTSTG_INSPECT_Y 166
+#define FIGHTSTG_INSPECT_STATE_DX 52
+#define FIGHTSTG_INSPECT_LINE 9
+#define FIGHTSTG_TWICE_X 108 /* the "Enemy x2" label: over the arena floor, under the gauges */
+#define FIGHTSTG_TWICE_Y 154
+static const u8 fightstg_inspect_empty[1] = { 0 };
+
+static void fightstg_battle_menu_inspect_set(FightstgBattleMenuData *data, s32 open) {
+    FightstgStats *enemy = NULL;
+    s32 e;
+    s32 n;
+
+    if (open) {
+        enemy = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
+    }
+    for (e = 0; e < 7; e++) {
+        if (!open) {
+            data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)fightstg_inspect_empty, -1);
+            data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)fightstg_inspect_empty, -1);
+            continue;
+        }
+        data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)def_inspect_element(e), -1);
+        data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)def_inspect_state(enemy->resists[e], &n), -1);
+        data->inspect_states[e]->set_palette(data->inspect_states[e], n);
+    }
+}
+
 void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData *data) {
     FightstgMember *member;
     u8 icon[4];
-    s32 rows[6] = { 0, 0, 0, 0, 0, 0 }; /* actions already placed in each slot */
     s32 slot;
     s32 x;
     s32 y;
@@ -3578,7 +3614,7 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         member = &fightstg_battle.state.members[0][fightstg_battle.state.current[0]];
         obj->press = obj->refused = -1;
         port_bm_open(); /* buffer_input: what was pressed just before is given from the first frame */
-        for (i = 0; i < 6; i++) {
+        for (i = 0; i < 7; i++) {
             slot = fightstg_bmenu_action_slot[i];
             x = fightstg_battle_menu_slots[slot][0];
             y = fightstg_battle_menu_slots[slot][1];
@@ -3594,6 +3630,15 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             data->labels[i]->set_text(data->labels[i], (u8 *)fightstg_bmenu_glyphs[i], -1);
             fightstg_battle_menu_paint(data, i, obj->grey[i] ? FIGHTSTG_BMENU_PAL_GREY : 0);
         }
+        for (i = 0; i < 7; i++) {
+            data->inspect_names[i] = message_create_window(0x1005, 3, FIGHTSTG_INSPECT_X,
+                                                           FIGHTSTG_INSPECT_Y + FIGHTSTG_INSPECT_LINE * i);
+            data->inspect_states[i] = message_create_window(0x1005, 3, FIGHTSTG_INSPECT_X + FIGHTSTG_INSPECT_STATE_DX,
+                                                            FIGHTSTG_INSPECT_Y + FIGHTSTG_INSPECT_LINE * i);
+        }
+        fightstg_battle_menu_inspect_set(data, 0);
+        data->twice = message_create_window(0x1005, 3, FIGHTSTG_TWICE_X, FIGHTSTG_TWICE_Y);
+        data->twice->set_text(data->twice, (u8 *)(def_enemy_acts_twice() ? def_twice_label() : fightstg_inspect_empty), -1);
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
@@ -3609,7 +3654,7 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
                 obj->refused = -1;
             }
         }
-        for (i = 0; i < 6; i++) {
+        for (i = 0; i < 7; i++) {
             dx = -(r * r) / 3;
             dy = 0;
             glow = 0;
@@ -3623,6 +3668,10 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
             }
             fightstg_battle_menu_show(obj, data, i, dx, dy, glow);
         }
+        if (obj->inspect) {
+            fightstg_battle_menu_quad(FIGHTSTG_INSPECT_X - 3, FIGHTSTG_INSPECT_Y - 2, 96,
+                                      FIGHTSTG_INSPECT_LINE * 7 + 4, 2, 150, 140, 100);
+        }
         if (obj->press >= 0) {
             /* The choice is given when the nudge is done; the original gives it at once. */
             if (obj->press_age >= FIGHTSTG_BMENU_PRESS) {
@@ -3633,9 +3682,18 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         }
         /* Nothing is read on the frame of the INIT above, as the original's: a press that closed a submenu is gone. */
         buffered = port_bm_take_action();
-        for (i = 0; i < 6; i++) {
+        for (i = 0; i < 7; i++) {
             if (i == buffered || port_battle_menu_pressed(i) || (pad_state.get_pressed(0) & (1 << port_battle_menu_bit(i)))) {
                 sound_module.play(0x4001C);
+                if (i == 6) { /* Inspect: opens or closes the panel, the menu stays and no turn is spent */
+                    obj->inspect = !obj->inspect;
+                    fightstg_battle_menu_inspect_set(data, obj->inspect);
+                    break;
+                }
+                if (obj->inspect) {
+                    obj->inspect = 0;
+                    fightstg_battle_menu_inspect_set(data, 0);
+                }
                 if (obj->grey[i]) {
                     port_bm_clear(); /* a refused press leaves the menu open, and nothing else is given */
                     port_battle_menu_chosen(i, port_battle_menu_bit(i), 1);
@@ -3646,7 +3704,7 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
                 port_battle_menu_chosen(i, port_battle_menu_bit(i), 0);
                 obj->press = i;
                 obj->press_age = 0;
-                for (r = 0; r < 6; r++) {
+                for (r = 0; r < 7; r++) {
                     fightstg_battle_menu_paint(data, r, r == i ? FIGHTSTG_BMENU_PAL_HOT : FIGHTSTG_BMENU_PAL_GREY);
                 }
                 break;

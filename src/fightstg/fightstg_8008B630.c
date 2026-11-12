@@ -520,6 +520,9 @@ s32 fightstg_script_run_stage(FightstgScript *obj, FightstgScriptData *data) {
 void fightstg_script_run_sound(FightstgScript *obj, FightstgScriptData *data) {
     s32 id = *obj->next++;
     s32 arg = *obj->next++;
+#ifdef PC_PORT
+    s32 is_hit = id == 0x62 || id == 0x63;
+#endif
 
     if (id == 0x62) {
         id = obj->results[obj->sound_index] == 3 ? 0x38 : obj->hit_sound;
@@ -528,6 +531,11 @@ void fightstg_script_run_sound(FightstgScript *obj, FightstgScriptData *data) {
         id = obj->results[3] == 3 ? 0x38 : obj->hit_sound;
         obj->sound_index++;
     }
+#ifdef PC_PORT
+    if (is_hit && data->sound == NULL) {
+        def_hit_feedback(); /* definitive combat: the weakness / neutral / resisted sound, with the hit's own */
+    }
+#endif
     if (data->sound == NULL) {
         data->sound = fightstg_sound_play(id, arg);
     }

@@ -265,11 +265,23 @@ s32 dw3_objective_spot(s32 region);
  * DW3_BATTLE_LOG=<file> appends one line per battle event; unset, every hook returns at once. def_get_damage and
  * def_get_special_damage are fightstg_rules.get_damage / .get_special_damage wrapped: same value, one line logged. */
 void def_log_begin(void);
+void port_hud_arm(void); /* game_mods.c: the battle HUD defaults, at each battle start (not under a replay script) */
 void def_log_turn(int side);
 void def_log_action(int side, int kind, int arg);
 void def_log_end(int result);
 /* Layer 1: the replacement for entry `i` of the text file loaded at `data` (font_get_entry), or NULL. */
 void *def_text_override(void *data, s32 i);
+/* Layer 2, Inspect: the glyph-byte label of element `e` (0..6: Fire, Water, Ice, Wind, Thunder, Machine, Dark), and the
+ * label for a resist value (Weak / Resist / -), with the palette the label is drawn in in *palette. */
+const unsigned char *def_inspect_element(int e);
+const unsigned char *def_inspect_state(int resist, int *palette);
+/* Layer 2: the sound that tells a hit on a weakness, a neutral one or a resisted one (the player's elemental
+ * techniques), played where the hit's own sound plays (fightstg_script_run_sound). */
+void def_hit_feedback(void);
+/* Layer 2: 1 when the enemy acts twice before our next turn (call with the command menu open, never mid-calculation),
+ * and the label shown then. */
+int def_enemy_acts_twice(void);
+const unsigned char *def_twice_label(void);
 s32 def_get_damage(u8 side, s32 id);
 s32 def_get_special_damage(u8 side, s32 id);
 

@@ -439,7 +439,7 @@ static const char *led_bar_status(struct PortMod *mod) {
 
 /* ---- battle_menu (docs/LAUNCHER.md "Battle menu"): while enabled, port_mod_battle_menu makes FIGHTSTG's
  * fightstg_command_menu_create build a menu with one pad button per action (fightstg_bmenu_*) instead of the list and
- * its cursor. Each option names a place on the player's pad; port_battle_menu_bit (below, after pad.map's code) turns it
+ * its cursor (always on in the port; a replay script keeps the list). Each option names a place on the player's pad; port_battle_menu_bit (below, after pad.map's code) turns it
  * into the PS1 bit the player's own button delivers, so the menu follows the pad map and shows that button's glyph.
  * Two actions on one place cannot both work: the defaults are used then. */
 /* The eight places a battle menu action (and a pad.map letter) can sit on, one table for everything that is known about
@@ -487,10 +487,49 @@ static const PortModOption bm_options[BM_OPTIONS] = {
 int port_mod_battle_menu;
 int port_mod_bm_remember;
 int port_mod_bm_buffer; /* frames; 0: off */
-static u8 bm_place[BM_COUNT]; /* by action: index into bm_places */
+/* The seven actions' places: the six options, then Inspect (definitive combat), which has no option (the mod's options
+ * are full): the first of L2, R2, then the other places, that no action of the six took. */
+#define BM_ACTIONS (BM_COUNT + 1)
+static u8 bm_place[BM_ACTIONS] = { 3, 4, 2, 0, 5, 1, 6 }; /* by action: index into bm_places (bm_default_places) */
+
+static void bm_pick_inspect(void) {
+    static const u8 order[BM_PLACE_COUNT] = { 6, 7, 4, 5, 0, 1, 2, 3 };
+    int i, a, taken;
+
+    for (i = 0; i < BM_PLACE_COUNT; i++) {
+        for (taken = 0, a = 0; a < BM_COUNT; a++) {
+            taken |= bm_place[a] == order[i];
+        }
+        if (!taken) {
+            bm_place[BM_COUNT] = order[i];
+            return;
+        }
+    }
+}
+static int bm_started; /* the mod's options were applied: bm_default_hud must not overwrite them */
+
+/* Definitive combat (PRD rule 4): the battle HUD is not a mod, it is always on. The mod record stays for its options
+ * (which buttons, remember_cursor, buffer_input): when it is not enabled the defaults hold. The one exception is a
+ * replay script (--script, tests/replay): the scripts are shared with the emulator and choose from the original
+ * list menu, so they keep it (as they keep the console's face-button rotation). */
+static void bm_default_hud(long rate) {
+    if (bm_started || port_script_active) {
+        return;
+    }
+    port_mod_battle_menu = 1;
+    port_mod_bm_remember = 1;
+    port_mod_bm_buffer = (int)(bm_buffer_ms[1] * rate / 1000); /* "short", the option's default */
+}
+
+/* At each battle's start (def_log_begin), not at boot: game_apply_rate runs before the runtime knows whether a script is
+ * driving the run. */
+void port_hud_arm(void) {
+    bm_default_hud(port_rate);
+}
 
 static void bm_start(struct PortMod *mod) {
     int a, b, clash = 0;
+    bm_started = 1;
     for (a = 0; a < BM_COUNT; a++) {
         bm_place[a] = (u8)mod->values[a].number;
     }
@@ -505,6 +544,7 @@ static void bm_start(struct PortMod *mod) {
             bm_place[a] = bm_default_places[a];
         }
     }
+    bm_pick_inspect();
     port_mod_battle_menu = 1;
     port_mod_bm_remember = mod->values[BM_REMEMBER].number != 0;
     /* the window in frames at the game's own rate (50 or 60 a second) */
@@ -940,7 +980,7 @@ int port_battle_menu_place(int bit) {
 int port_battle_menu_bit(int action) {
     int want, bit;
 
-    if (action < 0 || action >= BM_COUNT) {
+    if (action < 0 || action >= BM_ACTIONS) {
         return -1;
     }
     want = bm_slot[bm_place[action]].bit;
@@ -959,7 +999,7 @@ int port_battle_menu_bit(int action) {
 u16 dw3_raw_pressed = 0;
 
 int port_battle_menu_pressed(int action) {
-    if (action < 0 || action >= BM_COUNT) {
+    if (action < 0 || action >= BM_ACTIONS) {
         return 0;
     }
     return (dw3_raw_pressed >> bm_slot[bm_place[action]].bit) & 1;
@@ -974,7 +1014,7 @@ static int bm_place_in_file(int action) {
 
 /* The PS1 button the player's pad.map puts at the action's place: the symbol the menu shows when there is no letter. */
 int port_battle_menu_symbol_bit(int action) {
-    if (action < 0 || action >= BM_COUNT) {
+    if (action < 0 || action >= BM_ACTIONS) {
         return -1;
     }
     dw3_pad_load();
@@ -986,7 +1026,7 @@ int port_battle_menu_symbol_bit(int action) {
 char port_battle_menu_letter(int action) {
     char letter;
 
-    if (action < 0 || action >= BM_COUNT || !dw3_feat_icons) { /* icons off: the symbols, as in the game's text */
+    if (action < 0 || action >= BM_ACTIONS || !dw3_feat_icons) { /* icons off: the symbols, as in the game's text */
         return 0;
     }
     dw3_pad_load();

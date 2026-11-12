@@ -1,11 +1,12 @@
-/* "Definitive" combat (.plan/tasks/definitive-combat-prd.md). Always on in the port, no mod option. Layer 0 only so far:
- * the battle log. The game's C calls the def_* hooks under #ifdef PC_PORT; everything else lives here. */
+/* "Definitive" combat (.plan/tasks/definitive-combat-prd.md). Always on in the port, no mod option. Layer 0: the battle log;
+ * layer 1: the text overrides; layer 2: Inspect, the hit sounds, the "enemy acts twice" test. The game's C calls the def_* hooks under #ifdef PC_PORT; everything else lives here. */
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "cdload.h"
 #include "common.h"
 #include "fightstg.h"
+#include "sound.h"
 #include "gamestate.h"
 #include "records.h"
 
@@ -45,6 +46,7 @@ static int log_on(void) {
 void def_log_begin(void) {
     int i;
 
+    port_hud_arm();
     if (!log_on()) {
         return;
     }
@@ -101,9 +103,42 @@ void def_log_action(int side, int kind, int arg) {
     }
 }
 
+/* Layer 2: how the last damage the player dealt with an elemental technique met the target (0 none, 1 effective,
+ * 2 neutral, 3 resisted); def_hit_feedback plays its sound when the hit's own sound does. */
+static int hit_class;
+static s32 hit_id;
+
+static void classify(u8 side, s32 id) {
+    RecordsTechnique *rec = &records_techniques[id - 1];
+
+    hit_class = 0;
+    if (side != 0 || rec->defense_stat < 2 || rec->defense_stat > 8) {
+        return;
+    }
+    {
+        int resist = fightstg_rules.stats[1].resists[rec->defense_stat - 2];
+
+        hit_class = resist >= DEF_RESIST_MIN ? 3 : resist <= DEF_PROV_WEAK_MAX ? 1 : 2;
+        hit_id = id;
+    }
+}
+
+void def_hit_feedback(void) {
+    static const s32 sound[4] = { 0, DEF_SND_EFFECTIVE, DEF_SND_NEUTRAL, DEF_SND_RESISTED };
+
+    if (fightstg_action.side != 0 || hit_class == 0) {
+        return;
+    }
+    sound_module.play(sound[hit_class]);
+    if (log_on()) {
+        LOG("hitsound class %d tech %d", hit_class, (int)hit_id);
+    }
+}
+
 static s32 log_damage(u8 side, s32 id, s32 value, const char *what) {
     FightstgMember *target;
 
+    classify(side, id);
     if (log_on()) {
         target = &fightstg_battle.state.members[side == 0][fightstg_battle.state.current[side == 0]];
         LOG("damage %s side %d tech %d value %d target_hp %d -> %d", what, side != 0, id, value, target->hp,
@@ -166,4 +201,53 @@ void *def_text_override(void *data, s32 i) {
         return NULL;
     }
     return NULL;
+}
+
+/* ---- Inspect and the hit sounds (layer 2). Provisional rule until layer 3's def_weakness_mask: weak at DEF_PROV_WEAK_MAX
+ * or below, resisted from DEF_RESIST_MIN, neutral between. */
+extern const unsigned char def_str_Fire[], def_str_Water[], def_str_Ice[], def_str_Wind[], def_str_Thunder[],
+    def_str_Machine[], def_str_Dark[], def_str_Weak[], def_str_Resist[], def_str_Neutral[];
+
+/* "Enemy acts twice" (layer 2): with the command menu open, E the time left to the enemy's turn, Pe the delay its next
+ * turn would take and P the one ours would (fightstg_events.get_delay kind 0: no draw, but it rewrites
+ * fightstg_rules.stats, so only here, with the menu open and nothing being calculated), the enemy acts again before
+ * we do when E + Pe < P. */
+int def_enemy_acts_twice(void) {
+    int e = fightstg_events.find(3);
+    s32 left, enemy_next, own_next;
+
+    if (e < 0) {
+        return 0;
+    }
+    left = fightstg_events.events[e].delay;
+    enemy_next = fightstg_events.get_delay(0x10, 0);
+    own_next = fightstg_events.get_delay(0, 0);
+    if (log_on()) {
+        LOG("twice E %d Pe %d P %d -> %d", (int)left, (int)enemy_next, (int)own_next, left + enemy_next < own_next);
+    }
+    return left + enemy_next < own_next;
+}
+
+const unsigned char *def_twice_label(void) {
+    extern const unsigned char def_str_Twice[];
+    return def_str_Twice;
+}
+
+const unsigned char *def_inspect_element(int e) {
+    static const unsigned char *const names[7] = { def_str_Fire, def_str_Water,   def_str_Ice,  def_str_Wind,
+                                                    def_str_Thunder, def_str_Machine, def_str_Dark };
+    return names[e];
+}
+
+const unsigned char *def_inspect_state(int resist, int *palette) {
+    if (resist >= DEF_RESIST_MIN) {
+        *palette = 7;
+        return def_str_Resist;
+    }
+    if (resist <= DEF_PROV_WEAK_MAX) {
+        *palette = 3;
+        return def_str_Weak;
+    }
+    *palette = 0;
+    return def_str_Neutral;
 }

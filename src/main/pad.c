@@ -298,7 +298,7 @@ void pad_read_buttons(u8 id, u8 *data, u8 *rec) {
          * pad map (62a7ff8). Under --script the player's map is not in play, so apply the console's rotation. */
         {
             extern int port_script_active;
-            if (port_script_active && records_language != 0) {
+            if (port_script_active && !port_mod_battle_menu && records_language != 0) {
                 u16 raw = buttons;
 
                 buttons &= ~0x7000;

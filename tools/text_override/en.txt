@@ -148,3 +148,17 @@ SKLINF 205: Lowers enemy defense.
 SKLINF 206: Lowers enemy defense.
 SKLINF 207: Lowers enemy speed.
 SKLINF 208: Lowers enemy speed.
+
+# The battle HUD's own labels (Inspect panel): $NAME, no table entry.
+$Fire: Fire
+$Water: Water
+$Ice: Ice
+$Wind: Wind
+$Thunder: Thunder
+$Machine: Machine
+$Dark: Dark
+$Weak: Weak
+$Resist: Resist
+$Neutral: -
+$Unknown: ???
+$Twice: Enemy x2

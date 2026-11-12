@@ -316,7 +316,12 @@ lock. On the host there is nothing to see: `tests/port/mods.py` keeps the mod's 
 
 ### Battle menu
 
-`battle_menu`. Off by default. Redesigns **only the battle's main command menu** (Fight, Tech, Digivolve, Tag, Item,
+`battle_menu`. **Always on** (the definitive combat: `.plan/tasks/definitive-combat-prd.md`); the mod's record only carries
+its options (the buttons, `remember_cursor`, `buffer_input`), which apply while it is enabled and otherwise hold their
+defaults. The one exception is a replay script (`--script`), which keeps the original list. A seventh button, **Inspect**
+(L2, or R2 and then the free places when the player put an action there), opens a panel with the enemy's seven elements
+as Weak / Resist / - and spends no turn; "Enemy x2" shows over the arena when the enemy acts twice before our next turn.
+Redesigns **only the battle's main command menu** (Fight, Tech, Digivolve, Tag, Item,
 Run): the list and its cursor are gone, each action has its own button, and a compact 3x3 grid shaped like the pad is
 drawn where the list was: the up and down arms (Y, B) are columns, the left and right ones (X, A) and the shoulders
 (L1, R1) are cells. Each action is one of the font's coloured pictures (fist, bolt, figure, arrows, book, wing) beside its
