@@ -1,14 +1,16 @@
-# Digimon World 2003: handheld port (R36S / XF35H)
+# Digimon World 3: Definitive Edition
 
-A fork of the [Digimon World 2003 decompilation](https://github.com/gascarcella/dw2003recomp) and its PC port, tuned to
-run on RK3326 handhelds: the R36S, the XF35H and their clones (4x Cortex-A35, a Mali-G31, 1 GB of RAM, a 640x480 panel,
-a 32-bit Linux userspace). The decompilation and the PC port are the upstream project's work; this fork adds the handheld
-path.
+A remake of *Digimon World 3*'s battles in the style of *Persona*, running natively on RK3326 handhelds (the R36S, the
+XF35H and their clones) and on PC. It is built on the [Digimon World 2003 decompilation](https://github.com/gascarcella/dw2003recomp)
+and its PC port: the decompilation and the port are the upstream project's work; this fork adds the handheld path and
+the Definitive Edition's combat.
 
 > [!IMPORTANT]
 > **This repository contains no game data.** You need your own copy of *Digimon World 2003 (Europe) (En,Fr,De,Es,It)*,
 > raw `.bin` + `.cue`, MODE2/2352, 692,146,560 bytes, SHA-1 `457cb233349ba841e03b33d8060f8fbcadd45cb3`.
 > This project is not affiliated with or endorsed by Bandai, Bandai Namco or Sony.
+
+<!-- IMAGE: docs/images/definitive/banner.svg - title banner -->
 
 ## Quick start
 
@@ -17,21 +19,97 @@ path.
 2. Copy your disc image into `ports/dw3/game/`.
 3. Start *Digimon World 3* from the ports menu.
 
+Saves from earlier versions open and play. The rookies' new MP is not applied to an old save by the game:
+`tools/convert_save_mp.py card1.mcd` converts a card (keep a copy first).
+
 The player page, with install details, the tested devices and known issues, is
 [`portmaster/README.md`](portmaster/README.md). How the launcher runs the game, the environment variables and the
 controls are in [`docs/HANDHELD.md`](docs/HANDHELD.md).
 
-## What the fork adds
+## The Definitive Edition's combat
 
-- **Persona-style Direct Battle HUD**: a responsive direct-button battle HUD mapped directly to handheld face/shoulder buttons (Fight, Tech, DV, Items, Tag, Run) in a cross/diamond layout with dedicated icons, skipping sluggish sub-menu navigation. Rebindable from the launcher.
-  
-  ![Persona-style Direct Battle HUD](docs/images/battle_hud.png)
+The design and every number behind it are in [`.plan/tasks/definitive-combat-prd.md`](.plan/tasks/definitive-combat-prd.md);
+every tunable number is a constant in [`port/game/definitive.h`](port/game/definitive.h). It is always on: there is no
+option to turn it off.
+
+### Weaknesses
+
+Seven elements: Fire, Water, Ice, Wind, Thunder, Machine and Dark. Every enemy has its own weaknesses and resistances,
+set by a table the port applies over the disc's records (the disc is never edited):
+
+- most enemies are weak to two elements and resist one;
+- a few early "walls" are weak to a single element and resist two: find the weakness or grind;
+- late-game enemies resist two elements, bosses three, the final boss four;
+- Dark is rare on both sides: only a handful of enemies are weak to it, and as few resist it.
+
+A weakness is decided at the moment of the hit, from the target's resists as they stand then, so a buff or a debuff can
+create or remove one.
+
+<!-- IMAGE: docs/images/definitive/weakness.svg - the seven elements; weak / neutral / resisted; how the median rule picks two -->
+
+### Stagger and One More
+
+Hitting a weakness with an elemental technique **staggers** the enemy (it takes the tired pose) and gives you **one
+more** action. Each weakness element gives its extra action once per round, so two weaknesses can chain into several
+actions in a row. The stagger ends when the enemy takes its next blow (that blow still gets the bonus) or when it acts.
+
+- **Baton Pass**: while the enemy is staggered, the Tag menu offers Baton Pass, a free switch that keeps your turn (once
+  per round). A plain switch still costs the turn.
+- **You open the fight** (unless you are ambushed), and speed matters from the first turn: a much faster party acts twice
+  before the enemy does. The HUD shows "Enemy x2" when the enemy will act twice before you.
+
+<!-- IMAGE: docs/images/definitive/stagger.svg - hit a weakness -> stagger -> one more -> baton pass -->
+
+### Damage
+
+For your elemental techniques: `1.0 + 0.5 (weakness) + 0.2 (staggered target) + affinity` for each of the two, and half
+damage against a resisted element. **Affinity** is what your Digimon's old elemental "tolerance" stats became: they no
+longer defend, they strengthen your attacks of that element. Fire and Wind count on their own; Water with Ice and Thunder
+with Machine count as pairs (the affinity uses the pair's sum), Dark on its own. A blow with no element on a staggered
+target gets +0.2.
+
+Enemy magic is now resisted by your **Defense** (it was Spirit), so one stat covers both kinds of hit; Spirit stays your
+magic attack.
+
+<!-- IMAGE: docs/images/definitive/damage.svg - the multiplier, the affinity pairs -->
+
+### Knowing your enemy
+
+- **Inspect** (a seventh button on the battle HUD, L2 by default) and **Start** show the enemy's seven elements, but
+  only what you have found out: weaknesses and resistances are learnt by hitting them, everything else shows `???`.
+- **Libra** reveals all of an enemy's elements at once.
+- The **Bestiary** (field menu) keeps what you learnt of every species, saved with your game, per slot.
+- The technique menu shows each technique's element.
+
+<!-- IMAGE: docs/images/definitive/inspect.png - the weakness panel in battle -->
+<!-- IMAGE: docs/images/definitive/bestiary.png - the bestiary -->
+
+### Techniques and MP
+
+- Remade techniques: **Libra** (was Speed Up), **Relay** (was Mega Boost: the next switch is free), **Resist Down** (was
+  Slow Down) and Mega Break, which lower the enemy's resistance to your best elements for a few turns (bosses are immune).
+- Every technique description was rewritten from what the technique actually does (effect first: "Fire magic. Sleep
+  chance.").
+- The rookies' MP: Kotemon, Kumamon and Monmon start with 140 MP; their MP growth per level is 57, as is Veemon's.
+
+### Battle HUD
+
+A direct-button HUD replaces the battle's list menu: each action (Fight, Tech, Digivolve, Tag, Item, Run, Inspect) has
+its own button in a pad-shaped layout, rebindable from the launcher; it remembers the last technique and item, and
+buffers a press made just before the menu opens.
+
+![Persona-style Direct Battle HUD](docs/images/battle_hud.png)
+
+### Balance
+
+The numbers are a first pass, tuned by playing. A battle log (`DW3_BATTLE_LOG=<file>`) writes every turn, action and
+damage with the multiplier's terms, to see where a fight goes wrong.
+
+## The handheld port
 
 - **Battle text that does not stop the fight** (`battle_text`): the battle's message boxes no longer wait for a button.
-  In `async` (the default) the action carries on while the text stays up for a moment, and notes the animation already
-  shows (a plain Attack, Evade, stance and gauge notes) are dropped; `skip` removes the boxes, `off` is the original.
-  The rules and results are unchanged.
-
+  In `async` (the default) the action carries on while the text stays up for a moment; `skip` removes the boxes, `off`
+  is the original.
 - **Direct framebuffer present**: the PS1's VRAM expanded straight into `/dev/fb0` with NEON, which is what makes the 2D
   game and the movies run at full speed.
 - **A second renderer on the Mali** (`--renderer gles`): the VRAM as a texture, faster than the CPU rasteriser in heavy
