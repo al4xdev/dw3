@@ -236,27 +236,6 @@ with the mod on, with `manual` and party_xp, and capped without `manual`; that b
 `form_exp` is not reached by a scripted run.
 
 
-### Evolution buff
-
-`evo_buff`. No options, no hotkey: the on/off switch is the option. Off in a bare binary; **on in the handheld menu's
-tuned defaults** (`handheld/dw3-menu.py`'s `defaults()` writes `"evo_buff": {"enabled": true}`), so a card that never
-opened the menu plays with it. Once per battle, the first party Digimon to evolve (either a digivolution or a blast)
-gains **+100 to all five stats** (HP, MP, attack, defence, speed) for the rest of the fight, and takes **no damage on
-the enemy turn that follows the evolution**.
-
-- **Where it acts.** `fightstg_rules_get_stats` (`src/fightstg`, side 0 only) adds the 100 after the game's own totals.
-  The shield is a Guard value of 9999 on `stats[1]`, the statistic every physical and technique formula divides by
-  (`get_tech_damage`, `get_special_damage`) - and **only for the target** (`first == 0`): the attacker's own read of
-  the same member (`first == 1`) must keep its real defence, or the buffed Digimon's own attacks on that enemy turn
-  would each be divided by 9999.
-- **One per battle.** `dw3_evo_shield_member` is set on the first evolution and cleared at the next party turn's start,
-  so the shield covers exactly the enemy turn after it. `dw3_evo_buff_member` is reset at the battle's start
-  (`wfightmn_main_create`) and lasts the whole battle; a later evolution in the same fight changes nothing.
-- **No HUD marker, on purpose.** It drew the buffed member's icon in the active palette for a while; the highlight was
-  indistinguishable from the acting member's own and nobody noticed it, and the buff is felt where it matters (the
-  numbers and the protected turn), so the game's HUD is left as the original draws it.
-- **Balance:** the stats are a flat +100, not a multiplier, so it is decisive in the early game and small late.
-
 ### Widescreen battles
 
 `widescreen`. No options, no hotkey: while enabled, the battle (FIGHTSTG) is shown 16:9 through the GPU renderer's wide

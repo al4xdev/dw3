@@ -41,13 +41,12 @@ More: [running, deploying and limits](https://github.com/al4xdev/dw3/blob/main/d
 The menu runs before the game, is driven by the pad alone and writes `ports/dw3/settings.json` as you change it.
 `Cross` enters a group or changes a value, `Circle` goes back, `Start` plays from anywhere, `Select + Start` quits. The
 defaults are the setup the port was tuned with, so a player who never opens the menu gets it anyway: 8x fast-forward
-with the audio muted, the whole party sharing all the experience, XP boost 2x, form XP 14x, and the evolution buff on
-(the first Digimon to evolve in a battle gets +100 to every stat for the fight and one protected enemy turn).
+with the audio muted. The experience rules (the whole party sharing a battle's experience, form experience 14x) are
+the Definitive Edition's own, with nothing to set.
 
 | main row | what it holds |
 |---|---|
-| `GAME` | `FAST-FORWARD` (speed and off/on), `SKIP DIALOGUES`, `SKIP BATTLE ANIMS` and `HIT REACTION`, `SAVE ANYWHERE`, `EVO BUFF` (on by default) |
-| `XP` | `PARTY XP` (percentage of the party that shares), `XP / BITS BOOST` (off, or 2x to 20x, default 2x), `FORM XP` (1x to 20x, default 14x: the digivolutions' multiplier alone), `ALL FORMS' XP` (on by default) |
+| `GAME` | `FAST-FORWARD` (speed and off/on), `SKIP DIALOGUES`, `SKIP BATTLE ANIMS` and `HIT REACTION`, `SAVE ANYWHERE`, `BATTLE MENU` (its buttons, `REMEMBER CURSOR`, `BUFFER INPUT`) |
 | `VIDEO` | `HZ` (50 or 60), `RENDERER` (`GLES` for 3D, `SOFTWARE` for 2D-heavy scenes and the byte-exact reference) |
 | `DEBUG` | `LOGS` (off / soft / heavy, off by default), `SAVE LOGS` (a `dw3-logs-<date>.zip` beside the port: the logs, the crash reports, the settings and the pad map) and `CLEAN LOGS`, after asking, which deletes those files and the old zips |
 | `LED BAR` | the console's LED bar follows the acting Digimon's HP in battle (installs a small daemon) |

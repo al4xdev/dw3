@@ -173,16 +173,6 @@ extern s32 port_preset_language;
  * port_party_xp_share(slot, took_part, exp). Both only when def_on. */
 void port_party_xp_knocked_out(s32 slot, s32 knocked_out);
 s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp);
-/* port_mod_evo_buff: evo_buff is on ("Evolution buff"): the first Digimon in each battle to evolve gains +100 to every
- * stat for the rest of the fight (the rules, get_stats) and, on the enemy turn that follows, takes no damage (Guard at
- * the ceiling, get_stats, only where it is the target: first == 0). One per battle: dw3_evo_buff_member (set on the
- * first evolution, lasts the whole battle) and
- * dw3_evo_shield_member (lasts the one enemy turn after) are set by the battle (wfightmn) and read by the rules
- * (fightstg); -1 for none. Reset at the battle's start (wfightmn_main_create); the shield at each party turn's start
- * (wfightmn_party_turn). */
-extern int port_mod_evo_buff;
-extern s16 dw3_evo_buff_member;   /* the buffed member, -1 if none; the +100 to every stat lasts the battle */
-extern s16 dw3_evo_shield_member; /* the member that takes no damage, -1 if none; lasts the evolution turn */
 
 /* port_mod_battle_menu: battle_menu is on ("Battle menu"): FIGHTSTG's main command menu (fightstg_command_menu_create)
  * becomes a menu with one pad button per action, drawn where the list was (docs/LAUNCHER.md "Battle menu"). The

@@ -19,7 +19,7 @@ substituída por este arquivo). Dados extraídos: `.dumps/tasks/persona/data.jso
 1. **Não é mod.** Sempre ligado no port. Sem opção em `mod.json`, sem flag `port_mod_*`.
 2. Todo código novo no jogo fica sob `#ifdef PC_PORT`. O build PS1 (matching) e os goldens de `tests/golden` não
    podem mudar. Rode `scripts/test.sh` antes e depois de cada camada; uma falha nova é bloqueio.
-3. **Evo Buff não se toca** (`dw3_evo_buff_member`, `dw3_evo_shield_member`, `wfightmn_evo_buff_apply`).
+3. **Evo Buff não se toca** (`dw3_evo_buff_member`, `dw3_evo_shield_member`, `wfightmn_evo_buff_apply`). *(Obsoleto: o Evo Buff foi removido no PRD 3, camada B.)*
 4. O HUD `battle_menu` passa a ser obrigatório (camada 2): os caminhos `port_mod_battle_menu == 0` deixam de existir.
 5. **Dado do disco nunca é editado nem versionado.** Inimigos (`SDIGIEDT.PRO`) e textos (`ES*.BIN`) mudam por tabela
    de override no port. `src/main/records.c` (técnicas, Digimon) está no repo, mas é fonte matching: mudanças de dado
@@ -241,7 +241,7 @@ querer (comparar `techs.txt` antes/depois).
 - Só com o JOGADOR como alvo: em `get_special_damage`, quando `side != 0`, a razão usa a Defesa do alvo
   (`target->stats[1]`) no lugar do Espírito. Inimigo como alvo mantém Espírito.
 - Espírito do jogador fica como ataque mágico (e as durações que já usa).
-- Atenção ao escudo do Evo Buff: ele põe Defesa em 9999 quando o membro é alvo; com a defesa unificada, passa a
+- *(Obsoleto: Evo Buff removido no PRD 3, camada B.)* Atenção ao escudo do Evo Buff: ele põe Defesa em 9999 quando o membro é alvo; com a defesa unificada, passa a
   cobrir magia também. É consequência aceitável, mas avise no relatório.
 - Textos do menu de status: "Tolerance" dos 7 elementos vira afinidade; corrigir o que descrever Espírito como
   defesa (`ESSTATUS` 92–98, `ESTRAINI` 29+).

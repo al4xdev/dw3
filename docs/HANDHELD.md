@@ -162,12 +162,9 @@ build has a fixed button map of its own.
 ## Mods and menu defaults
 
 The mods are described in [`LAUNCHER.md`](LAUNCHER.md). What matters on a handheld is what the menu writes when nobody
-opens it. Its defaults are the settings this port was tuned with: 8x fast-forward (audio muted), the evolution buff on,
-the party sharing all the experience, XP and bits boost 2x, form (digivolution) experience 14x, and the forms that did not
-fight earning experience as well. The multipliers go up to 20x.
-
-The binary's own default is different: `dw3_feat_xp` is 0, so without the menu and without `mods.xp_boost` in
-`settings.json` there is no boost. `DW3_FEAT_XP=1` turns it on for one run.
+opens it. Its defaults are the settings this port was tuned with: 8x fast-forward (audio muted). The experience rules
+(the party sharing all the experience, form experience 14x, every owned form earning) are the Definitive Edition's own,
+in the game, not settings ([`MECHANICS.md`](MECHANICS.md) section 6).
 
 Fast-forward goes up to 8x where the game has headroom (menus, dialogue, cutscenes). In the field and in a battle the CPU
 is the limit, so it only mutes the audio there.
@@ -191,7 +188,6 @@ Read by the game:
 | `DW3_FEAT_ICONS=0` | no button glyph replacement |
 | `DW3_FEAT_TRAVEL=0` | no fast travel |
 | `DW3_FEAT_OBJECTIVE=0` | no map objective |
-| `DW3_FEAT_XP=1` | XP and bits boost on, for this run |
 | `DW3_NO_NEON_FLAT=1` | scalar flat textured span, the same binary (to time or to isolate a fault) |
 | `DW3_NO_NEON_GOURAUD=1` | scalar Gouraud span |
 | `DW3_STATE_ANY=1` | load a save state written by another build; lifts the checksum and image checks, and can hang silently if the state is really incompatible |

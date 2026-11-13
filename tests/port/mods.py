@@ -53,10 +53,6 @@ draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the
 battle_menu: from the first battle's start (a state of the build), at the command menu: each default button chooses
 its own action, the buttons not on the menu choose nothing, the mod off reads the original's menu, a pad.map that
 swaps cross and square moves the actions with the buttons, two actions on one button fall back to the defaults.
-evo_buff: the registry (a builtin with no options), the flag the setting sets, and the shield's condition: it is the
-member as a *target* only (`first == 0`), because fightstg_rules_scale_damage divides by stats[1] and the buffed
-Digimon's own attacks must keep their numbers on that turn. No scripted route digivolves (the story's first battle has
-no digivolution to choose), so the arithmetic is checked where it lives; the play-test is the device.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -484,30 +480,6 @@ def definitive_xp(binary, out):
             check(money == FIRST_BATTLE_MONEY, f"{label}: the money gain {money}, want {FIRST_BATTLE_MONEY}")
 
 
-def evo_buff(binary, out):
-    """evo_buff: the manifest is the game's registry, the flag follows the setting, and - the review's bug - the
-    one-turn shield is the member as a *target* only, never as an attacker.
-
-    The first battle of the story has no digivolution to choose, so no scripted route reaches wfightmn_digivolve; the
-    arithmetic is therefore checked where it lives: the shield writes `out->stats[1]`, the statistic
-    `fightstg_rules_scale_damage` divides by, and must not write it on the attacker's own read of the same member, or
-    the buffed Digimon's attacks on that enemy turn would each be divided by 9999. The play-test is the device.
-    """
-    print("mods: evo_buff (the manifest, the flag, and the shield's condition)")
-    reg = json.loads(subprocess.run([str(binary), "--print-mods"], cwd=ROOT, capture_output=True, text=True).stdout)
-    entry = next((m for m in reg if m["id"] == "evo_buff"), None)
-    check(entry is not None and entry["kind"] == "builtin" and entry["options"] == [],
-          f"the registry has evo_buff as a builtin without options ({entry})")
-    cfg = settings(out, "evo_flags", {"evo_buff": {"enabled": True}})
-    rc, _, _, err = run_port(binary, out, "evo_flags", derived(out, "evo_flags", []), cfg, True)
-    check("evo_buff on" in err and "evo_buff off" not in err,
-          f"the mod starts when the setting enables it ({[l for l in err.splitlines() if 'evo_buff' in l]})")
-    src = (ROOT / "src/fightstg/fightstg_8008D3B4.c").read_text()
-    line = next((l.strip() for l in src.splitlines() if "dw3_evo_shield_member) {" in l), "")
-    check(line.startswith("if (first == 0 && member == dw3_evo_shield_member)"),
-          f"the shield applies to the target's read only ({line!r})")
-
-
 def bm_state(binary, out):
     """The first battle's start (first_battle_save's checkpoint battle_start) saved as a state of this binary, or None.
 
@@ -646,7 +618,6 @@ MODS_TESTS = {
     "preset_language": lambda binary, out, record: preset_language(binary, out),
     "skip_dialogues": skip_dialogues,
     "definitive_xp": lambda binary, out, record: definitive_xp(binary, out),
-    "evo_buff": lambda binary, out, record: evo_buff(binary, out),
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
     "battle_text": lambda binary, out, record: battle_text(binary, out),

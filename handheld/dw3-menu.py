@@ -162,9 +162,9 @@ GLYPH = {
 def defaults():
     """The tuned setup, and what RESET SETTINGS puts back: the owner's own settings on the handheld, so a player who never
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
-    evolution buff, and no logs. The experience rules (the party's share, form experience) are the game's own now
+    no logs. The experience rules (the party's share, form experience) are the game's own now
     (the definitive edition), with nothing to set here."""
-    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, btext=2, saveany=0, evo=1, bmenu=1, bmem=1, bbuf=1,
+    return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, btext=2, saveany=0, bmenu=1, bmem=1, bbuf=1,
                 bm_fight="east", bm_tech="l1", bm_digivolve="north", bm_tag="south", bm_item="r1", bm_run="west",
                 logs=0, lang=0, lang_on=0)
 
@@ -245,7 +245,6 @@ def write_settings(s, disc):
     "global_save": { "enabled": %s, "restore_map_state": true },
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
-    "evo_buff": { "enabled": %s },
     "battle_menu": { "enabled": %s, "fight": "%s", "tech": "%s", "digivolve": "%s", "tag": "%s", "item": "%s", "run": "%s", "remember_cursor": %s, "buffer_input": "%s" },
     "led_bar": { "enabled": %s }
   },
@@ -253,7 +252,6 @@ def write_settings(s, disc):
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
        b(s["battles"]), b(s["hit"]), b(s.get("btext", 2) != 0), BTEXT_MODES[s.get("btext", 2)] if s.get("btext", 2) else "async", b(s["saveany"]),
-       b(s["evo"]),
        "true",  # the battle HUD is always on now (definitive combat); "enabled" only makes its options apply
        s.get("bm_fight", "east"), s.get("bm_tech", "l1"), s.get("bm_digivolve", "north"),
        s.get("bm_tag", "south"), s.get("bm_item", "r1"), s.get("bm_run", "west"),
@@ -383,7 +381,6 @@ GROUPS = [
         ("hit", "  HIT REACTION"),
         ("btext", "BATTLE TEXT"),
         ("saveany", "SAVE ANYWHERE"),
-        ("evo", "EVO BUFF"),
         ("bmenu", "BATTLE MENU"),
         ("bmem", "  REMEMBER CURSOR"),
         ("bbuf", "  BUFFER INPUT"),
@@ -449,7 +446,7 @@ def field_text(s, key):
         return on(s["hit"]) if s["battles"] else "off"
     if key == "bmenu":
         return "ALWAYS"
-    if key in ("skip", "battles", "saveany", "evo"):
+    if key in ("skip", "battles", "saveany"):
         return on(s[key])
     return ""
 
@@ -493,7 +490,7 @@ def field_toggle(s, key, direction=1):
             s["hit"] = 1
         else:
             s["hit"] ^= 1
-    elif key in ("skip", "battles", "saveany", "evo"):
+    elif key in ("skip", "battles", "saveany"):
         s[key] ^= 1
 
 

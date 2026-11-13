@@ -1,5 +1,5 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, evo_buff, widescreen, led_bar, battle_menu and battle_text
+ * battle_animations, global_save, preset_language, widescreen, led_bar, battle_menu and battle_text
  * (and, after them, the handheld's features and the player's pad.map), as PortMod records the
  * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
@@ -296,28 +296,6 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
     return gain;
 }
 
-/* ---- evo_buff (docs/LAUNCHER.md "Evolution buff"): while enabled, the first Digimon in each battle to evolve gains
- * +100 to every stat for the rest of the fight (fightstg_rules_get_stats, side 0) and, on the enemy turn that follows,
- * takes no damage (Guard at the ceiling, get_stats, and only where the member is the target: first == 0). The per-battle
- * member indices (dw3_evo_buff_member, the buff;
- * dw3_evo_shield_member, the one-turn shield; -1 for none) are set by the battle on the first evolution
- * (wfightmn_digivolve / wfightmn_blast), reset by the battle's start (wfightmn_main_create); the shield is cleared
- * at each party turn's start (wfightmn_party_turn). The binary starts it off; the handheld menu's tuned defaults turn
- * it on (`mods.evo_buff`), as they turn on the party's shared experience. */
-int port_mod_evo_buff;
-s16 dw3_evo_buff_member = -1;
-s16 dw3_evo_shield_member = -1;
-
-static void eb_start(struct PortMod *mod) {
-    (void)mod;
-    port_mod_evo_buff = 1;
-}
-
-static const char *eb_status(struct PortMod *mod) {
-    (void)mod;
-    return "evo buff";
-}
-
 /* ---- widescreen (docs/LAUNCHER.md "Widescreen battles"): the battle at 16:9 through the hardware renderer's wide
  * canvas (psxstack render_gpu_wide.c). FIGHTSTG already sends the 3D a 16:9 frame needs: its only screen-space cull,
  * fightstg_model_mesh_is_visible, keeps a mesh with a bounding point within the clip plus 64 pixels (x within 224 of
@@ -612,7 +590,6 @@ static PortMod game_mod_table[] = {
       .option_count = (int)(sizeof(gs_options) / sizeof(gs_options[0])), .start = gs_start },
     { .id = "preset_language", .version = "0.1", .options = pl_options,
       .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start },
-    { .id = "evo_buff", .version = "0.1", .start = eb_start, .status = eb_status },
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
     { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
       .status = led_bar_status },
