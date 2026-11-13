@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700" role="img" aria-labelledby="title desc">
+<title id="title">The Rare Target loop</title>
+<desc id="desc">1: each random battle won in a region adds to its chain; from 5 wins the next encounter has a 5% chance to be the Rare Target, 5% more per win, up to 40% from 12 wins. 2: the Rare Target is a boss battle raised to the region's level and shown with its region's numeral, for example Datamon IV; you can always run and the Rush never skips it. 3: it drops the region's numbered rare item, for example Datamon Core IV, one R-Booster pack and far more experience. 4: the Bestiary keeps the rare items collected and the common materials held.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="700" rx="16" fill="#171a21"/>
+<text x="30" y="46" font-size="26" fill="#f0efec" font-weight="800">The hunt: the Rare Target</text>
+<text x="30" y="76" font-size="15.5" fill="#c3c2b7">Keep winning random battles in one region, and its Rare Target comes out.</text>
+<rect x="30" y="96" width="400" height="240" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="54" cy="122" r="13" fill="#f0efec"/>
+<text x="54" y="127.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">1</text>
+<text x="76" y="128" font-size="17" fill="#f0efec" font-weight="700">The regional chain</text>
+<text x="48" y="154" font-size="14.5" fill="#c3c2b7">Chance that the next encounter is the Rare Target</text>
+<line x1="80" y1="282.0" x2="415.0" y2="282.0" stroke="#2a3040" stroke-width="1"/>
+<text x="76" y="287.0" font-size="13.5" fill="#9a9a94" text-anchor="end">0%</text>
+<line x1="80" y1="232.0" x2="415.0" y2="232.0" stroke="#2a3040" stroke-width="1"/>
+<text x="76" y="237.0" font-size="13.5" fill="#9a9a94" text-anchor="end">20%</text>
+<line x1="80" y1="182.0" x2="415.0" y2="182.0" stroke="#2a3040" stroke-width="1"/>
+<text x="76" y="187.0" font-size="13.5" fill="#9a9a94" text-anchor="end">40%</text>
+<rect x="89.0" y="280" width="17.5" height="2" fill="#4a4f5c"/>
+<text x="97.75" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">0</text>
+<rect x="112.5" y="280" width="17.5" height="2" fill="#4a4f5c"/>
+<rect x="136.0" y="280" width="17.5" height="2" fill="#4a4f5c"/>
+<rect x="159.5" y="280" width="17.5" height="2" fill="#4a4f5c"/>
+<rect x="183.0" y="280" width="17.5" height="2" fill="#4a4f5c"/>
+<rect x="206.5" y="269.5" width="17.5" height="12.5" rx="3" fill="#c98500"/>
+<text x="215.25" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">5</text>
+<rect x="230.0" y="257.0" width="17.5" height="25.0" rx="3" fill="#c98500"/>
+<rect x="253.5" y="244.5" width="17.5" height="37.5" rx="3" fill="#c98500"/>
+<rect x="277.0" y="232.0" width="17.5" height="50.0" rx="3" fill="#c98500"/>
+<rect x="300.5" y="219.5" width="17.5" height="62.5" rx="3" fill="#c98500"/>
+<rect x="324.0" y="207.0" width="17.5" height="75.0" rx="3" fill="#c98500"/>
+<text x="332.75" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">10</text>
+<rect x="347.5" y="194.5" width="17.5" height="87.5" rx="3" fill="#c98500"/>
+<rect x="371.0" y="182.0" width="17.5" height="100.0" rx="3" fill="#c98500"/>
+<text x="379.75" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">12</text>
+<rect x="394.5" y="182.0" width="17.5" height="100.0" rx="3" fill="#c98500"/>
+<text x="215.25" y="261.5" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">5%</text>
+<text x="379.75" y="174.0" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">40%</text>
+<text x="250.5" y="322" font-size="13.5" fill="#9a9a94" text-anchor="middle">wins in a row in this region</text>
+<rect x="470" y="96" width="400" height="240" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="494" cy="122" r="13" fill="#f0efec"/>
+<text x="494" y="127.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">2</text>
+<text x="516" y="128" font-size="17" fill="#f0efec" font-weight="700">The Rare Target</text>
+<g transform="translate(778.0,127.0) skewX(-14)"><rect x="-60.0" y="-19.0" width="120" height="38" rx="4" fill="#c98500"/></g>
+<text x="778.0" y="134.92" font-size="22" fill="#14161c" font-weight="800" text-anchor="middle" font-style="italic" letter-spacing="1">RARE!</text>
+<rect x="488" y="154" width="150" height="30" rx="6" fill="#12151c" stroke="#3a4257" stroke-width="1.5"/>
+<text x="563" y="175" font-size="15.5" fill="#f0efec" font-weight="700" text-anchor="middle">Datamon IV</text>
+<text x="650" y="175" font-size="14.5" fill="#9a9a94">its region's numeral</text>
+<text x="488" y="212" font-size="15" fill="#c3c2b7">One of the game's boss battles, its</text>
+<text x="488" y="234" font-size="15" fill="#c3c2b7">enemies raised to the region's level,</text>
+<text x="488" y="256" font-size="15" fill="#c3c2b7">on the region's own stage and music.</text>
+<text x="488" y="278" font-size="15" fill="#c3c2b7">You can always run from it, and the</text>
+<text x="488" y="300" font-size="15" fill="#c3c2b7">Overlevel Rush never skips it.</text>
+<rect x="470" y="376" width="400" height="240" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="494" cy="402" r="13" fill="#f0efec"/>
+<text x="494" y="407.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">3</text>
+<text x="516" y="408" font-size="17" fill="#f0efec" font-weight="700">Rewards</text>
+<text x="488" y="450" font-size="15.5" fill="#f0efec" font-weight="700">Rare item</text>
+<text x="594" y="450" font-size="15" fill="#c3c2b7">the region's own, numbered</text>
+<text x="594" y="477" font-size="15" fill="#c3c2b7">like its target: Datamon Core IV</text>
+<text x="488" y="504" font-size="15.5" fill="#f0efec" font-weight="700">R-Booster</text>
+<text x="594" y="504" font-size="15" fill="#c3c2b7">one pack, by the target's level</text>
+<text x="488" y="531" font-size="15.5" fill="#f0efec" font-weight="700">Experience</text>
+<text x="594" y="531" font-size="15" fill="#c3c2b7">far more than the encounter</text>
+<text x="594" y="558" font-size="15" fill="#c3c2b7">it replaced</text>
+<text x="488" y="594" font-size="14" fill="#9a9a94">Rares are spent later: forge, Black Market, DRI (planned).</text>
+<rect x="30" y="376" width="400" height="240" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="54" cy="402" r="13" fill="#f0efec"/>
+<text x="54" y="407.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">4</text>
+<text x="76" y="408" font-size="17" fill="#f0efec" font-weight="700">The Bestiary keeps the collection</text>
+<rect x="48" y="430" width="364" height="104" rx="6" fill="#12151c" stroke="#3a4257" stroke-width="1.5"/>
+<text x="64" y="464" font-size="15" fill="#c98500" font-weight="700">Rare</text>
+<text x="150" y="464" font-size="15" fill="#f0efec">Rare Cores</text>
+<text x="390" y="464" font-size="15" fill="#f0efec" font-weight="700" text-anchor="end">4/13</text>
+<text x="64" y="504" font-size="15" fill="#c3c2b7" font-weight="700">Common</text>
+<text x="150" y="504" font-size="15" fill="#f0efec">Bit Shard</text>
+<text x="390" y="504" font-size="15" fill="#f0efec" font-weight="700" text-anchor="end">x12</text>
+<text x="48" y="562" font-size="14.5" fill="#c3c2b7">Under each species: the rare items you have</text>
+<text x="48" y="581" font-size="14.5" fill="#c3c2b7">collected, and its common material held.</text>
+<line x1="434" y1="216" x2="464" y2="216" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="670.0" y1="339" x2="670.0" y2="370" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="466" y1="496" x2="436" y2="496" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="230.0" y1="373" x2="230.0" y2="342" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<text x="30" y="650" font-size="15" fill="#f0efec">The chain resets in another region, after a Guardromon teleport and after any Rare Target fight.</text>
+<text x="30" y="674" font-size="15" fill="#c3c2b7">Battles you do not win, or skip with the Overlevel Rush, do not count.</text>
+</svg>

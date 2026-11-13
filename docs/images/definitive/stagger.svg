@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+<title id="title">Stagger and One More</title>
+<desc id="desc">Hit a weakness with an elemental technique: WEAK!, the enemy staggers and you get one more action. With it: hit another weak element for another extra action, Baton Pass to switch and keep the turn, or any other blow, which gets the stagger bonus and ends the stagger. OVERFINISH pays Bits for hitting a knocked-out enemy during the extra action.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="560" rx="16" fill="#171a21"/>
+<text x="30" y="46" font-size="26" fill="#f0efec" font-weight="800">Stagger and One More</text>
+<text x="30" y="76" font-size="15.5" fill="#c3c2b7">Only your elemental techniques stagger. A round runs from one normal action to the next.</text>
+<rect x="30" y="98" width="250" height="132" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="56" cy="124" r="13" fill="#f0efec"/>
+<text x="56" y="129.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">1</text>
+<text x="78" y="130" font-size="18" fill="#f0efec" font-weight="700">Hit a weakness</text>
+<text x="78" y="152" font-size="15" fill="#c3c2b7">with an elemental technique</text>
+<g transform="translate(140.0,190.0) skewX(-14)"><rect x="-60.0" y="-20.0" width="120" height="40" rx="4" fill="#e0662f"/></g>
+<text x="140.0" y="198.64" font-size="24" fill="#14161c" font-weight="800" text-anchor="middle" font-style="italic" letter-spacing="1">WEAK!</text>
+<line x1="284" y1="164" x2="318" y2="164" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="325" y="98" width="250" height="132" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="351" cy="124" r="13" fill="#f0efec"/>
+<text x="351" y="129.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">2</text>
+<text x="373" y="130" font-size="18" fill="#f0efec" font-weight="700">The enemy staggers</text>
+<text x="351" y="160" font-size="15" fill="#c3c2b7">It takes its tired pose. Your</text>
+<text x="351" y="180" font-size="15" fill="#c3c2b7">next blow on it gets the +0.2</text>
+<text x="351" y="200" font-size="15" fill="#c3c2b7">stagger bonus.</text>
+<line x1="579" y1="164" x2="613" y2="164" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="620" y="98" width="250" height="132" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="646" cy="124" r="13" fill="#f0efec"/>
+<text x="646" y="129.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">3</text>
+<text x="668" y="130" font-size="18" fill="#f0efec" font-weight="700">You act again at once</text>
+<g transform="translate(747.0,170.0) skewX(-14)"><rect x="-75.0" y="-20.0" width="150" height="40" rx="4" fill="#199e70"/></g>
+<text x="747.0" y="177.56" font-size="21" fill="#14161c" font-weight="800" text-anchor="middle" font-style="italic" letter-spacing="1">ONE MORE!</text>
+<text x="646" y="214" font-size="15" fill="#c3c2b7">What will you do with it?</text>
+<path d="M745,232 V250 H165 V268 M745,250 V268 M455,250 V268" fill="none" stroke="#c3c2b7" stroke-width="2"/>
+<line x1="165" y1="262" x2="165" y2="272" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="455" y1="262" x2="455" y2="272" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="745" y1="262" x2="745" y2="272" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="30" y="276" width="260" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="50" y="306" font-size="17" fill="#f0efec" font-weight="700">Hit a weakness again</text>
+<text x="50" y="334" font-size="15" fill="#c3c2b7">The enemy stays staggered. A</text>
+<text x="50" y="355" font-size="15" fill="#c3c2b7">weak family not used yet this</text>
+<text x="50" y="376" font-size="15" fill="#c3c2b7">round gives another One More.</text>
+<rect x="320" y="276" width="260" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="340" y="306" font-size="17" fill="#f0efec" font-weight="700">Baton Pass</text>
+<text x="340" y="334" font-size="15" fill="#c3c2b7">Switch partners and keep the</text>
+<text x="340" y="355" font-size="15" fill="#c3c2b7">turn. Only while the enemy is</text>
+<text x="340" y="376" font-size="15" fill="#c3c2b7">staggered, once per round.</text>
+<rect x="610" y="276" width="260" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="630" y="306" font-size="17" fill="#f0efec" font-weight="700">Any other blow</text>
+<text x="630" y="334" font-size="15" fill="#c3c2b7">It still gets the +0.2 stagger</text>
+<text x="630" y="355" font-size="15" fill="#c3c2b7">bonus (a resisted hit does not),</text>
+<text x="630" y="376" font-size="15" fill="#c3c2b7">then the stagger ends.</text>
+<line x1="30" y1="418" x2="870" y2="418" stroke="#30374a" stroke-width="1.5"/>
+<text x="30" y="446" font-size="15.5" fill="#f0efec">The stagger ends when the enemy takes a blow that is not a weakness hit, or when it acts.</text>
+<text x="30" y="474" font-size="15.5" fill="#c3c2b7">A plain switch still costs the turn, unless Relay made the next one free.</text>
+<g transform="translate(110.0,514.0) skewX(-14)"><rect x="-80.0" y="-20.0" width="160" height="40" rx="4" fill="#e34948"/></g>
+<text x="110.0" y="521.2" font-size="20" fill="#14161c" font-weight="800" text-anchor="middle" font-style="italic" letter-spacing="1">OVERFINISH!</text>
+<text x="208" y="509" font-size="15" fill="#c3c2b7">Knock the enemy out with a blow that earns One More, and it stays down for that action.</text>
+<text x="208" y="529" font-size="15" fill="#c3c2b7">Every hit on it then pays Bits worth 10% of its damage, with the battle's.</text>
+</svg>

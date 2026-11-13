@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="690" viewBox="0 0 900 690" role="img" aria-labelledby="title desc">
+<title id="title">The damage multiplier and affinity</title>
+<desc id="desc">Resisted 0.5 with no bonus; neutral 1.0; weakness 1.0 + 0.5 + affinity; neutral element on a staggered target 1.0 + 0.2 + affinity; weakness on a staggered target 1.0 + 0.5 + 0.2 + twice the affinity; a blow with no element on a staggered target 1.2. Affinity ceilings: Fire 0.3, Water plus Ice 0.6, Wind 0.3, Thunder plus Machine 0.6, Dark 0.6.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="690" rx="16" fill="#171a21"/>
+<text x="30" y="46" font-size="26" fill="#f0efec" font-weight="800">The multiplier on your elemental techniques</text>
+<text x="30" y="76" font-size="15.5" fill="#c3c2b7">Solid parts are fixed. Affinity (hatched) comes from your Digimon: it is added once for a weakness</text>
+<text x="30" y="97" font-size="15.5" fill="#c3c2b7">and once for a staggered target, and never otherwise.</text>
+<rect x="30" y="114" width="16" height="16" rx="3" fill="#4a4f5c"/>
+<text x="52" y="127" font-size="14.5" fill="#c3c2b7">1.0 base</text>
+<rect x="138" y="114" width="16" height="16" rx="3" fill="#e0662f"/>
+<text x="160" y="127" font-size="14.5" fill="#c3c2b7">+0.5 weakness</text>
+<rect x="286" y="114" width="16" height="16" rx="3" fill="#199e70"/>
+<text x="308" y="127" font-size="14.5" fill="#c3c2b7">+0.2 staggered target</text>
+<rect x="486" y="114" width="16" height="16" rx="3" fill="url(#hatch)"/>
+<text x="508" y="127" font-size="14.5" fill="#c3c2b7">+ affinity, 0 to 0.6</text>
+<rect x="671" y="114" width="16" height="16" rx="3" fill="#3987e5"/>
+<text x="693" y="127" font-size="14.5" fill="#c3c2b7">resisted</text>
+<line x1="320.0" y1="154" x2="320.0" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="320.0" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">0.0</text>
+<line x1="402.5" y1="154" x2="402.5" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="402.5" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">0.5</text>
+<line x1="485.0" y1="154" x2="485.0" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="485.0" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">1.0</text>
+<line x1="567.5" y1="154" x2="567.5" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="567.5" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">1.5</text>
+<line x1="650.0" y1="154" x2="650.0" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="650.0" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">2.0</text>
+<line x1="732.5" y1="154" x2="732.5" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="732.5" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">2.5</text>
+<line x1="815.0" y1="154" x2="815.0" y2="428" stroke="#2a3040" stroke-width="1"/>
+<text x="815.0" y="448" font-size="14" fill="#9a9a94" text-anchor="middle">3.0</text>
+<text x="304" y="181" font-size="15.5" fill="#f0efec" text-anchor="end">Resisted element</text>
+<rect x="321" y="164" width="80.5" height="24" rx="3" fill="#3987e5"/>
+<text x="412.5" y="181" font-size="15.5" fill="#f0efec" font-weight="700">0.5, no bonus</text>
+<text x="304" y="227" font-size="15.5" fill="#f0efec" text-anchor="end">Neutral element</text>
+<rect x="321" y="210" width="163.0" height="24" rx="3" fill="#4a4f5c"/>
+<text x="495.0" y="227" font-size="15.5" fill="#f0efec" font-weight="700">1.0</text>
+<text x="304" y="273" font-size="15.5" fill="#f0efec" text-anchor="end">Weakness</text>
+<rect x="321" y="256" width="163.0" height="24" rx="3" fill="#4a4f5c"/>
+<rect x="486.0" y="256" width="80.5" height="24" rx="3" fill="#e0662f"/>
+<rect x="568.5" y="256" width="97.0" height="24" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1.2"/>
+<text x="676.5" y="273" font-size="15.5" fill="#f0efec" font-weight="700">1.5 to 2.1</text>
+<text x="304" y="319" font-size="15.5" fill="#f0efec" text-anchor="end">Neutral element, staggered</text>
+<rect x="321" y="302" width="163.0" height="24" rx="3" fill="#4a4f5c"/>
+<rect x="486.0" y="302" width="31.0" height="24" rx="3" fill="#199e70"/>
+<rect x="519.0" y="302" width="97.0" height="24" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1.2"/>
+<text x="627.0" y="319" font-size="15.5" fill="#f0efec" font-weight="700">1.2 to 1.8</text>
+<text x="304" y="365" font-size="15.5" fill="#f0efec" text-anchor="end">Weakness, staggered</text>
+<rect x="321" y="348" width="163.0" height="24" rx="3" fill="#4a4f5c"/>
+<rect x="486.0" y="348" width="80.5" height="24" rx="3" fill="#e0662f"/>
+<rect x="568.5" y="348" width="97.0" height="24" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1.2"/>
+<rect x="667.5" y="348" width="31.0" height="24" rx="3" fill="#199e70"/>
+<rect x="700.5" y="348" width="97.0" height="24" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1.2"/>
+<text x="808.5" y="365" font-size="15.5" fill="#f0efec" font-weight="700">1.7 to 2.9</text>
+<text x="304" y="411" font-size="15.5" fill="#f0efec" text-anchor="end">No element, staggered</text>
+<rect x="321" y="394" width="163.0" height="24" rx="3" fill="#4a4f5c"/>
+<rect x="486.0" y="394" width="31.0" height="24" rx="3" fill="#199e70"/>
+<text x="528.0" y="411" font-size="15.5" fill="#f0efec" font-weight="700">1.2</text>
+<line x1="30" y1="470" x2="870" y2="470" stroke="#30374a" stroke-width="1.5"/>
+<text x="30" y="506" font-size="19" fill="#f0efec" font-weight="800">Affinity: your Digimon's old resist stats, now an attack bonus</text>
+<text x="30" y="532" font-size="15.5" fill="#c3c2b7">Each family's ceiling, times its stat's share of 999 (a pair: the two stats' sum, of 1998).</text>
+<rect x="30" y="548" width="136" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-fire" x="84.0" y="562.0" width="28" height="28" color="#ef6a3a"/>
+<text x="98.0" y="614" font-size="15.5" fill="#f0efec" font-weight="700" text-anchor="middle">Fire</text>
+<rect x="50" y="628" width="96" height="12" rx="3" fill="#2a3040"/>
+<rect x="50" y="628" width="48.0" height="12" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1"/>
+<text x="98.0" y="660" font-size="14.5" fill="#c3c2b7" text-anchor="middle">up to 0.3</text>
+<rect x="182" y="548" width="184" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-water" x="233.4" y="562.0" width="28" height="28" color="#3d8fe8"/>
+<text x="274.0" y="583" font-size="20" fill="#9a9a94" font-weight="700" text-anchor="middle">+</text>
+<use href="#i-ice" x="286.6" y="562.0" width="28" height="28" color="#8fd3f0"/>
+<text x="274.0" y="614" font-size="15.5" fill="#f0efec" font-weight="700" text-anchor="middle">Water + Ice</text>
+<rect x="202" y="628" width="144" height="12" rx="3" fill="#2a3040"/>
+<rect x="202" y="628" width="144.0" height="12" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1"/>
+<text x="274.0" y="660" font-size="14.5" fill="#c3c2b7" text-anchor="middle">up to 0.6</text>
+<rect x="382" y="548" width="136" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-wind" x="436.0" y="562.0" width="28" height="28" color="#3fbf7f"/>
+<text x="450.0" y="614" font-size="15.5" fill="#f0efec" font-weight="700" text-anchor="middle">Wind</text>
+<rect x="402" y="628" width="96" height="12" rx="3" fill="#2a3040"/>
+<rect x="402" y="628" width="48.0" height="12" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1"/>
+<text x="450.0" y="660" font-size="14.5" fill="#c3c2b7" text-anchor="middle">up to 0.3</text>
+<rect x="534" y="548" width="184" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-thunder" x="585.4" y="562.0" width="28" height="28" color="#f2c230"/>
+<text x="626.0" y="583" font-size="20" fill="#9a9a94" font-weight="700" text-anchor="middle">+</text>
+<use href="#i-machine" x="638.6" y="562.0" width="28" height="28" color="#a7adb8"/>
+<text x="626.0" y="614" font-size="15.5" fill="#f0efec" font-weight="700" text-anchor="middle">Thunder + Machine</text>
+<rect x="554" y="628" width="144" height="12" rx="3" fill="#2a3040"/>
+<rect x="554" y="628" width="144.0" height="12" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1"/>
+<text x="626.0" y="660" font-size="14.5" fill="#c3c2b7" text-anchor="middle">up to 0.6</text>
+<rect x="734" y="548" width="136" height="120" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-dark" x="788.0" y="562.0" width="28" height="28" color="#a58bf5"/>
+<text x="802.0" y="614" font-size="15.5" fill="#f0efec" font-weight="700" text-anchor="middle">Dark</text>
+<rect x="754" y="628" width="96" height="12" rx="3" fill="#2a3040"/>
+<rect x="754" y="628" width="96.0" height="12" rx="3" fill="url(#hatch)" stroke="#9085e9" stroke-width="1"/>
+<text x="802.0" y="660" font-size="14.5" fill="#c3c2b7" text-anchor="middle">up to 0.6</text>
+</svg>

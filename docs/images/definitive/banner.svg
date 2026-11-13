@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="260" viewBox="0 0 900 260" role="img" aria-labelledby="title desc">
+<title id="title">Digimon World 3: Definitive Edition</title>
+<desc id="desc">Title banner: Digimon World 3, Definitive Edition. Find the weakness, stagger, one more, pass the baton. The WEAK! and ONE MORE! callouts and the five element families.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="260" rx="16" fill="#171a21"/>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#121520"/><stop offset="1" stop-color="#232a3d"/></linearGradient></defs>
+<rect width="900" height="260" rx="16" fill="url(#bg)"/>
+<text x="48" y="98" font-size="48" fill="#f0efec" font-weight="800">Digimon World 3</text>
+<text x="51" y="138" font-size="21" fill="#e0662f" font-weight="800" letter-spacing="6">DEFINITIVE EDITION</text>
+<text x="50" y="184" font-size="17" fill="#c3c2b7">Find the weakness. Stagger. One more. Pass the baton.</text>
+<text x="50" y="216" font-size="14.5" fill="#9a9a94">A PS1 recompilation, native on RK3326 handhelds and PC</text>
+<g transform="translate(675.0,61.0) skewX(-14)"><rect x="-75.0" y="-25.0" width="150" height="50" rx="4" fill="#e0662f"/></g>
+<text x="675.0" y="71.8" font-size="30" fill="#14161c" font-weight="800" text-anchor="middle" font-style="italic" letter-spacing="1">WEAK!</text>
+<g transform="translate(774.0,121.0) skewX(-14)"><rect x="-86.0" y="-23.0" width="172" height="46" rx="4" fill="#199e70"/></g>
+<text x="774.0" y="130.0" font-size="25" fill="#14161c" font-weight="800" text-anchor="middle" font-style="italic" letter-spacing="1">ONE MORE!</text>
+<rect x="542" y="170" width="46" height="46" rx="23" fill="#20263a" stroke="#3a4257" stroke-width="1.5"/>
+<use href="#i-fire" x="552.0" y="180.0" width="26" height="26" color="#ef6a3a"/>
+<rect x="598" y="170" width="76" height="46" rx="23" fill="#20263a" stroke="#3a4257" stroke-width="1.5"/>
+<use href="#i-water" x="608.0" y="181.0" width="24" height="24" color="#3d8fe8"/>
+<use href="#i-ice" x="640.0" y="181.0" width="24" height="24" color="#8fd3f0"/>
+<rect x="684" y="170" width="46" height="46" rx="23" fill="#20263a" stroke="#3a4257" stroke-width="1.5"/>
+<use href="#i-wind" x="694.0" y="180.0" width="26" height="26" color="#3fbf7f"/>
+<rect x="740" y="170" width="76" height="46" rx="23" fill="#20263a" stroke="#3a4257" stroke-width="1.5"/>
+<use href="#i-thunder" x="750.0" y="181.0" width="24" height="24" color="#f2c230"/>
+<use href="#i-machine" x="782.0" y="181.0" width="24" height="24" color="#a7adb8"/>
+<rect x="826" y="170" width="46" height="46" rx="23" fill="#20263a" stroke="#3a4257" stroke-width="1.5"/>
+<use href="#i-dark" x="836.0" y="180.0" width="26" height="26" color="#a58bf5"/>
+<text x="707" y="240" font-size="13.5" fill="#9a9a94" text-anchor="middle">Fire · Water + Ice · Wind · Thunder + Machine · Dark</text>
+</svg>

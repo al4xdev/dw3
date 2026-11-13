@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="720" viewBox="0 0 900 720" role="img" aria-labelledby="title desc">
+<title id="title">Seven elements, five families</title>
+<desc id="desc">Fire, Water plus Ice, Wind, Thunder plus Machine and Dark. A pair always shares one value. An example enemy resists Fire, is weak to Water and Ice and neutral to the rest; after a Fire hit and an Ice hit, Inspect shows Fire resisted, Water plus Ice weak and the rest unknown. A family's value of 80 or less is a weakness, 250 or more resisted, neutral between; Resist Down's minus 80 turns a neutral 110 into a weakness and a resisted 300 into a neutral 220. Weak is 1.5 or more and staggers, neutral 1.0, resisted 0.5.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="720" rx="16" fill="#171a21"/>
+<text x="30" y="46" font-size="26" fill="#f0efec" font-weight="800">Seven elements, five families</text>
+<text x="30" y="76" font-size="15.5" fill="#c3c2b7">A pair's two elements always share one value on an enemy, and count as one weakness or resistance.</text>
+<rect x="30" y="96" width="136" height="112" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-fire" x="81.0" y="119.0" width="34" height="34" color="#ef6a3a"/>
+<text x="98.0" y="190" font-size="16" fill="#f0efec" font-weight="700" text-anchor="middle">Fire</text>
+<rect x="182" y="96" width="184" height="112" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-water" x="224.7" y="119.0" width="34" height="34" color="#3d8fe8"/>
+<text x="274.0" y="143" font-size="20" fill="#9a9a94" font-weight="700" text-anchor="middle">+</text>
+<use href="#i-ice" x="289.3" y="119.0" width="34" height="34" color="#8fd3f0"/>
+<text x="274.0" y="190" font-size="16" fill="#f0efec" font-weight="700" text-anchor="middle">Water + Ice</text>
+<rect x="382" y="96" width="136" height="112" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-wind" x="433.0" y="119.0" width="34" height="34" color="#3fbf7f"/>
+<text x="450.0" y="190" font-size="16" fill="#f0efec" font-weight="700" text-anchor="middle">Wind</text>
+<rect x="534" y="96" width="184" height="112" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-thunder" x="576.7" y="119.0" width="34" height="34" color="#f2c230"/>
+<text x="626.0" y="143" font-size="20" fill="#9a9a94" font-weight="700" text-anchor="middle">+</text>
+<use href="#i-machine" x="641.3" y="119.0" width="34" height="34" color="#a7adb8"/>
+<text x="626.0" y="190" font-size="16" fill="#f0efec" font-weight="700" text-anchor="middle">Thunder + Machine</text>
+<rect x="734" y="96" width="136" height="112" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<use href="#i-dark" x="785.0" y="119.0" width="34" height="34" color="#a58bf5"/>
+<text x="802.0" y="190" font-size="16" fill="#f0efec" font-weight="700" text-anchor="middle">Dark</text>
+<text x="30" y="246"><tspan font-size="16" fill="#f0efec" font-weight="700">An enemy, as it is</tspan><tspan font-size="15" fill="#9a9a94" dx="12">every enemy has its own, and debuffs can add a weakness mid-fight</tspan></text>
+<rect x="30" y="258" width="136" height="38" rx="8" fill="#3987e5"/>
+<text x="98.0" y="282.5" font-size="15" fill="#0f1422" font-weight="800" text-anchor="middle" letter-spacing="1.5">RESIST</text>
+<rect x="182" y="258" width="184" height="38" rx="8" fill="#e0662f"/>
+<text x="274.0" y="282.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle" letter-spacing="1.5">WEAK</text>
+<rect x="382" y="258" width="136" height="38" rx="8" fill="#4a4f5c"/>
+<text x="450.0" y="282.5" font-size="15" fill="#e6e5e0" font-weight="800" text-anchor="middle" letter-spacing="1.5">NEUTRAL</text>
+<rect x="534" y="258" width="184" height="38" rx="8" fill="#4a4f5c"/>
+<text x="626.0" y="282.5" font-size="15" fill="#e6e5e0" font-weight="800" text-anchor="middle" letter-spacing="1.5">NEUTRAL</text>
+<rect x="734" y="258" width="136" height="38" rx="8" fill="#4a4f5c"/>
+<text x="802.0" y="282.5" font-size="15" fill="#e6e5e0" font-weight="800" text-anchor="middle" letter-spacing="1.5">NEUTRAL</text>
+<text x="30" y="334"><tspan font-size="16" fill="#f0efec" font-weight="700">What Inspect and the Bestiary show</tspan><tspan font-size="15" fill="#9a9a94" dx="12">after a Fire hit and an Ice hit</tspan></text>
+<rect x="30" y="346" width="136" height="38" rx="8" fill="#3987e5"/>
+<text x="98.0" y="370.5" font-size="15" fill="#0f1422" font-weight="800" text-anchor="middle" letter-spacing="1.5">RESIST</text>
+<rect x="182" y="346" width="184" height="38" rx="8" fill="#e0662f"/>
+<text x="274.0" y="370.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle" letter-spacing="1.5">WEAK</text>
+<rect x="382" y="346" width="136" height="38" rx="8" fill="none" stroke="#646a78" stroke-width="1.8" stroke-dasharray="6 5"/>
+<text x="450.0" y="370.5" font-size="15" fill="#9a9a94" font-weight="800" text-anchor="middle" letter-spacing="1.5">???</text>
+<rect x="534" y="346" width="184" height="38" rx="8" fill="none" stroke="#646a78" stroke-width="1.8" stroke-dasharray="6 5"/>
+<text x="626.0" y="370.5" font-size="15" fill="#9a9a94" font-weight="800" text-anchor="middle" letter-spacing="1.5">???</text>
+<rect x="734" y="346" width="136" height="38" rx="8" fill="none" stroke="#646a78" stroke-width="1.8" stroke-dasharray="6 5"/>
+<text x="802.0" y="370.5" font-size="15" fill="#9a9a94" font-weight="800" text-anchor="middle" letter-spacing="1.5">???</text>
+<text x="870" y="408" font-size="15" fill="#c3c2b7" text-anchor="end">A hit teaches both elements of its family; Libra reveals all at once.</text>
+<line x1="30" y1="428" x2="870" y2="428" stroke="#30374a" stroke-width="1.5"/>
+<text x="30" y="458"><tspan font-size="16" fill="#f0efec" font-weight="700">How the game decides</tspan><tspan font-size="15" fill="#9a9a94" dx="12">each family has one resistance value</tspan></text>
+<rect x="61.0" y="520" width="176.28571428571428" height="30" rx="4" fill="#e0662f"/>
+<text x="149.14285714285714" y="540" font-size="14.5" fill="#14161c" font-weight="800" text-anchor="middle" letter-spacing="0.5">WEAK, 80 or less</text>
+<rect x="239.28571428571428" y="520" width="376.85714285714283" height="30" rx="4" fill="#4a4f5c"/>
+<text x="427.71428571428567" y="540" font-size="14.5" fill="#e6e5e0" font-weight="800" text-anchor="middle" letter-spacing="0.5">NEUTRAL</text>
+<rect x="618.1428571428571" y="520" width="220.8571428571429" height="30" rx="4" fill="#3987e5"/>
+<text x="728.5714285714286" y="540" font-size="14.5" fill="#0f1422" font-weight="800" text-anchor="middle" letter-spacing="0.5">RESIST, 250 or more</text>
+<text x="60.0" y="568" font-size="13.5" fill="#9a9a94" text-anchor="middle">0</text>
+<text x="238.28571428571428" y="568" font-size="13.5" fill="#9a9a94" text-anchor="middle">80</text>
+<text x="617.1428571428571" y="568" font-size="13.5" fill="#9a9a94" text-anchor="middle">250</text>
+<line x1="193.71428571428572" y1="550" x2="193.71428571428572" y2="558" stroke="#c3c2b7" stroke-width="2"/>
+<text x="203.71428571428572" y="586" font-size="14" fill="#c3c2b7" text-anchor="end">the table's weak: 60</text>
+<path d="M282.8571428571429,554 V560 H316.2857142857143 V554" fill="none" stroke="#c3c2b7" stroke-width="2"/>
+<text x="276.8571428571429" y="586" font-size="14" fill="#c3c2b7">the table's neutral: 100 to 115</text>
+<path d="M305.1428571428571,516 C305.1428571428571,494 126.85714285714286,494 126.85714285714286,514" fill="none" stroke="#f0efec" stroke-width="2.2" marker-end="url(#arrow)"/>
+<text x="286.0" y="490" font-size="14" fill="#f0efec" text-anchor="middle">Resist Down −80: 110 becomes 30, a new weakness</text>
+<path d="M728.5714285714286,516 C728.5714285714286,494 550.2857142857142,494 550.2857142857142,514" fill="none" stroke="#f0efec" stroke-width="2.2" marker-end="url(#arrow)"/>
+<text x="639.4285714285714" y="490" font-size="14" fill="#f0efec" text-anchor="middle">300 becomes 220: only neutral</text>
+<line x1="30" y1="608" x2="870" y2="608" stroke="#30374a" stroke-width="1.5"/>
+<rect x="30" y="626" width="104" height="34" rx="8" fill="#e0662f"/>
+<text x="82.0" y="648.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle" letter-spacing="1.5">WEAK</text>
+<text x="148" y="639" font-size="15" fill="#c3c2b7">×1.5 or more: the enemy staggers</text>
+<text x="148" y="658" font-size="15" fill="#c3c2b7">and you get one more action</text>
+<rect x="470" y="626" width="104" height="34" rx="8" fill="#4a4f5c"/>
+<text x="522.0" y="648.5" font-size="15" fill="#e6e5e0" font-weight="800" text-anchor="middle" letter-spacing="1.5">NEUTRAL</text>
+<text x="588" y="649" font-size="15" fill="#c3c2b7">×1.0</text>
+<rect x="30" y="674" width="104" height="34" rx="8" fill="#3987e5"/>
+<text x="82.0" y="696.5" font-size="15" fill="#0f1422" font-weight="800" text-anchor="middle" letter-spacing="1.5">RESIST</text>
+<text x="148" y="697" font-size="15" fill="#c3c2b7">×0.5, no bonus, never staggers</text>
+<rect x="470" y="674" width="104" height="34" rx="8" fill="none" stroke="#646a78" stroke-width="1.8" stroke-dasharray="6 5"/>
+<text x="522.0" y="696.5" font-size="15" fill="#9a9a94" font-weight="800" text-anchor="middle" letter-spacing="1.5">???</text>
+<text x="588" y="687" font-size="15" fill="#c3c2b7">not learnt yet: hit a weakness or a</text>
+<text x="588" y="706" font-size="15" fill="#c3c2b7">resistance of the family, or use Libra</text>
+</svg>

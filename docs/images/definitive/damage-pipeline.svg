@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="580" viewBox="0 0 900 580" role="img" aria-labelledby="title desc">
+<title id="title">The damage pipeline</title>
+<desc id="desc">1 base (physical: power times Strength over Defense; magic: power times Spirit over the defending stat, kept within half and twice the power), 2 field, type match and boosts, 3 the element step, where the Definitive multiplier replaces the original resist term, 4 times 1.2 for a blow with no element on a staggered enemy, 5 critical hits and crests, 6 caps of five times the base and 9999.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="580" rx="16" fill="#171a21"/>
+<text x="30" y="46" font-size="26" fill="#f0efec" font-weight="800">Where the multiplier sits in the damage formula</text>
+<text x="30" y="76" font-size="15.5" fill="#c3c2b7">The game's own steps, in order. The Definitive Edition replaces step 3 and adds step 4.</text>
+<rect x="30" y="100" width="262" height="192" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="54" cy="126" r="13" fill="#f0efec"/>
+<text x="54" y="131.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">1</text>
+<text x="76" y="132" font-size="17" fill="#f0efec" font-weight="700">Base</text>
+<text x="48" y="162" font-size="14.5" fill="#f0efec" font-weight="700">Physical</text>
+<text x="48" y="181" font-size="14.5" fill="#c3c2b7">power × Strength ÷ Defense</text>
+<text x="48" y="200" font-size="14.5" fill="#f0efec" font-weight="700">Magic</text>
+<text x="48" y="219" font-size="14.5" fill="#c3c2b7">power × (Spirit × 50 ÷ D + 50)</text>
+<text x="48" y="238" font-size="14.5" fill="#c3c2b7">÷ 100, within ½ to 2 × power</text>
+<text x="48" y="257" font-size="14.5" fill="#c3c2b7">D: the enemy's Spirit; when it</text>
+<text x="48" y="276" font-size="14.5" fill="#c3c2b7">attacks, your Defense</text>
+<rect x="319" y="100" width="262" height="192" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="343" cy="126" r="13" fill="#f0efec"/>
+<text x="343" y="131.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">2</text>
+<text x="365" y="132" font-size="17" fill="#f0efec" font-weight="700">Field, type, boosts</text>
+<text x="337" y="162" font-size="14.5" fill="#c3c2b7">A field of the technique's element</text>
+<text x="337" y="181" font-size="14.5" fill="#c3c2b7">adds, the opposite one takes away.</text>
+<text x="337" y="200" font-size="14.5" fill="#c3c2b7">Type match: +50% (in magic, after</text>
+<text x="337" y="219" font-size="14.5" fill="#c3c2b7">steps 3 and 4).</text>
+<text x="337" y="238" font-size="14.5" fill="#c3c2b7">Physical: the power boost.</text>
+<rect x="608" y="100" width="262" height="192" rx="12" fill="#232a3a" stroke="#e0662f" stroke-width="2.4"/>
+<circle cx="632" cy="126" r="13" fill="#e0662f"/>
+<text x="632" y="131.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">3</text>
+<text x="654" y="132" font-size="17" fill="#f0efec" font-weight="700">Element</text>
+<text x="626" y="162" font-size="14.5" fill="#f0efec" font-weight="700">You hit an enemy</text>
+<text x="626" y="181" font-size="14.5" fill="#c3c2b7">× the multiplier: weakness,</text>
+<text x="626" y="200" font-size="14.5" fill="#c3c2b7">stagger, affinity; resisted 0.5</text>
+<text x="626" y="219" font-size="14.5" fill="#f0efec" font-weight="700">An enemy hits you</text>
+<text x="626" y="238" font-size="14.5" fill="#c3c2b7">your resists no longer defend</text>
+<rect x="30" y="344" width="262" height="192" rx="12" fill="#232a3a" stroke="#199e70" stroke-width="2.4"/>
+<circle cx="54" cy="370" r="13" fill="#199e70"/>
+<text x="54" y="375.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">4</text>
+<text x="76" y="376" font-size="17" fill="#f0efec" font-weight="700">No element, staggered</text>
+<text x="48" y="406" font-size="14.5" fill="#c3c2b7">A blow with no element (a basic</text>
+<text x="48" y="425" font-size="14.5" fill="#c3c2b7">attack, or a technique without one)</text>
+<text x="48" y="444" font-size="14.5" fill="#c3c2b7">on a staggered enemy: × 1.2.</text>
+<rect x="319" y="344" width="262" height="192" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="343" cy="370" r="13" fill="#f0efec"/>
+<text x="343" y="375.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">5</text>
+<text x="365" y="376" font-size="17" fill="#f0efec" font-weight="700">Critical and crests</text>
+<text x="337" y="406" font-size="14.5" fill="#c3c2b7">A critical hit adds 50% or more.</text>
+<text x="337" y="425" font-size="14.5" fill="#c3c2b7">Multi-hit crest × 0.4 (physical).</text>
+<text x="337" y="444" font-size="14.5" fill="#c3c2b7">A Guard crest takes off a flat</text>
+<text x="337" y="463" font-size="14.5" fill="#c3c2b7">amount.</text>
+<rect x="608" y="344" width="262" height="192" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<circle cx="632" cy="370" r="13" fill="#f0efec"/>
+<text x="632" y="375.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">6</text>
+<text x="654" y="376" font-size="17" fill="#f0efec" font-weight="700">Caps</text>
+<text x="626" y="406" font-size="14.5" fill="#c3c2b7">Never more than 5 × the base,</text>
+<text x="626" y="425" font-size="14.5" fill="#c3c2b7">never more than 9999.</text>
+<line x1="294" y1="196" x2="315" y2="196" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="583" y1="196" x2="604" y2="196" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="294" y1="440" x2="315" y2="440" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="583" y1="440" x2="604" y2="440" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M739.0,294 V318 H161.0 V336" fill="none" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<text x="30" y="564" font-size="14.5" fill="#9a9a94">Integer maths throughout; the original steps in full are in docs/MECHANICS.md, section 2.</text>
+</svg>
