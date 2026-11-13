@@ -26,8 +26,9 @@ the game, and how the Definitive Edition is put together. The player's overview 
 - **A second renderer on the Mali** (`--renderer gles`): the VRAM as a texture, faster than the CPU rasteriser in heavy
   3D battles. The software renderer stays as the reference and the fallback.
 - **A gamepad menu** (`handheld/dw3-menu.py`) for the game, XP and video settings, with no keyboard needed.
-- **Mods**: fast travel from the map, a map objective marker, button glyphs that match the pad and remapping, and
-  fast-forward. They are described in [`docs/LAUNCHER.md`](LAUNCHER.md).
+- **Mods**: the Guardromon network (`SAVE` or `TELEPORT` from any Guardromon, to the ones met so far), a map objective
+  marker, button glyphs that match the pad and remapping, and fast-forward. They are described in
+  [`docs/LAUNCHER.md`](LAUNCHER.md).
 - **Cortex-A35 code generation**, NEON span drawing, a cache-friendly VRAM row layout and a frame meter that splits a
   frame into the parts you can act on ([`docs/PERFORMANCE.md`](PERFORMANCE.md)).
 - **A checked PortMaster package**: `portmaster/make_release.sh` builds `dist/dw3.zip` and refuses to build it with a

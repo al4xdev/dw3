@@ -244,3 +244,10 @@ $EvoSpi: Spirit
 $EvoWis: Wisdom
 $EvoSpd: Speed
 $EvoCha: Charisma
+
+# The Guardromon network: talking to one offers SAVE or TELEPORT (port/game/definitive_travel.c)
+$Guardromon: GUARDROMON
+$Save: SAVE
+$Teleport: TELEPORT
+$TravelKeys: × button: Choose<1>△ button: Back
+$TravelKeys2: × button: Travel<1>△ button: Back

@@ -161,6 +161,7 @@ s32 port_battle_cut(const s16 *stream, s32 stage, const s32 *results, s32 hit_so
 extern int port_mod_global_save;
 void port_global_save_open(void);
 s32 port_global_save_map_name(s32 map_name);
+s32 port_global_save_inn(s32 map);
 void port_global_save_record(void *slot);
 void port_global_save_restore(const void *slot);
 /* port_mod_preset_language: preset_language is on ("Preset language"): CNTY_SEL's root object (src/cnty_sel), once the
@@ -223,15 +224,12 @@ void dw3_feats_arm(void);
 u16 dw3_pad_permute(u16 buttons, int rotated);
 /* Face-button text code (1, then 0x1B/0x2F/0x32/0x34) as a main-font letter, or 0. */
 s16 dw3_button_glyph(u8 code);
-/* The Guardromon network (game_mods.c): circle on a MAP screen area asks for its registered Guardromon (1 when the
- * player stands in a registered inn and there is one); the field menu then takes the map and its landing spot.
- * dw3_network_leaving: FIELDSTG leaves `map` for `next` (an inn's save screen registers its Guardromon). */
-int dw3_fast_travel_ask(s32 area, s32 region);
-void dw3_fast_travel_clear(void);
-int dw3_fast_travel_take(s32 *map);
-int dw3_fast_travel_landing(s32 *x, s32 *y, s32 *dir);
-void dw3_network_leaving(s32 map, s32 next);
-int dw3_network_here(void);
+/* The Guardromon network (port/game/definitive_travel.c): talking to a Guardromon (the inn's event script leaving `map`
+ * for its 0xC.. save screen `next`) offers SAVE or TELEPORT. dw3_travel_leave returns 1 when the screen takes that
+ * transition over (the map is kept until the player picks); dw3_travel_frame runs the screen from FIELDSTG's idle step
+ * (fieldstg_manager_update) and returns 1 while it owns the field. */
+int dw3_travel_leave(s32 map, s32 next);
+int dw3_travel_frame(void);
 /* Layout index of the story step's area on this map half, or 0. */
 s32 dw3_objective_spot(s32 region);
 

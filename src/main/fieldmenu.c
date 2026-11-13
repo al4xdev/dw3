@@ -684,22 +684,6 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 obj->base.step++;
                 break;
             }
-            {
-                s32 travel, x, y, dir;
-                if (gamestate_data.funcs.get_map() == 0x1000 && dw3_fast_travel_take(&travel)) {
-                    /* Land on the destination's own entry point: FIELDSTG copies player_pos to return_pos when
-                     * the previous map is not a field. Without one remembered, its position is left alone. */
-                    if (dw3_fast_travel_landing(&x, &y, &dir)) {
-                        gamestate_data.player_pos.x = x;
-                        gamestate_data.player_pos.y = y;
-                        gamestate_data.player_dir = dir;
-                    }
-                    gamestate_data.funcs.set_next_map(travel, 0);
-                    obj->base.step++;
-                    break;
-                }
-                dw3_fast_travel_clear();
-            }
 #endif
             if (gamestate_data.funcs.get_map() == 0x1000) {
                 gamestate_data.funcs.set_next_map(gamestate_data.field_map, 0);

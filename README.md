@@ -158,8 +158,8 @@ stats the way you want. TP still caps at 99 in hand, so you train along the way 
 
 - **The Blast Gauge is saved.** The original reset it every time the game was closed, even after saving.
 - **Battle text that does not stop the fight**: message boxes no longer wait for a button.
-- **Fast travel** from the map, a **map objective marker**, **fast-forward**, button glyphs that match your pad, and
-  full remapping.
+- **A Guardromon network**: at any Guardromon, `SAVE` or `TELEPORT` to the others you have met, a **map objective
+  marker**, **fast-forward**, button glyphs that match your pad, and full remapping.
 - **A gamepad menu** for every setting, with no keyboard needed.
 
 ## Building and documentation

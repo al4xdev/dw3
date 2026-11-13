@@ -40,7 +40,7 @@ Leia antes de começar; tudo abaixo está no código e foi testado no jogo.
 | Overlevel Rush | `port/game/definitive.c` (`def_rush_offer`, `def_rush_results`), `src/fieldstg/fieldstg_80087DB0.c` (`fieldstg_rush_*`, `fieldstg_encounter_start`) | Mostra como ir do campo direto para a tela de recompensas (mapa `0x1400`) preenchendo `records_battle_results`; e como desenhar uma pergunta no campo |
 | Estado extra do save | `port/game/definitive_bestiary.c` (`REC_EXTRA`, `def_save_flag`, `def_network_mask`) | O registro do bestiário (0x100 bytes por slot) tem bytes livres depois da tabela: é **o** lugar para estado novo por save. A cauda do slot (0x26C4..0x2700) está cheia |
 | Bestiário | `src/main/fieldmenu.c` (`fieldmenu_bestiary_*`), `port/game/definitive_bestiary.c` | Tela que vai ganhar a linha de materiais |
-| Rede Guardromon | `port/game/game_mods.c` (`dw3_net_nodes`, `dw3_network_leaving`) | Tabela das 25 pousadas com mapa e posição; teleporte zera a cadeia de caçada |
+| Rede Guardromon | `port/game/definitive_travel.c` (`nodes`, `dw3_travel_leave`, `dw3_travel_frame`) | Tabela das 25 pousadas com mapa e posição, a tela SAVE/TELEPORT e o gancho em FIELDSTG; teleporte zera a cadeia de caçada |
 | Modo Difícil | `def_save_flag(DEF_SAVE_HARD)` | Party de 2: o balanceamento dos equipamentos mira 2–3 Digimon |
 | Tabela de inimigos por espécie | `port/game/definitive_enemies.c`, gerada por `tools/gen_enemy_weaknesses.py` | Modelo de "tabela gerada por ferramenta e aprovada pelo dono" |
 | Textos novos | `tools/text_override/en.txt` + `tools/gen_text_override.py` (gera `port/game/definitive_text.c`) | Todo texto na fonte do jogo entra por aqui |
@@ -126,7 +126,7 @@ sozinho contra um driver). Rode sempre `tests/port/definitive*.py`,
 3. Reset: em `fieldstg` quando o mapa carregado tem área diferente (o mesmo
    lugar onde `def_hard_party_fix()` é chamado, logo depois de
    `gamestate_flags.set_flag(get_map() + 0x1E00, 1)`), e em
-   `dw3_fast_travel_take`.
+   `dw3_travel_frame` (`port/game/definitive_travel.c`).
 4. Troca do encontro: em `fieldstg_encounter_start`, antes de
    `fieldstg_start_battle(event->battle)`. O Alvo Raro é **uma batalha que já
    existe** em `fieldstg_battles[]` (um chefe/sub-chefe), escolhida por região

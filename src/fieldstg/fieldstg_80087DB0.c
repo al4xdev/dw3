@@ -1659,9 +1659,6 @@ static inline void fieldstg_manager_open_menu(FieldstgManager *obj, FieldstgMana
             }
             fieldstg_stage.menu_open = 1;
             fieldstg_stage.event_running = 1;
-#ifdef PC_PORT
-            dw3_fast_travel_clear(); /* a new menu session: a destination left over by a cancelled one is dropped */
-#endif
             data->menu = fieldmenu_create(0x1002, 0);
             gamestate_data.field_map = gamestate_data.funcs.get_map();
             gamestate_data.player_pos = data->party[0]->pos;
@@ -1808,6 +1805,11 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
         switch (obj->base.step) {
         case 0:
         default:
+#ifdef PC_PORT
+            if (dw3_travel_frame()) {
+                break; /* the Guardromon's SAVE / TELEPORT screen owns the field */
+            }
+#endif
             fieldstg_manager_open_menu(obj, data);
             break;
         case 1:
@@ -1855,7 +1857,9 @@ void fieldstg_goto_map_delayed(s32 map, s32 entry, s32 x, s32 y, s32 dir, s32 de
 
     if (obj != NULL) {
 #ifdef PC_PORT
-        dw3_network_leaving(gamestate_data.funcs.get_map(), map); /* an inn's save screen: its Guardromon registers */
+        if (dw3_travel_leave(gamestate_data.funcs.get_map(), map)) {
+            return; /* an inn's Guardromon: the SAVE / TELEPORT screen keeps the map until the player picks */
+        }
 #endif
         obj->next_map = map;
         obj->map_entry = entry;

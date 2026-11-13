@@ -155,9 +155,11 @@ the face buttons for every language but Japanese.
 | `SELECT` | with `START`: quit | select |
 | the D-pad and the sticks | move | - |
 
-On the map, `CONFIRM` on a visited area starts a fast travel. The `LAYOUT` row (Xbox, Switch, PlayStation) says what is
-printed on the pad. The remap is written to `pad.map` and applied by the game itself (`DW3_PAD_REMAP=1`), because the SDL2
-build has a fixed button map of its own.
+At a Guardromon, `CONFIRM` offers `SAVE` (the game's own save screen) or `TELEPORT`: a two-column list of every
+Guardromon the player has met so far, in the bestiary's layout, where `CONFIRM` chooses a place and a second `CONFIRM`
+takes it. `TRIANGLE`/`BACK` goes back. A Guardromon is met by talking to it, and the places met so far travel with the
+save. The `LAYOUT` row (Xbox, Switch, PlayStation) says what is printed on the pad. The remap is written to `pad.map` and
+applied by the game itself (`DW3_PAD_REMAP=1`), because the SDL2 build has a fixed button map of its own.
 
 ## Mods and menu defaults
 
@@ -186,7 +188,7 @@ Read by the game:
 | Variable | Effect |
 |---|---|
 | `DW3_FEAT_ICONS=0` | no button glyph replacement |
-| `DW3_FEAT_TRAVEL=0` | no fast travel |
+| `DW3_FEAT_TRAVEL=0` | no Guardromon network (the Guardromon only saves) |
 | `DW3_FEAT_OBJECTIVE=0` | no map objective |
 | `DW3_NO_NEON_FLAT=1` | scalar flat textured span, the same binary (to time or to isolate a fault) |
 | `DW3_NO_NEON_GOURAUD=1` | scalar Gouraud span |
@@ -221,7 +223,8 @@ Measurement switches (off in the launcher, where they are commented out; see [`P
   tested is identical, which is not a proof for every scene.
 - **Widescreen needs the hardware renderer**; it is off on software.
 - **Fast-forward mutes the audio**, on purpose: at 8x the sound would be eight times faster and choppy.
-- **Fast travel** lands on the map's entry point (or the remembered position), not on a specific door.
+- **A teleport** lands on the spot the game itself walks the player to before that Guardromon, and only between
+  Guardromon met so far: nothing else travels.
 - **The boot and title screen is 320x576** and falls back to the converting present (~16 ms a frame, for under a second).
 - **`--input-test` hangs on this device**, with no output and immune to `timeout`. It does not affect playing.
 - **The game's own C is built at `-O0`**: `-O2` crashes at boot, because the decompilation has undefined behaviour the
