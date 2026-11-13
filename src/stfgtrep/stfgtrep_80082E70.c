@@ -914,6 +914,11 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         }
         break;
     case 21:
+#ifdef PC_PORT
+        if (records_battle_results.item == 0) {
+            records_battle_results.item = def_hunt_reward_pack(); /* PRD 4 layer B: a Rare Target's rare Booster */
+        }
+#endif
         if (records_battle_results.item != 0) {
             s32 item_gain = 1;
 #ifdef PC_PORT
@@ -928,14 +933,32 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
             data->messages->set_speed(data->messages, 6);
             obj->base.step = 25;
             obj->base.substep = 1;
+#ifdef PC_PORT
+            if (def_hunt_material_pending()) {
+                obj->base.substep = 2; /* PRD 4 layer B: the Hunt Material's line after the item's */
+            }
+#endif
             gamestate_data.items[records_battle_results.item] += item_gain;
             if (gamestate_data.items[records_battle_results.item] >= 100) {
                 gamestate_data.items[records_battle_results.item] = 99;
             }
         } else {
             obj->base.step = 50;
+#ifdef PC_PORT
+            if (def_hunt_material_pending()) {
+                obj->base.step = 22; /* PRD 4 layer B: no item, but a Hunt Material */
+            }
+#endif
         }
         break;
+#ifdef PC_PORT
+    case 22: /* PRD 4 layer B: the Rare Target's Hunt Material, shown like an item ("Item gained:" in ESFGTRPT 11) */
+        data->messages->set_text(data->messages, (u8 *)def_hunt_material_text(), -1);
+        data->messages->set_speed(data->messages, 6);
+        obj->base.step = 25;
+        obj->base.substep = 1;
+        break;
+#endif
     case 25:
         if (data->messages->is_done(data->messages) != 0) {
             data->messages->set_visible(data->messages, 0);
@@ -945,6 +968,11 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
             default:
                 obj->base.step = 21;
                 break;
+#ifdef PC_PORT
+            case 2:
+                obj->base.step = 22;
+                break;
+#endif
             case 1:
                 obj->base.step = 50;
                 break;
@@ -960,6 +988,9 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         }
         break;
     case 50:
+#ifdef PC_PORT
+        def_hunt_reward_done();
+#endif
         data->fade = stfgtrep_fade_create();
         data->fade->start(data->fade, 0, 30);
         stfgtrep_funcs.anim_start(&obj->frame_anim, 0);
@@ -1080,6 +1111,13 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
                 exp = stfgtrep_rewards[records_battle_results.battle].exp / 3;
                 break;
             }
+#ifdef PC_PORT
+            if (def_hunt_reward_battle() >= 0) { /* PRD 4 layer B: a Rare Target pays DEF_HUNT_XP_MULT times the random
+                                                  * encounter it replaced, split between the members as above */
+                exp = stfgtrep_rewards[def_hunt_reward_battle()].exp * DEF_HUNT_XP_MULT;
+                exp = n == 2 ? exp * 6 / 10 : n == 3 ? exp / 3 : exp;
+            }
+#endif
             for (i = 0; i < obj->member_count; i++) {
                 if (records_battle_results.members[i].took_part != 0) {
                     m = stfgtrep_member_create(obj, i, exp);

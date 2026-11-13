@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 4 layer A (the regional hunt): port/game/definitive_hunt.c and definitive_bestiary.c compiled alone against a
+"""PRD 4 layers A and B (the regional hunt and the Rare Target's rewards): port/game/definitive_hunt.c and definitive_bestiary.c compiled alone against a
 driver with stand-ins for the game's state: the chance curve, the chain (won encounters only, not the Rush's, not
 scripted battles), its resets (region, teleport, a Rare Target fought), the swap and the enemies' raise, the card
 record (written, read back, an older record as zero) and a replay script (nothing changes, nothing is drawn). Also
@@ -33,6 +33,7 @@ def main():
           "-I", str(ROOT / "tests/host"),
           "-I", str(ROOT / "psxstack/include"), "-I", str(ROOT / "port/game"),
           str(ROOT / "port/game/definitive_hunt.c"), str(ROOT / "port/game/definitive_bestiary.c"),
+          str(ROOT / "port/game/definitive_text.c"),
           str(ROOT / "tests/port/definitive_hunt_driver.c"), "-o", str(exe)]
     if subprocess.run(cc).returncode != 0:
         print("definitive_hunt: FAIL: does not compile")

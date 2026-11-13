@@ -68,6 +68,7 @@ void def_log_begin(void) {
     def_mp_hook();
     def_chain_reset(&chain);
     def_callout_show(DEF_CALLOUT_NONE, 0);
+    def_hunt_reward_done(); /* PRD 4 layer B: a reward a results screen never showed does not carry over */
     if (def_hunt_active()) {
         def_callout_show(DEF_CALLOUT_RARE, 1); /* PRD 4 layer A */
     }

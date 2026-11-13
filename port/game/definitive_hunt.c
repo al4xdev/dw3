@@ -8,6 +8,10 @@
  * tools/gen_hunt_targets.py) may be swapped for it: an existing boss battle, fought on the encounter's own stage and
  * music, its enemies raised to the region's level, and the party can always flee from it. The Overlevel Rush never offers to skip it: fieldstg_encounter_start asks here before the Rush.
  *
+ * A Rare Target won (layer B) pays DEF_HUNT_XP_MULT times the XP of the encounter it replaced, drops a rare Booster
+ * when the battle left no item, and gives one Hunt Material of its level band, counted in the card record at once and
+ * shown on the results screen after the item.
+ *
  * Off in a replay script (def_on): no state changes and no pad_random draw, so the scripts' battles are the emulator's. */
 #include "common.h"
 #include "pad.h"
@@ -25,7 +29,17 @@ static struct {
     signed char from_encounter; /* the battle being set up came from a random encounter */
     signed char rare;           /* and it is the Rare Target */
     short level;                /* the Rare Target's level */
+    short base;                 /* the encounter's own battle, the one it replaced (layer B's XP) */
 } hunt;
+
+/* A Rare Target won, until its results screen ends (layer B). */
+static struct {
+    signed char pending;  /* a results screen has this reward to show */
+    signed char shown;    /* its material's line was shown */
+    short base;           /* the battle whose XP it pays DEF_HUNT_XP_MULT times */
+    short level;          /* the target's level: the material's band and the Booster */
+    signed char material; /* the material it gave */
+} reward;
 
 static const DefHuntTarget *target_of(int region) {
     int i;
@@ -95,6 +109,7 @@ int def_hunt_encounter(int battle) {
     }
     hunt.rare = 1;
     hunt.level = t->level;
+    hunt.base = (short)battle;
     port_log("hunt: chain %d in region 0x%X: the Rare Target (battle %d, level %d)", chain, region, t->battle, t->level);
     return t->battle;
 }
@@ -136,6 +151,15 @@ void def_hunt_battle_end(int result) {
         if (hunt.rare) {
             port_log("hunt: Rare Target %s, chain %d reset", result != 0 ? "won" : "left", chain);
             chain = 0;
+            if (result != 0) {
+                reward.pending = 1;
+                reward.shown = 0;
+                reward.base = hunt.base;
+                reward.level = hunt.level;
+                reward.material = (signed char)def_hunt_material_of_level(hunt.level);
+                def_record_material_add(reward.material, 1); /* in the record now: a save right after keeps it */
+                port_log("hunt: material %d (now %d)", reward.material, def_record_material(reward.material));
+            }
         } else if (result != 0 && chain < DEF_HUNT_CHAIN_CAP) {
             chain++;
         }
@@ -145,8 +169,72 @@ void def_hunt_battle_end(int result) {
     hunt.rare = 0;
 }
 
+int def_hunt_material_of_level(int level) {
+    int m = (level - 1) / DEF_HUNT_MATERIAL_LEVELS;
+
+    return m < 0 ? 0 : m >= DEF_HUNT_MATERIALS ? DEF_HUNT_MATERIALS - 1 : m;
+}
+
+const unsigned char *def_hunt_material_name(int material) {
+    extern const unsigned char def_str_HuntMat0[], def_str_HuntMat1[], def_str_HuntMat2[], def_str_HuntMat3[],
+        def_str_HuntMat4[], def_str_HuntMat5[], def_str_HuntMat6[], def_str_HuntMat7[], def_str_HuntMat8[],
+        def_str_HuntMat9[], def_str_HuntMat10[], def_str_HuntMat11[], def_str_HuntMat12[], def_str_HuntMat13[],
+        def_str_HuntMat14[], def_str_HuntMat15[];
+    static const unsigned char *const names[DEF_HUNT_MATERIALS] = {
+        def_str_HuntMat0,  def_str_HuntMat1,  def_str_HuntMat2,  def_str_HuntMat3,  def_str_HuntMat4,  def_str_HuntMat5,
+        def_str_HuntMat6,  def_str_HuntMat7,  def_str_HuntMat8,  def_str_HuntMat9,  def_str_HuntMat10, def_str_HuntMat11,
+        def_str_HuntMat12, def_str_HuntMat13, def_str_HuntMat14, def_str_HuntMat15,
+    };
+
+    return names[material < 0 ? 0 : material >= DEF_HUNT_MATERIALS ? DEF_HUNT_MATERIALS - 1 : material];
+}
+
+int def_hunt_reward_battle(void) {
+    return reward.pending ? reward.base : -1;
+}
+
+int def_hunt_reward_pack(void) {
+    int tier;
+
+    if (!reward.pending) {
+        return 0;
+    }
+    tier = reward.level < 25 ? 0 : 1 + (reward.level - 25) / DEF_HUNT_PACK_LEVELS;
+    return DEF_HUNT_PACK_FIRST + (tier > 4 ? 4 : tier);
+}
+
+int def_hunt_material_pending(void) {
+    return reward.pending && !reward.shown;
+}
+
+/* "Hunt material:" <line break> the name, then the wait for a press: ESFGTRPT 11's layout ("Item gained:"). */
+const unsigned char *def_hunt_material_text(void) {
+    extern const unsigned char def_str_HuntGotPrefix[], def_str_HuntGotSuffix[];
+    static unsigned char buf[96];
+    const unsigned char *parts[3];
+    int i, j, p = 0;
+
+    parts[0] = def_str_HuntGotPrefix;
+    parts[1] = def_hunt_material_name(reward.material);
+    parts[2] = def_str_HuntGotSuffix;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; parts[i][j] != 0 && p < (int)sizeof(buf) - 1; j++) {
+            buf[p++] = parts[i][j];
+        }
+    }
+    buf[p] = 0;
+    reward.shown = 1;
+    return buf;
+}
+
+void def_hunt_reward_done(void) {
+    reward.pending = 0;
+    reward.shown = 0;
+}
+
 /* Between the swap and the battle's end a save state may be taken (the MCP tests do): it carries whether this is a Rare
- * Target, so a loaded battle still lets the party flee. */
+ * Target, so a loaded battle still lets the party flee, and a reward its results screen has not shown yet. */
 void def_hunt_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, hunt);
+    PORT_STATE_VAR(s, reward);
 }

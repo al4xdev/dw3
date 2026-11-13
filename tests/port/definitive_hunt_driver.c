@@ -129,6 +129,18 @@ int main(void) {
     def_hunt_battle_end(1);
     check("fighting the Rare Target resets the chain and ends the escape rule", chain_now() == 0 && !def_hunt_active());
 
+    /* Layer B: the reward of that win (the stand-in target is level 30: band (30-1)/6 = 4; R-Booster 02 from 25). */
+    check("the win gives one material of the target's band, in the record at once", def_record_material(4) == 1 &&
+                                                                                     def_hunt_material_of_level(30) == 4);
+    check("its results screen pays the replaced encounter's XP and drops the band's rare Booster",
+          def_hunt_reward_battle() == 7 && def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST + 1);
+    check("the material's line is pending, is a text, and is shown once",
+          def_hunt_material_pending() && def_hunt_material_text()[0] != 0 && !def_hunt_material_pending());
+    def_hunt_reward_done();
+    check("the screen's end clears the reward", def_hunt_reward_battle() == -1 && def_hunt_reward_pack() == 0);
+    check("the Booster rises with the level: 01 under 25, 02 from 25, 05 from 70",
+          def_hunt_material_of_level(1) == 0 && def_hunt_material_of_level(99) == DEF_HUNT_MATERIALS - 1);
+
     for (i = 0; i < 3; i++) {
         encounter(7, 1);
     }
@@ -166,6 +178,18 @@ int main(void) {
     def_bestiary_record_read(rec);
     def_record_hunt(&region, &chain);
     check("a record with only the hunt's state is written and read back", region == 0x93 && chain == 12);
+
+    def_bestiary_reset();
+    def_record_material_add(5, 3);
+    def_record_material_add(15, 250);
+    def_bestiary_record_write(rec);
+    def_bestiary_reset();
+    def_bestiary_record_read(rec);
+    check("materials alone write the record and read back, clamped at the cap",
+          def_record_material(5) == 3 && def_record_material(15) == DEF_HUNT_MATERIAL_CAP && def_record_material(0) == 0);
+    rec[0xD0 + 10 + 7] = 200; /* no checksum covers it: a damaged count */
+    def_bestiary_record_read(rec);
+    check("a count past the cap reads as the cap", def_record_material(7) == DEF_HUNT_MATERIAL_CAP);
 
     memset(rec, 0, sizeof(rec));
     memcpy(rec, "BEST", 4);

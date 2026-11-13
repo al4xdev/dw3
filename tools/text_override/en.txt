@@ -251,3 +251,24 @@ $Save: SAVE
 $Teleport: TELEPORT
 $TravelKeys: × button: Choose<1>△ button: Back
 $TravelKeys2: × button: Travel<1>△ button: Back
+
+# PRD 4 layer B: the Rare Target's Hunt Material line on the results screen (ESFGTRPT 11's layout,
+# without the indent: the loader trims a text's ends), and the materials' names, by band of target levels.
+$HuntGotPrefix: Hunt material:<1>
+$HuntGotSuffix: <2,2>
+$HuntMat0: Bit Shard
+$HuntMat1: Byte Shard
+$HuntMat2: Data Chip
+$HuntMat3: Code Chip
+$HuntMat4: Core Fragment
+$HuntMat5: Core Crystal
+$HuntMat6: Mega Crystal
+$HuntMat7: Giga Crystal
+$HuntMat8: Tera Prism
+$HuntMat9: Peta Prism
+$HuntMat10: Chrome Digizoid
+$HuntMat11: Blue Digizoid
+$HuntMat12: Red Digizoid
+$HuntMat13: Gold Digizoid
+$HuntMat14: Black Digizoid
+$HuntMat15: Obsidian Digizoid

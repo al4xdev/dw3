@@ -16,13 +16,15 @@ extern int fightstg_enemy_find_record(int id);
 #define REC_TABLE 8 /* offset of the table in the record (magic 4, version 1, checksum 1, 2 unused) */
 /* The record's spare bytes after the table carry the slot's other port state (the slot's own tail is full): at
  * REC_EXTRA "X1", the flags (DEF_SAVE_HARD), a byte unused, the Guardromon network's mask (4 bytes, low first), then the
- * hunt's region and chain (PRD 4 layer A; the PRD's budget gives the rest of the 48 bytes to the later layers). A record
+ * hunt's region and chain (PRD 4 layer A), then the Hunt Materials, a byte each (layer B; the PRD's budget gives the
+ * rest of the 48 bytes to the later layers). A record
  * without the "X1" (an older save) reads as none of it, and one written before the hunt existed reads its bytes as 0. */
 #define REC_EXTRA 0xD0
 
 static unsigned char extra_flags;
 static unsigned int extra_network;
 static unsigned char extra_region, extra_chain;
+static unsigned char extra_materials[DEF_HUNT_MATERIALS];
 
 static unsigned char table[DEF_BESTIARY_SPECIES];
 static unsigned char buffer[DEF_BESTIARY_RECORD_SIZE];
@@ -33,6 +35,7 @@ void def_bestiary_reset(void) {
     extra_network = 0;
     extra_region = 0;
     extra_chain = 0;
+    memset(extra_materials, 0, sizeof(extra_materials));
 }
 
 unsigned int def_network_mask(void) {
@@ -57,6 +60,32 @@ void def_record_hunt(int *region, int *chain) {
 void def_record_set_hunt(int region, int chain) {
     extra_region = (unsigned char)region;
     extra_chain = (unsigned char)(chain < 0 ? 0 : chain > 255 ? 255 : chain);
+}
+
+int def_record_material(int material) {
+    return material >= 0 && material < DEF_HUNT_MATERIALS ? extra_materials[material] : 0;
+}
+
+void def_record_material_add(int material, int n) {
+    int v;
+
+    if (material < 0 || material >= DEF_HUNT_MATERIALS) {
+        return;
+    }
+    v = extra_materials[material] + n;
+    extra_materials[material] = (unsigned char)(v < 0 ? 0 : v > DEF_HUNT_MATERIAL_CAP ? DEF_HUNT_MATERIAL_CAP : v);
+}
+
+/* 1 when anything of the slot's other port state is set: the record (and its "X1" part) is written only then. */
+static int extra_any(void) {
+    int i;
+
+    for (i = 0; i < DEF_HUNT_MATERIALS; i++) {
+        if (extra_materials[i] != 0) {
+            return 1;
+        }
+    }
+    return extra_flags != 0 || extra_network != 0 || extra_region != 0 || extra_chain != 0;
 }
 
 void def_save_flag_set(int flag, int on) {
@@ -85,6 +114,7 @@ void def_bestiary_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, extra_network);
     PORT_STATE_VAR(s, extra_region);
     PORT_STATE_VAR(s, extra_chain);
+    PORT_STATE_VAR(s, extra_materials);
 }
 
 static unsigned char sum(const unsigned char *p, int n) {
@@ -105,7 +135,7 @@ void def_bestiary_record_write(unsigned char *out) {
             break;
         }
     }
-    if (i == DEF_BESTIARY_SPECIES && extra_flags == 0 && extra_network == 0 && extra_region == 0 && extra_chain == 0) {
+    if (i == DEF_BESTIARY_SPECIES && !extra_any()) {
         return;
     }
     port_log("bestiary: the slot's record written");
@@ -113,8 +143,7 @@ void def_bestiary_record_write(unsigned char *out) {
     out[4] = DEF_BESTIARY_VERSION;
     memcpy(out + REC_TABLE, table, DEF_BESTIARY_SPECIES);
     out[5] = sum(out + REC_TABLE, DEF_BESTIARY_SPECIES);
-    if (extra_flags != 0 || extra_network != 0 || extra_region != 0 || extra_chain != 0) { /* none of it: the record
-                                                                                            * stays as it was */
+    if (extra_any()) { /* none of it: the record stays as it always was */
         out[REC_EXTRA] = 'X';
         out[REC_EXTRA + 1] = '1';
         out[REC_EXTRA + 2] = extra_flags;
@@ -123,6 +152,7 @@ void def_bestiary_record_write(unsigned char *out) {
         }
         out[REC_EXTRA + 8] = extra_region;
         out[REC_EXTRA + 9] = extra_chain;
+        memcpy(out + REC_EXTRA + 10, extra_materials, DEF_HUNT_MATERIALS);
     }
 }
 
@@ -145,6 +175,10 @@ void def_bestiary_record_read(const unsigned char *in) {
         }
         extra_region = in[REC_EXTRA + 8];
         extra_chain = in[REC_EXTRA + 9];
+        for (i = 0; i < DEF_HUNT_MATERIALS; i++) { /* no checksum covers it: a count past the cap reads as the cap */
+            extra_materials[i] = in[REC_EXTRA + 10 + i] > DEF_HUNT_MATERIAL_CAP ? DEF_HUNT_MATERIAL_CAP
+                                                                               : in[REC_EXTRA + 10 + i];
+        }
     }
     port_log("bestiary: the slot's record read: %d species known, flags %d, network 0x%X", known, extra_flags,
              extra_network);

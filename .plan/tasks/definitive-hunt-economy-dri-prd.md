@@ -2,8 +2,8 @@
 
 Dono: Alex. Data: 2026-11-13. Estado: desenho completo; as decisões do dono estão
 marcadas `[dono]`, cada uma com uma proposta padrão (fim do arquivo);
-implementação por camadas, cada camada só depois do ok da anterior. **Camada A
-implementada em 2026-11-13** com a tabela de alvos provisória (abaixo).
+implementação por camadas, cada camada só depois do ok da anterior. **Camadas A
+e B implementadas em 2026-11-13**, a A com a tabela de alvos provisória (abaixo).
 
 Continuação de `definitive-combat-prd.md`, `definitive-progression-prd.md` e
 `definitive-rebalance-prd.md`. Mesmas regras de trabalho: camadas pequenas,
@@ -320,6 +320,42 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   continua lendo como zero, um save antigo continua byte a byte igual quando
   nada foi ganho, e um save que só tem materiais grava e relê os materiais).
 - Jogo: vencer um Alvo Raro forçado e ver XP, carta e material.
+
+### Feito (2026-11-13)
+
+- **XP:** `stfgtrep_main_run` recalcula depois do `switch` dos membros:
+  `stfgtrep_rewards[b].exp * DEF_HUNT_XP_MULT`, onde `b` é o encontro aleatório
+  que o Alvo Raro substituiu (o "encontro padrão da área", não a batalha do
+  chefe), dividido entre os membros como o jogo faz (6/10 com dois, 1/3 com três).
+- **Carta rara → R-Booster.** A tela de resultados mostra um item só, e as
+  cartas chegam em pacotes. Quando a batalha não deixou item, o Alvo Raro deixa
+  um R-Booster (itens `0x186..0x18A`): 01 abaixo do nível 25, um a mais a cada
+  `DEF_HUNT_PACK_LEVELS` (15) níveis, 05 a partir do 70. O PRD 3 já faz um drop
+  de Booster valer `DEF_CARD_BOOST_PACKS` (15). Não usei a tabela dos Cardmons.
+  `[dono: proposta aplicada; trocar por carta avulsa é só mudar def_hunt_reward_pack]`
+- **Materiais:** 16, um por faixa de `DEF_HUNT_MATERIAL_LEVELS` (6) níveis do
+  alvo (1..6 o primeiro, 91+ o último): Bit Shard, Byte Shard, Data Chip, Code
+  Chip, Core Fragment, Core Crystal, Mega Crystal, Giga Crystal, Tera Prism, Peta
+  Prism, Chrome Digizoid, Blue Digizoid, Red Digizoid, Gold Digizoid, Black
+  Digizoid, Obsidian Digizoid (`$HuntMat0..15` em `en.txt`).
+  `[dono: confirmar nomes e faixas]` Contador em `REC_EXTRA + 10..25`, teto 99;
+  a leitura corta um valor acima do teto, porque nenhum checksum cobre o
+  registro. O material entra na vitória (`def_hunt_battle_end`), não na tela, e
+  por isso não se perde se o jogo fechar nela.
+- **Linha na tela:** "Hunt material:" + nome, no layout do "Item gained:"
+  (ESFGTRPT 11), depois da linha do item. É o passo 22 de `stfgtrep_main_run`,
+  que estava livre (o 22 de `stfgtrep_member_run` é outro). A recompensa
+  pendente é limpa no fim da tela (passo 50) e no começo da próxima batalha
+  (`def_log_begin`), para uma tela que nunca rodou não passar adiante.
+- **Teste de unidade:** estendi `tests/port/definitive_hunt_driver.c`, que já
+  linka `definitive_bestiary.c`, em vez do driver do Bestiário: material na
+  vitória, XP e Booster pendentes, linha mostrada uma vez, limpeza, faixas,
+  registro que só tem materiais grava e relê, valor acima do teto lê como o
+  teto. Um jogo novo continua gravando o registro todo zero.
+- **Teste no jogo:** Alvo Raro forçado (mapa 0x21D, batalha 323, nível 15),
+  três membros: "EXP gained: 60 EXP" para cada um, "BIT gained: 275 BIT",
+  "Item gained: R-Booster 01", "Hunt material: Data Chip", e o contador do
+  material 2 foi de 0 a 1. Frames em `.dumps/tasks/hunt/item_*.ppm`.
 
 ## Camada C — Bestiário mostra os materiais
 

@@ -166,6 +166,13 @@ void def_callout_frame(void);
 #define DEF_HUNT_CHANCE_MAX 40  /* the chance's ceiling, % */
 #define DEF_HUNT_CHAIN_CAP 255  /* the chain stops counting here (one byte of the card record) */
 #define DEF_HUNT_HP_MAX 30000   /* a raised Rare Target's HP never passes this (RecordsEnemy.hp is an s16) */
+/* PRD 4 layer B: the Rare Target's rewards. */
+#define DEF_HUNT_XP_MULT 10           /* XP: this many times the random encounter the Rare Target replaced */
+#define DEF_HUNT_MATERIALS 16         /* Hunt Materials: one u8 counter each in the card record (REC_EXTRA + 10..25) */
+#define DEF_HUNT_MATERIAL_CAP 99      /* the most of one material the player can hold */
+#define DEF_HUNT_MATERIAL_LEVELS 6    /* a material per band of this many target levels: level 1..6 the first, ... */
+#define DEF_HUNT_PACK_FIRST 0x186     /* the rare Booster (R-Booster 01..05, items 0x186..0x18A) a Rare Target drops... */
+#define DEF_HUNT_PACK_LEVELS 15       /* ...one more per this many levels from level 25 (01 below 25, 05 from 70) */
 typedef struct DefHuntTarget {
     unsigned char region; /* ststatus_map_areas's byte: the world map area, bit 7 the server */
     short battle;         /* an existing boss battle: an index into fieldstg_battles */
@@ -175,6 +182,17 @@ extern const DefHuntTarget def_hunt_targets[];
 extern const int def_hunt_target_count;
 /* The % chance of the Rare Target for a region's chain (0 under the minimum). */
 int def_hunt_chance(int chain);
+/* The material a Rare Target of `level` drops (0..DEF_HUNT_MATERIALS-1) and its name (glyph bytes, 0-ended). */
+int def_hunt_material_of_level(int level);
+const unsigned char *def_hunt_material_name(int material);
+/* The results screen of a Rare Target won (PRD 4 layer B; STFGTREP): the battle whose XP it pays DEF_HUNT_XP_MULT times
+ * (-1: none pending), the rare Booster it drops when the battle left no item (0: none), 1 while its material's line has
+ * not been shown, that line (glyph bytes, marks it shown), and the end of the screen. */
+int def_hunt_reward_battle(void);
+int def_hunt_reward_pack(void);
+int def_hunt_material_pending(void);
+const unsigned char *def_hunt_material_text(void);
+void def_hunt_reward_done(void);
 /* The hooks the game's C calls (also declared in include/port.h, for the units that do not include this header). */
 void def_hunt_map(int map);
 int def_hunt_encounter(int battle);
@@ -211,6 +229,10 @@ void def_save_flag_set(int flag, int on);
 /* The hunt's chain and the region it counts in (PRD 4 layer A), kept in the same record (REC_EXTRA + 8, + 9). */
 void def_record_hunt(int *region, int *chain);
 void def_record_set_hunt(int region, int chain);
+/* The Hunt Materials held (PRD 4 layer B), same record (REC_EXTRA + 10..25): the count of one, and adding to it
+ * (clamped to 0..DEF_HUNT_MATERIAL_CAP). */
+int def_record_material(int material);
+void def_record_material_add(int material, int n);
 void def_bestiary_discover(int index, int element_mask);
 int def_bestiary_known(int index);
 int def_bestiary_index(int species_id);
