@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700" role="img" aria-labelledby="title desc">
 <title id="title">The Rare Target loop</title>
-<desc id="desc">1: each random battle won in a region adds to its chain; from 5 wins the next encounter has a 5% chance to be the Rare Target, 5% more per win, up to 40% from 12 wins. 2: the Rare Target is a boss battle raised to the region's level and shown with its region's numeral, for example Datamon IV; you can always run and the Rush never skips it. 3: it drops the region's numbered rare item, for example Datamon Core IV, one R-Booster pack and far more experience. 4: the Bestiary keeps the rare items collected and the common materials held.</desc>
+<desc id="desc">1: each random battle won in a region adds to its chain; past 5 wins the next encounter may be the Rare Target: 20% at 6 wins, 20% more per win, certain at 10. 2: the Rare Target is a boss battle raised to the region's level and shown with its region's numeral, for example Datamon IV; you can always run and the Rush never skips it. 3: it drops the region's numbered rare item, for example Datamon Core IV, one R-Booster pack and far more experience. 4: the Bestiary keeps the rare items collected and the common materials held.</desc>
 <defs>
 <style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
 
@@ -26,29 +26,28 @@
 <line x1="80" y1="282.0" x2="415.0" y2="282.0" stroke="#2a3040" stroke-width="1"/>
 <text x="76" y="287.0" font-size="13.5" fill="#9a9a94" text-anchor="end">0%</text>
 <line x1="80" y1="232.0" x2="415.0" y2="232.0" stroke="#2a3040" stroke-width="1"/>
-<text x="76" y="237.0" font-size="13.5" fill="#9a9a94" text-anchor="end">20%</text>
+<text x="76" y="237.0" font-size="13.5" fill="#9a9a94" text-anchor="end">50%</text>
 <line x1="80" y1="182.0" x2="415.0" y2="182.0" stroke="#2a3040" stroke-width="1"/>
-<text x="76" y="187.0" font-size="13.5" fill="#9a9a94" text-anchor="end">40%</text>
+<text x="76" y="187.0" font-size="13.5" fill="#9a9a94" text-anchor="end">100%</text>
 <rect x="89.0" y="280" width="17.5" height="2" fill="#4a4f5c"/>
 <text x="97.75" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">0</text>
 <rect x="112.5" y="280" width="17.5" height="2" fill="#4a4f5c"/>
 <rect x="136.0" y="280" width="17.5" height="2" fill="#4a4f5c"/>
 <rect x="159.5" y="280" width="17.5" height="2" fill="#4a4f5c"/>
 <rect x="183.0" y="280" width="17.5" height="2" fill="#4a4f5c"/>
-<rect x="206.5" y="269.5" width="17.5" height="12.5" rx="3" fill="#c98500"/>
+<rect x="206.5" y="280" width="17.5" height="2" fill="#4a4f5c"/>
 <text x="215.25" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">5</text>
-<rect x="230.0" y="257.0" width="17.5" height="25.0" rx="3" fill="#c98500"/>
-<rect x="253.5" y="244.5" width="17.5" height="37.5" rx="3" fill="#c98500"/>
-<rect x="277.0" y="232.0" width="17.5" height="50.0" rx="3" fill="#c98500"/>
-<rect x="300.5" y="219.5" width="17.5" height="62.5" rx="3" fill="#c98500"/>
-<rect x="324.0" y="207.0" width="17.5" height="75.0" rx="3" fill="#c98500"/>
+<rect x="230.0" y="262.0" width="17.5" height="20.0" rx="3" fill="#c98500"/>
+<rect x="253.5" y="242.0" width="17.5" height="40.0" rx="3" fill="#c98500"/>
+<rect x="277.0" y="222.0" width="17.5" height="60.0" rx="3" fill="#c98500"/>
+<rect x="300.5" y="202.0" width="17.5" height="80.0" rx="3" fill="#c98500"/>
+<rect x="324.0" y="182.0" width="17.5" height="100.0" rx="3" fill="#c98500"/>
 <text x="332.75" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">10</text>
-<rect x="347.5" y="194.5" width="17.5" height="87.5" rx="3" fill="#c98500"/>
+<rect x="347.5" y="182.0" width="17.5" height="100.0" rx="3" fill="#c98500"/>
 <rect x="371.0" y="182.0" width="17.5" height="100.0" rx="3" fill="#c98500"/>
-<text x="379.75" y="300" font-size="13.5" fill="#9a9a94" text-anchor="middle">12</text>
 <rect x="394.5" y="182.0" width="17.5" height="100.0" rx="3" fill="#c98500"/>
-<text x="215.25" y="261.5" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">5%</text>
-<text x="379.75" y="174.0" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">40%</text>
+<text x="238.75" y="254.0" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">20%</text>
+<text x="332.75" y="174.0" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">100%</text>
 <text x="250.5" y="322" font-size="13.5" fill="#9a9a94" text-anchor="middle">wins in a row in this region</text>
 <rect x="470" y="96" width="400" height="240" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
 <circle cx="494" cy="122" r="13" fill="#f0efec"/>

@@ -120,10 +120,12 @@ int main(void) {
     ststatus_map_areas[MAP_C & 0xFF] = 0x06;
     def_bestiary_reset();
 
-    check("chance: 0 under the minimum, base at it, grows per win, stops at the ceiling",
-          def_hunt_chance(DEF_HUNT_CHAIN_MIN - 1) == 0 && def_hunt_chance(DEF_HUNT_CHAIN_MIN) == DEF_HUNT_CHANCE_BASE &&
-              def_hunt_chance(DEF_HUNT_CHAIN_MIN + 1) == DEF_HUNT_CHANCE_BASE + DEF_HUNT_CHANCE_STEP &&
-              def_hunt_chance(200) == DEF_HUNT_CHANCE_MAX);
+    check("chance: 0 up to the minimum, even steps past it, certain from DEF_HUNT_CHAIN_SURE on",
+          def_hunt_chance(DEF_HUNT_CHAIN_MIN - 1) == 0 && def_hunt_chance(DEF_HUNT_CHAIN_MIN) == 0 &&
+              def_hunt_chance(DEF_HUNT_CHAIN_MIN + 1) == 100 / (DEF_HUNT_CHAIN_SURE - DEF_HUNT_CHAIN_MIN) &&
+              def_hunt_chance(DEF_HUNT_CHAIN_MIN + 2) == 200 / (DEF_HUNT_CHAIN_SURE - DEF_HUNT_CHAIN_MIN) &&
+              def_hunt_chance(DEF_HUNT_CHAIN_SURE - 1) < 100 && def_hunt_chance(DEF_HUNT_CHAIN_SURE) == 100 &&
+              def_hunt_chance(DEF_HUNT_CHAIN_CAP) == 100);
 
     def_hunt_map(MAP_A);
     next_value = 0; /* a draw that would always hit */
@@ -133,8 +135,8 @@ int main(void) {
     }
     check("won encounters count, and no draw happens under the minimum", chain_now() == DEF_HUNT_CHAIN_MIN && draws == 0);
 
-    /* From here the chain is at the minimum, so each encounter draws: a missing draw keeps the cases below about the
-     * chain alone (a hit would make them Rare Targets, which reset it). */
+    /* From here the chain is at the minimum, where no draw happens yet; past it each encounter draws, and a missing
+     * draw keeps the cases below about the chain alone (a hit would make them Rare Targets, which reset it). */
     next_value = 99;
     encounter(7, 0);
     check("a lost or fled encounter neither counts nor resets", chain_now() == DEF_HUNT_CHAIN_MIN);
@@ -150,7 +152,13 @@ int main(void) {
     def_hunt_map(MAP_B);
     check("another map of the same region keeps the chain", chain_now() == DEF_HUNT_CHAIN_MIN);
 
-    next_value = 99; /* a draw that misses (99 >= any chance up to 40) */
+    draws = 0;
+    next_value = 99;
+    encounter(7, 1);
+    check("at the minimum no draw happens yet, and a win takes the chain past it",
+          draws == 0 && chain_now() == DEF_HUNT_CHAIN_MIN + 1);
+
+    next_value = 99; /* a draw that misses (99 misses any chance under 100) */
     draws = 0;
     fought = def_hunt_encounter(7);
     check("past the minimum a draw happens; a miss keeps the encounter", fought == 7 && draws == 1 && !def_hunt_active());

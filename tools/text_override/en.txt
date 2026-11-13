@@ -411,6 +411,30 @@ $DriClear: Cleared every stage
 $DriKeysUnlock: × button: Unlock<1>△ button: Back
 $DriKeysStart: × button: Start<1>△ button: Back
 $DriKeysConfirm: × button: Confirm<1>△ button: Back
+# The Tamers the simulations replay (owner, 2026-11-13: classic characters, the old Digimon tamers, as rivals), one per
+# challenge in gen_dri_challenges.py's LINES order: the title on their page, the line before the fight, after a full clear
+# and after less. By title, not by name. The 11-pixel font has no comma, colon, slash or apostrophe here: none is used.
+$DriKeysFight: × button: Fight<1>△ button: Back
+$DriRival0: The Calm Tamer
+$DriRival0Hello: Momentai! Fighting is not everything<1>but a simulation is a fair test!
+$DriRival0Won: You read every move - well played!<1>Momentai! You earned it!
+$DriRival0Lost: Rushing in never works - think first!<1>Come back with a plan!
+$DriRival1: The Heir of Miracles
+$DriRival1Hello: Miracles do not just happen!<1>We make them - show me yours!
+$DriRival1Won: Now THAT was a miracle!<1>You have the guts of a real leader!
+$DriRival1Lost: Do not give up! Miracles come<1>to those who keep fighting!
+$DriRival2: The Child of Hope
+$DriRival2Hello: As long as there is hope<1>we never lose! Here we go!
+$DriRival2Won: Your hope shines brighter than mine!<1>Keep that light going!
+$DriRival2Lost: Hope is never lost - only delayed!<1>Try again when you are ready!
+$DriRival3: The Leader of Courage
+$DriRival3Hello: Courage is going on even when scared!<1>Partner - full power! Here we go!
+$DriRival3Won: You have real courage!<1>The Digital World is in good hands!
+$DriRival3Lost: Being scared is fine - quitting is not!<1>Get up and come at me again!
+$DriRival4: The Dreamer Tamer
+$DriRival4Hello: I drew my partner before I met him!<1>Let us see what your dreams can do!
+$DriRival4Won: Your bond is real - I can feel it!<1>Never stop dreaming!
+$DriRival4Lost: Even a dark path leads somewhere!<1>Hold on to your partner and come back!
 $DriStages: "Stages felled "
 $DriNewReward: New reward
 $DriNoReward: No new reward

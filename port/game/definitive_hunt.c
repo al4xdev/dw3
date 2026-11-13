@@ -112,14 +112,16 @@ static unsigned char *line_new(void) {
 }
 
 /* ---- The chain and the Rare Target (layer A). */
+/* In %: none up to DEF_HUNT_CHAIN_MIN wins, then even steps to certain at DEF_HUNT_CHAIN_SURE. 100 always hits: the
+ * draw is (x % 100) < chance. */
 int def_hunt_chance(int chain) {
-    int c;
-
-    if (chain < DEF_HUNT_CHAIN_MIN) {
+    if (chain <= DEF_HUNT_CHAIN_MIN) {
         return 0;
     }
-    c = DEF_HUNT_CHANCE_BASE + DEF_HUNT_CHANCE_STEP * (chain - DEF_HUNT_CHAIN_MIN);
-    return c > DEF_HUNT_CHANCE_MAX ? DEF_HUNT_CHANCE_MAX : c;
+    if (chain >= DEF_HUNT_CHAIN_SURE) {
+        return 100;
+    }
+    return 100 * (chain - DEF_HUNT_CHAIN_MIN) / (DEF_HUNT_CHAIN_SURE - DEF_HUNT_CHAIN_MIN);
 }
 
 void def_hunt_map(int map) {

@@ -48,12 +48,12 @@ substituída por este arquivo). Dados extraídos: `.dumps/tasks/persona/data.jso
 | `DEF_RESIST_MIN` | 250 | valor a partir do qual o elemento é "resistido" |
 | `DEF_MULT_WEAK` | 0,5 | bônus por acertar fraqueza |
 | `DEF_MULT_STAGGER` | 0,2 | bônus por alvo em stagger |
-| `DEF_MULT_RESISTED` | 0,5 | multiplicador total contra elemento resistido **[CONFIRMAR COM O DONO]** |
+| `DEF_MULT_RESISTED` | 0,5 | multiplicador total contra elemento resistido (confirmado pelo dono em 2026-11-13) |
 | `DEF_AFF_SINGLE_MAX` | 0,3 | teto de afinidade de Fogo e de Vento (status 999) |
 | `DEF_AFF_PAIR_MAX` | 0,6 | teto de Água+Gelo e de Trovão+Máquina (soma 1998) |
 | `DEF_AFF_DARK_MAX` | 0,6 | teto de Trevas (status 999) |
 | `DEF_PLAYER_REF_RESIST` | 100 | resistência de referência do jogador como alvo de elemento |
-| `DEF_BATON_PASS_MP` | 12 | custo do Baton Pass |
+| `DEF_BATON_PASS_MP` | 0 | custo do Baton Pass (o dono, 2026-11-13: grátis, como o código já fazia) |
 | `DEF_RELAY_MP` | 50 | custo do Mega Boost refeito |
 
 Represente frações em ponto fixo (por exemplo /1000): o jogo não usa float.

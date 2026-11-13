@@ -22,13 +22,6 @@ const int def_dri_challenge_count = 5;
 const DefDriAgent def_dri_agents[] = {
     { -1, 43 },
     { -1, 44 },
-    { 555, 157 },
-    { 600, 157 },
-    { 600, 158 },
-    { 541, 159 },
-    { 600, 159 },
-    { 541, 160 },
-    { 558, 161 },
     { -1, 163 },
 };
-const int def_dri_agent_count = 10;
+const int def_dri_agent_count = 3;

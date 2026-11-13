@@ -1,9 +1,13 @@
 /* PRD 4 layer H: the DRI Agents' Gauntlet, the game's side (the rules are definitive_dri.c).
  *
- * Talking to a DRI Agent (def_dri_agents; FIELDSTG's talk hook asks def_dri_talk) opens the list of simulations in the
+ * A DRI Agent's talk is never taken (def_dri_agents; FIELDSTG's talk hook tells def_dri_talk): its lines and its DDNA
+ * quest, one per agent for the whole game, run as in the game, and once the field has stayed idle DEF_DRI_WAIT_IDLE
+ * frames on that map (def_dri_wait_step; a battle or another map drops it) the list of simulations opens in the
  * Guardromon network's layout: each line's three stages by name, its best stage (or locked), and for the one under the
  * cursor its rewards, its levels and what unlocking it takes. The confirm button chooses once and acts on a second press:
- * a locked challenge is unlocked (its materials handed over), an open one starts. The screen is a field overlay run from
+ * a locked challenge is unlocked (its materials handed over), an open one shows its Tamer's page (def_dri_rival: the
+ * classic Tamer whose battle data it replays, and their line), whose confirm starts it.
+ * The screen is a field overlay run from
  * FIELDSTG's idle step (def_dri_frame, next to dw3_travel_frame); while it is up fieldstg_stage.event_running stays set,
  * which freezes the player, the map's events and the encounters.
  *
@@ -44,7 +48,7 @@ extern void *font_get_entry(void *data, s32 i);
 extern const unsigned char def_str_DriTitle[], def_str_DriSep[], def_str_DriDash[], def_str_DriReward[],
     def_str_DriBest[], def_str_DriClear[], def_str_DriKeysUnlock[], def_str_DriKeysStart[], def_str_DriKeysConfirm[],
     def_str_DriStages[], def_str_DriNewReward[], def_str_DriNoReward[], def_str_DriOk[], def_str_EvoLv[],
-    def_str_HuntSpace[], def_str_DriOf[], def_str_DriSep[], def_str_Unknown[];
+    def_str_HuntSpace[], def_str_DriOf[], def_str_DriSep[], def_str_Unknown[], def_str_DriKeysFight[];
 
 /* The layout (320x240), the Guardromon network's colours and panels: a title bar, the list, the chosen challenge's
  * panel and the keys; the debrief is one panel over the field. */
@@ -60,14 +64,15 @@ extern const unsigned char def_str_DriTitle[], def_str_DriSep[], def_str_DriDash
 #define DRI_INFO_Y (DRI_TOP - 5 + DRI_LIST_H + 3)
 #define DRI_INFO_H 58
 #define DRI_HINT_Y 208
-#define DRI_DEB_Y 146    /* the debrief's panel */
-#define DRI_DEB_H 88
+#define DRI_DEB_Y 118    /* the debrief's panel, and the Tamer's page */
+#define DRI_DEB_H 116
 #define DRI_TEXT 96      /* bytes of a composed line */
 #define DRI_WINDOWS 32
 #define DRI_PAL_TEXT 0
 #define DRI_PAL_HOT 3    /* chosen once (the bestiary's orange) */
 #define DRI_PAL_DONE 4   /* cleared (its green) */
 #define DRI_PAL_DIM 7    /* locked */
+#define DRI_KEYS ((1 << 12) | (1 << 13) | (1 << 14)) /* the screens' buttons (PAD_PRESSED's bits) */
 #define DRI_SND_MOVE 0x8004513E
 #define DRI_SND_OK 0x8004503C
 #define DRI_SND_BACK 0x800450BD
@@ -75,20 +80,21 @@ extern const unsigned char def_str_DriTitle[], def_str_DriSep[], def_str_DriDash
  * simulation then. */
 #define DRI_PROGRESS_SPECIAL 0x2B
 
-enum { DRI_LIST, DRI_DEBRIEF };
-enum { DRI_IDLE, DRI_CLOSE, DRI_START };
+enum { DRI_LIST, DRI_DEBRIEF, DRI_RIVAL };
+enum { DRI_IDLE, DRI_CLOSE, DRI_START, DRI_TO_RIVAL, DRI_TO_LIST };
 
 int def_dri_debug = -1; /* tests: 0.. starts that challenge from the idle field, DEF_DRI_DEBUG_MENU opens the list */
 
 static struct {
     s32 request; /* the screen opens on the field's next idle frame with its texts loaded */
     s32 open;
-    s32 mode;    /* DRI_LIST or DRI_DEBRIEF */
+    s32 mode;    /* DRI_LIST, DRI_RIVAL or DRI_DEBRIEF */
     s32 sel;     /* the challenge under the cursor */
     s32 top;     /* the list's first row */
     s32 armed;   /* the challenge the confirm button chose once, or -1 */
     s32 fresh;   /* the frame it opened: the pad is not read (the press that talked may still be down) */
     s32 action;
+    s32 releasing; /* closed: the field goes back once the screen's buttons are up (dri_release) */
     s32 count;
     MessageWindow *wins[DRI_WINDOWS];
     MessageWindow *title, *hint, *states[DRI_ROWS], *names[DRI_ROWS], *reward, *levels, *cost;
@@ -111,6 +117,8 @@ static struct {
     short party[3];       /* the party's Digimon then, and their HP and MP (restored after a defeat) */
     short hp[3], mp[3];
 } dri_sim;
+
+static DefDriWait dri_wait; /* a DRI Agent's talk runs: the list opens after it */
 
 static unsigned char row_name[DRI_ROWS][DRI_TEXT], row_state[DRI_ROWS][8], info_reward[DRI_TEXT], info_levels[DRI_TEXT],
     info_best[DRI_TEXT], deb_name[DRI_TEXT], deb_stages[DRI_TEXT], deb_reward[2 * DRI_TEXT];
@@ -358,7 +366,7 @@ static void list_input(void) {
             list_fill();
         } else {
             sound_module.play(DRI_SND_OK);
-            dri.action = DRI_START;
+            dri.action = def_dri_rival(c, DEF_DRI_RIVAL_HELLO) != NULL ? DRI_TO_RIVAL : DRI_START;
         }
     } else if (PAD_PRESSED(12) || PAD_PRESSED(14)) {
         sound_module.play(DRI_SND_BACK);
@@ -375,6 +383,7 @@ static void list_input(void) {
 
 static void debrief_open(void) {
     const DefDriChallenge *ch = def_dri_challenge(dri_sim.challenge);
+    const unsigned char *say;
     MessageWindow *w;
     int p = 0;
 
@@ -391,6 +400,12 @@ static void debrief_open(void) {
     w = dri_window(1, 18, DRI_DEB_Y + 24);
     w->set_text(w, deb_stages, -1);
     w->set_palette(w, dri_sim.fallen >= DEF_DRI_STAGES ? DRI_PAL_DONE : DRI_PAL_TEXT);
+    say = def_dri_rival(dri_sim.challenge, dri_sim.fallen >= DEF_DRI_STAGES ? DEF_DRI_RIVAL_WON : DEF_DRI_RIVAL_LOST);
+    if (say != NULL) { /* the Tamer's word on it: a full clear, or anything less */
+        w = dri_window(2, 18, DRI_DEB_Y + 40);
+        w->set_page_lines(w, 2);
+        w->set_text(w, (u8 *)say, -1);
+    }
     p = 0;
     deb_reward[0] = 0;
     if (dri_sim.count > 0) {
@@ -402,12 +417,47 @@ static void debrief_open(void) {
     } else {
         def_glyph_put(deb_reward, &p, sizeof(deb_reward), def_str_DriNoReward);
     }
-    w = dri_window(2, 18, DRI_DEB_Y + 42);
+    w = dri_window(2, 18, DRI_DEB_Y + 70);
     w->set_page_lines(w, 2);
     w->set_text(w, deb_reward, -1);
     w->set_palette(w, dri_sim.count > 0 ? DRI_PAL_HOT : DRI_PAL_TEXT);
-    w = dri_window(1, 18, DRI_DEB_Y + 68);
+    w = dri_window(1, 18, DRI_DEB_Y + 96);
     w->set_text(w, (u8 *)def_str_DriOk, -1);
+}
+
+/* ---- The Tamer's page: before an open challenge starts, whose battle data it replays and their line. */
+
+static void rival_open(void) {
+    const DefDriChallenge *ch = def_dri_challenge(dri.sel);
+    const unsigned char *name = def_dri_rival(dri.sel, DEF_DRI_RIVAL_NAME);
+    const unsigned char *hello = def_dri_rival(dri.sel, DEF_DRI_RIVAL_HELLO);
+    MessageWindow *w;
+
+    if (ch == NULL || name == NULL || hello == NULL) {
+        return;
+    }
+    w = dri_window(2, 18, DRI_DEB_Y + 5);
+    w->set_text(w, (u8 *)name, -1);
+    w->set_palette(w, DRI_PAL_HOT);
+    put_line(deb_name, DRI_TEXT, ch);
+    w = dri_window(2, 18, DRI_DEB_Y + 22);
+    w->set_text(w, deb_name, -1);
+    w = dri_window(2, 18, DRI_DEB_Y + 42);
+    w->set_page_lines(w, 2);
+    w->set_text(w, (u8 *)hello, -1);
+    w = dri_window(1, 18, DRI_DEB_Y + 86);
+    w->set_page_lines(w, 2);
+    w->set_text(w, (u8 *)def_str_DriKeysFight, -1);
+}
+
+static void rival_input(void) {
+    if (PAD_PRESSED(13)) {
+        sound_module.play(DRI_SND_OK);
+        dri.action = DRI_START;
+    } else if (PAD_PRESSED(12) || PAD_PRESSED(14)) {
+        sound_module.play(DRI_SND_BACK);
+        dri.action = DRI_TO_LIST;
+    }
 }
 
 /* ---- The screen. */
@@ -419,14 +469,16 @@ static void dri_open(void) {
     dri.action = DRI_IDLE;
     if (dri.mode == DRI_LIST) {
         list_open();
+    } else if (dri.mode == DRI_RIVAL) {
+        rival_open();
     } else {
         debrief_open();
     }
     dri.open = 1;
     dri.request = 0;
     dri.fresh = 1;
-    port_log("dri: frame %ld: the %s of map 0x%X", port_frames, dri.mode == DRI_LIST ? "list" : "debrief",
-             gamestate_data.funcs.get_map());
+    port_log("dri: frame %ld: the %s of map 0x%X", port_frames,
+             dri.mode == DRI_LIST ? "list" : dri.mode == DRI_RIVAL ? "Tamer page" : "debrief", gamestate_data.funcs.get_map());
 }
 
 static void dri_close(void) {
@@ -505,18 +557,37 @@ static int sim_start(int c) {
 /* Closes the screen and carries out the choice: the simulation's battle, or the field handed back. */
 static void dri_finish(void) {
     s32 action = dri.action;
-    FieldstgActor *player;
 
     dri.action = DRI_IDLE;
     dri_close();
+    if (action == DRI_TO_RIVAL || action == DRI_TO_LIST) { /* the other page, on the next frame: the field stays held */
+        dri.mode = action == DRI_TO_RIVAL ? DRI_RIVAL : DRI_LIST;
+        dri.request = 1;
+        return;
+    }
     if (action == DRI_START && sim_start(dri.sel)) {
         return; /* fieldstg_start_battle keeps the field frozen until the battle */
     }
+    dri.releasing = 1;
+}
+
+/* The field back to the player once none of the screens' buttons is down. Handed back in the frame of the press that
+ * closed the screen, the press reached the player's control too, and CIRCLE there examines what the player faces: after
+ * the debrief (closed by CIRCLE) that left the player stuck (fieldstg_stage.actor_busy). */
+static int dri_release(void) {
+    FieldstgActor *player;
+
+    if (pad_state.get_held(0) & DRI_KEYS) {
+        fieldstg_stage.event_running = 1;
+        return 1;
+    }
+    dri.releasing = 0;
     fieldstg_stage.event_running = 0;
     player = (FieldstgActor *)heap_objects.find(5, -1, 0);
     if (player != NULL) {
         player->reset_control(player);
     }
+    return 1;
 }
 
 static void list_request(void) {
@@ -534,14 +605,17 @@ int def_dri_talk(s32 map, s32 actor) {
         gamestate_data.progress == DRI_PROGRESS_SPECIAL) {
         return 0;
     }
-    port_log("dri: the DRI Agent %d of map 0x%X", actor, map);
-    list_request();
-    return 1;
+    port_log("dri: the DRI Agent %d of map 0x%X: its own talk first, the list after it", actor, map);
+    def_dri_wait_arm(&dri_wait, map);
+    return 0; /* never the talk's: the agent's lines and its DDNA quest run as in the game */
 }
 
 int def_dri_frame(void) {
     if (!def_on()) {
         return 0;
+    }
+    if (dri.releasing) {
+        return dri_release();
     }
     if (!dri.open && !dri.request) {
         if (def_dri_debug >= 0 && idle()) {
@@ -561,6 +635,13 @@ int def_dri_frame(void) {
             dri.request = 1;
             dri.mode = DRI_DEBRIEF;
             dri_sim.lost = 0; /* back on the field: the defeat's redirect is done */
+        } else if (dri_wait.armed) {
+            if (def_dri_wait_step(&dri_wait, gamestate_data.funcs.get_map(), idle(), fieldstg_stage.battle_starting)) {
+                port_log("dri: frame %ld: the DRI Agent's own talk is over", port_frames);
+                list_request();
+            } else if (!dri_wait.armed) {
+                port_log("dri: frame %ld: no list after the talk (a battle, another map or a talk too long)", port_frames);
+            }
         }
         if (!dri.request) {
             return 0;
@@ -577,6 +658,8 @@ int def_dri_frame(void) {
     if (!dri.fresh) {
         if (dri.mode == DRI_LIST) {
             list_input();
+        } else if (dri.mode == DRI_RIVAL) {
+            rival_input();
         } else if (PAD_PRESSED(13) || PAD_PRESSED(12) || PAD_PRESSED(14)) {
             sound_module.play(DRI_SND_OK);
             dri.action = DRI_CLOSE;
@@ -601,6 +684,7 @@ int def_dri_frame(void) {
 void def_dri_battle_begin(void) {
     const DefDriChallenge *ch;
 
+    dri_wait.armed = 0; /* a battle in between (a quest's): no list after it */
     dri_sim.fighting = 0;
     dri_sim.lost = 0;
     if (!dri_sim.pending) {

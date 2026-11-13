@@ -7,8 +7,9 @@
 For each stage file (src/wstag/*.c): its map (the file's header comment, as tools/gen_hunt_targets.py reads it), its talk
 file (fieldstg_stage.talk_file = records_language + ID), and each placed actor (FieldstgPlacedActor: ID, x, y) with the
 messages of its talks (FieldstgTalk). The talk file's ENG entries are decoded with tools/dump_text.py; an actor matches
-when one of its messages has one of the words. Prints each match, then the AGENTS rows for tools/gen_dri_challenges.py:
-an actor ID that only DRI talks use is offered for any map (-1), else per map.
+when one of its messages has one of the words, unless every word of the message is pig talk ("Oink, ooioink!": the
+story's pig forms of the researchers are a quest's state, not agents). Prints each match, then the AGENTS rows for
+tools/gen_dri_challenges.py: an actor ID that only DRI talks use is offered for any map (-1), else per map.
 """
 import argparse
 import re
@@ -37,6 +38,13 @@ def stage_actors(path):
             continue
         actors.append((int(f[2], 0), int(f[4], 0), int(f[5], 0), talks.get(f[1], [])))
     return talk_files, actors
+
+
+def pig_talk(text):
+    """Every word of the message after its speaker's tag is made of o, i, n and k."""
+    body = re.sub(r"<[^>]*>", " ", re.sub(r"^<7>.*?<7>", "", text))
+    words = re.findall(r"[A-Za-z]+", body)
+    return bool(words) and all(set(w.lower()) <= set("oink") for w in words)
 
 
 def main():
@@ -69,7 +77,9 @@ def main():
                     if not 0 <= msg < len(offs):
                         continue
                     text = dt.decode(d, offs[msg], tables)[0].replace("\n    ", " ")
-                    if pat.search(text):
+                    if pat.search(text) and pig_talk(text):
+                        print(f"wstag{f} actor {aid}: pig talk, not an agent: {text[:80]}")
+                    elif pat.search(text):
                         for m in maps:
                             hits[aid].add(m)
                         print(f"wstag{f} map {', '.join(hex(m) for m in maps)} actor {aid} at ({x}, {y}) talk file "

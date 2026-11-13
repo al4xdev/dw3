@@ -3178,9 +3178,10 @@ s32 fieldstg_actor_talk_to(FieldstgActor *obj, FieldstgPos *pos) {
     s32 i;
 
 #ifdef PC_PORT
-    /* PRD 4 layers G and H: the Black Market's trader and the DRI Agents open the port's own screens instead of their
-     * talk (on the next idle frame, as the Guardromon screen does); 1 stops the player as a talk does. The placed actor's
-     * own ID is asked, before the game's talk redirects. */
+    /* PRD 4 layers G and H: the Black Market's trader opens the port's own screen instead of its talk (on the next idle
+     * frame, as the Guardromon screen does); 1 stops the player as a talk does. A DRI Agent's talk is never taken
+     * (def_dri_talk is always 0): its lines and DDNA quest run, and the list opens after them. The placed actor's own
+     * ID is asked, before the game's talk redirects. */
     if (other != NULL && other->base.state == OBJECT_STATE_RUN && (def_bm_talk(gamestate_data.funcs.get_map(), other->base.key1) ||
                                                                  def_dri_talk(gamestate_data.funcs.get_map(), other->base.key1))) {
         return 1;

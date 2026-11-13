@@ -250,15 +250,15 @@ lab, and the lab keeps the third slot closed. The choice is saved with the game.
 Optional, and open all game long: every battle can drop Hunt Materials, and a winning streak in one region brings out
 its rarest prey. The materials then pay for the forge, the Black Market and the DRI Gauntlet.
 
-<p align="center"><img src="docs/images/definitive/hunt.svg" width="800" alt="The Rare Target loop: 1 the regional chain, from 5 wins a 5% chance rising to 40%; 2 the Rare Target, a boss battle at the region's level shown with its region's numeral, such as Datamon IV; 3 its rewards, the region's numbered rare item, an R-Booster pack and far more experience; 4 the Bestiary keeps the collection."></p>
+<p align="center"><img src="docs/images/definitive/hunt.svg" width="800" alt="The Rare Target loop: 1 the regional chain, past 5 wins a chance rising to certain at 10; 2 the Rare Target, a boss battle at the region's level shown with its region's numeral, such as Datamon IV; 3 its rewards, the region's numbered rare item, an R-Booster pack and far more experience; 4 the Bestiary keeps the collection."></p>
 
 ### The regional chain and the Rare Target
 
 - Every random battle you win adds one to the **hunt chain** of the region you are in (an area of the world map; the
   server counts as its own). Moving to another region, a Guardromon teleport and fighting the Rare Target reset it.
   Battles you do not win, or skip with the Overlevel Rush, do not count. The chain is saved with your game.
-- Once the chain reaches **5**, each random encounter in that region may be its **Rare Target** instead: a 5% chance,
-  then 5% more per win, up to **40%** from 12 wins.
+- Past **5** wins, each random encounter in that region may be its **Rare Target** instead: a 20% chance at 6 wins,
+  20% more per win, and **certain** at 10.
 - The Rare Target is one of the game's boss battles, fought on the region's own stage and music, with its enemies
   raised to the region's level. A **RARE!** callout announces it, the Overlevel Rush never offers to skip it, and you
   can always run from it.
@@ -354,7 +354,7 @@ to them opens two tabs (L1/R1):
 
 ### The DRI Gauntlet
 
-Talk to a DRI Agent for the list of simulations. Each is one battle against an evolution line's three stages,
+Talk to a DRI Agent: once their own lines are over (their DDNA quest works as in the game), the list of simulations opens. Each replays a classic Tamer's battle data, who has a word for you before the fight and after it. Each is one battle against an evolution line's three stages,
 Champion, Ultimate and Mega: when one falls the next comes in at full HP with a **DIGIVOLVE!** callout, while your
 party keeps the HP, MP and items it has spent. There is no running away and no game over: lose and you are back on the
 field with your HP and MP as they were before (spent items stay spent). A simulation is unlocked once, for good, by

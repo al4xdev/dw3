@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PRD 4 layer H (the DRI Agents' Gauntlet): port/game/definitive_dri.c compiled with definitive_bestiary.c against a
-driver with stand-in challenges and agents: the stage-to-tier rule, the agents' match, the unlock (once, paid exactly,
+driver with stand-in challenges and agents: the stage-to-tier rule, the agents' match, the wait after an agent's
+talk (the list opens only once it is over), each challenge's Tamer texts, the unlock (once, paid exactly,
 never again), the rewards (each tier once, the best stage only rises), the second card record's bytes 152..157 written
 and read back (an older record as nothing unlocked) and a replay script (nothing). Then the generated table checked
 against its rule (tools/gen_dri_challenges.py --check) and against the game's data: every stage an enemy species, every

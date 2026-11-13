@@ -116,9 +116,7 @@ Valores iniciais; o balanço final é do dono.
 
 ```c
 #define DEF_HUNT_CHAIN_MIN        5   /* vitórias seguidas na região antes de o Alvo Raro poder aparecer */
-#define DEF_HUNT_CHANCE_BASE      5   /* % de chance no primeiro encontro depois do mínimo */
-#define DEF_HUNT_CHANCE_STEP      5   /* % a mais por vitória além do mínimo */
-#define DEF_HUNT_CHANCE_MAX      40   /* teto da chance, % */
+#define DEF_HUNT_CHAIN_SURE      10   /* daqui em diante o Alvo Raro é certo; do mínimo até aqui a chance sobe por igual (emenda do dono) */
 #define DEF_HUNT_XP_MULT         10   /* XP do Alvo Raro em relação ao encontro padrão da área */
 #define DEF_HUNT_MATERIALS       16   /* materiais distintos; um contador u8 cada no registro (orçamento abaixo) */
 #define DEF_HUNT_MATERIAL_CAP    99   /* máximo em mãos de cada material */
@@ -214,8 +212,9 @@ não podem mudar, e uma falha nova é bloqueio.
   durante backtracking). O gancho é `def_rush_results`.
 - **Gatilho:** acima de `DEF_HUNT_CHAIN_MIN` (5) vitórias seguidas, o próximo
   encontro aleatório tem chance crescente de ser o Alvo Raro da região
-  (`DEF_HUNT_CHANCE_BASE` + `DEF_HUNT_CHANCE_STEP` por vitória além do mínimo,
-  teto `DEF_HUNT_CHANCE_MAX`). Use `pad_random` só **depois** de decidir que o
+  (emenda do dono, 2026-11-13: nenhuma com 5, sobe por igual a cada vitória e é
+  certeza com `DEF_HUNT_CHAIN_SURE` (10): 20% com 6, 40% com 7, ..., 100% com 10;
+  antes eram 5% com 5, mais 5% por vitória, teto de 40%). Use `pad_random` só **depois** de decidir que o
   recurso está ligado, para não mexer na sequência aleatória dos replays.
 - **O Rush nunca oferece pular o Alvo Raro.** A decisão do Alvo Raro vem antes
   do bloco do Rush em `fieldstg_encounter_start`; sendo Alvo Raro, o bloco do
@@ -917,6 +916,39 @@ antes de construir o resto.
 - **Teste no jogo (2026-11-13):** lista, destravar pagando os materiais, começar; derrota de volta ao campo (0x21D)
   com HP e MP restaurados; vitória com os três estágios em sequência (DIGIVOLVE! a cada entrada), a tela de
   resultados, o campo e os três tiers (Metal Power 1, 2 e S); repetir não dá nada novo.
+
+### Emenda do dono (2026-11-13): a fala dos agentes e os Tamers
+
+- **A fala do agente nunca é trocada.** Os DRI Agents são os pesquisadores das
+  quests de DDNA (Kazuki/Patamon e Michael/Renamon no 0x21D; Bob/Veemon,
+  Johann/Agumon, Jimmy/Guilmon, Ken/Kotemon, Yuji/Kumamon, Yang/Monmon), uma
+  quest por agente no jogo todo. O gancho abria a lista no lugar da fala e assim
+  impedia a quest. Agora `def_dri_talk` só arma uma espera e devolve 0: a fala e
+  a quest rodam como no jogo, e a lista abre quando o campo fica
+  `DEF_DRI_WAIT_IDLE` (30) frames seguidos parado no mesmo mapa
+  (`def_dri_wait_step`, em `definitive_dri.c`; um frame parado entre duas partes
+  da fala não conta como fim). Uma batalha (a quest pode levar a uma luta) ou
+  outro mapa no meio cancelam; passados `DEF_DRI_WAIT_MAX` frames, desiste.
+- **Agentes:** as formas de porco da história ("Oink...", atores 157 a 161)
+  saíram da tabela: são um estado da quest, não agentes. `find_dri_agents.py`
+  agora ignora mensagem só de "oink". Ficam os atores 43, 44 e 163, em todo mapa
+  em que aparecem (todos pesquisadores da DRI).
+- **Tamers:** cada simulação reproduz os dados de batalha de um Tamer clássico,
+  pelo título, sem nome: "The Leader of Courage" (linha do Agumon), "The Child of
+  Hope" (Patamon), "The Heir of Miracles" (Veemon), "The Dreamer Tamer"
+  (Guilmon), "The Calm Tamer" (Terriermon). Escolher um desafio aberto mostra a
+  página do Tamer (título, os três estágios, a fala; × luta, △ volta à lista);
+  no resumo depois, a fala de vitória (os três estágios) ou a de derrota. Textos
+  em `en.txt` (`$DriRival<n>*`), na ordem de `LINES` de
+  `gen_dri_challenges.py`, que confere que existem. A fonte de 11 px não tem
+  vírgula, dois-pontos, barra nem apóstrofo: as falas não usam.
+- **Corrigido junto:** fechar o resumo com × (CIRCLE) devolvia o campo no mesmo
+  frame, e o controle do jogador via o mesmo toque e examinava o que estava na
+  frente: o jogador ficava preso (`actor_busy`). As telas do DRI agora só
+  devolvem o campo quando os botões delas estão soltos (`dri_release`).
+- **Teste:** o driver (a espera: nada durante a fala nem antes de 30 frames
+  parados, um intervalo no meio da fala, batalha, outro mapa, fala sem fim,
+  replay; os textos de cada desafio) e `dri_talk_ingame.py` no lab.
 
 ## Camada I — Resultados do Rush flutuantes, sem sair do campo
 

@@ -76,6 +76,56 @@ int main(void) {
     check("a DRI Agent on its map, one on any map, nobody else",
           def_dri_agent(0x210, 60) && !def_dri_agent(0x211, 60) && def_dri_agent(0x211, 61) && def_dri_agent(0x2A0, 61) &&
               !def_dri_agent(0x210, 62));
+    {
+        DefDriWait w;
+
+        memset(&w, 0, sizeof(w));
+        check("nothing armed: nothing opens", !def_dri_wait_step(&w, 0x210, 1, 0));
+        def_dri_wait_arm(&w, 0x210);
+        n = 0;
+        for (i = 0; i < 40; i++) { /* the agent's own lines */
+            n |= def_dri_wait_step(&w, 0x210, 0, 0);
+        }
+        for (i = 0; i < DEF_DRI_WAIT_IDLE - 1; i++) {
+            n |= def_dri_wait_step(&w, 0x210, 1, 0);
+        }
+        check("after a talk: nothing while it runs, nor before the field has been idle long enough", !n && w.armed);
+        check("then the list, once", def_dri_wait_step(&w, 0x210, 1, 0) && !w.armed && !def_dri_wait_step(&w, 0x210, 1, 0));
+        def_dri_wait_arm(&w, 0x210);
+        n = 0;
+        for (i = 0; i < DEF_DRI_WAIT_IDLE - 1; i++) {
+            n |= def_dri_wait_step(&w, 0x210, 1, 0);
+        }
+        n |= def_dri_wait_step(&w, 0x210, 0, 0); /* the talk's next part */
+        for (i = 0; i < DEF_DRI_WAIT_IDLE - 1; i++) {
+            n |= def_dri_wait_step(&w, 0x210, 1, 0);
+        }
+        check("an idle gap inside the talk is not its end", !n && w.armed && def_dri_wait_step(&w, 0x210, 1, 0));
+        def_dri_wait_arm(&w, 0x210);
+        check("a battle the talk starts drops it",
+              !def_dri_wait_step(&w, 0x210, 0, 1) && !w.armed && !def_dri_wait_step(&w, 0x210, 1, 0));
+        def_dri_wait_arm(&w, 0x210);
+        n = 0;
+        for (i = 0; i < 2 * DEF_DRI_WAIT_IDLE; i++) {
+            n |= def_dri_wait_step(&w, 0x211, 1, 0);
+        }
+        check("another map drops it", !n && !w.armed);
+        def_dri_wait_arm(&w, 0x210);
+        n = 0;
+        for (i = 0; i <= DEF_DRI_WAIT_MAX; i++) {
+            n |= def_dri_wait_step(&w, 0x210, 0, 0);
+        }
+        check("a talk that never ends gives up", !n && !w.armed);
+        on = 0;
+        def_dri_wait_arm(&w, 0x210);
+        check("in a replay script nothing is armed, and no Tamer", !w.armed && def_dri_rival(0, DEF_DRI_RIVAL_NAME) == NULL);
+        on = 1;
+    }
+    check("each challenge's Tamer: title, before, after a clear, after less; none past the table",
+          def_dri_rival(0, DEF_DRI_RIVAL_NAME) != NULL && def_dri_rival(2, DEF_DRI_RIVAL_LOST) != NULL &&
+              def_dri_rival(0, DEF_DRI_RIVAL_HELLO) != def_dri_rival(0, DEF_DRI_RIVAL_WON) &&
+              def_dri_rival(1, DEF_DRI_RIVAL_WON) != def_dri_rival(1, DEF_DRI_RIVAL_LOST) &&
+              def_dri_rival(3, DEF_DRI_RIVAL_NAME) == NULL && def_dri_rival(0, 4) == NULL && def_dri_rival(0, -1) == NULL);
 
     /* Unlock: the materials, once. */
     check("nothing held: locked and cannot be unlocked", !def_record_dri_unlocked(0) && !def_dri_can_unlock(0) &&

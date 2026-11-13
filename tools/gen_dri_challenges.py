@@ -60,18 +60,13 @@ LINES = [
               "(Fire is Agumon's)"),
 ]
 
-# The DRI Agents: (map, actor ID) pairs whose talk opens the list (the actor ID is FieldstgPlacedActor.id, the actor's
-# base.key1); map -1 matches any map. Found on the lab with tools/find_dri_agents.py (needs the disc).
+# The DRI Agents: (map, actor ID) pairs after whose own talk the list opens (the actor ID is FieldstgPlacedActor.id, the
+# actor's base.key1); map -1 matches any map. Found on the lab with tools/find_dri_agents.py (needs the disc): the DDNA
+# quests' researchers (Kazuki and Michael on 0x21D; Bob, Johann, Jimmy, Ken, Yuji, Yang). Their story's pig forms
+# ("Oink...", actors 157..161) are left out: a quest's state, not an agent.
 AGENTS = [
     (-1, 43),  # every map it is on: 0x21d, 0x226, 0x22b, 0x22e, 0x258
     (-1, 44),  # every map it is on: 0x21d, 0x258
-    (0x22B, 157),
-    (0x258, 157),
-    (0x258, 158),
-    (0x21D, 159),
-    (0x258, 159),
-    (0x21D, 160),
-    (0x22E, 161),
     (-1, 163),  # every map it is on: 0x258
 ]
 
@@ -81,7 +76,7 @@ def constants():
     c = {k: int(v, 0) for k, v in re.findall(r"#define (DEF_\w+)\s+(0x[0-9A-Fa-f]+|\d+)", h)}
     for k in ("DEF_DRI_CHALLENGES", "DEF_DRI_STAGES", "DEF_DRI_LEVEL_FIRST", "DEF_DRI_LEVEL_GAP", "DEF_DRI_LEVEL_STEP",
               "DEF_DRI_COMMON_LO", "DEF_DRI_COMMON_HI", "DEF_DRI_RARE_OVER", "DEF_DRI_TWO_RARES", "DEF_DRI_SCALE_EXP_PCT",
-              "DEF_HUNT_HP_MAX",
+              "DEF_HUNT_HP_MAX", "DEF_DRI_RIVALS",
               "DEF_HUNT_MATERIALS"):
         assert k in c, k
     return c
@@ -152,6 +147,12 @@ def material_tops(order):
     return tops
 
 
+def rival_texts():
+    """The Tamers' texts ($DriRival<n>, ...Hello, ...Won, ...Lost in en.txt), by name."""
+    s = (ROOT / "tools/text_override/en.txt").read_text()
+    return {k: v.strip() for k, v in re.findall(r"^\$(DriRival\d+\w*): (.*)$", s, re.M)}
+
+
 def material_names():
     s = (ROOT / "tools/text_override/en.txt").read_text()
     return {int(i): n.strip() for i, n in re.findall(r"^\$HuntMat(\d+): (.*)$", s, re.M)}
@@ -199,6 +200,11 @@ def table():
     targets = rares(rows, battles)
     n = len(LINES)
     assert 0 < n <= c["DEF_DRI_CHALLENGES"], n
+    assert n <= c["DEF_DRI_RIVALS"], f"{n} lines, DEF_DRI_RIVALS {c['DEF_DRI_RIVALS']}: each line needs its Tamer"
+    say = rival_texts()
+    for k in range(n):
+        for part in ("", "Hello", "Won", "Lost"):
+            assert f"DriRival{k}{part}" in say, f"tools/text_override/en.txt has no $DriRival{k}{part}"
     out = []
     for k, line in enumerate(LINES):
         stages = line["stages"]
@@ -278,7 +284,8 @@ def write_md(rows_, names, its, battles, rows):
         cost = f"{mats.get(r['common'], r['common'])} ×{r['common_n']}, " + ", ".join(
             f"{rare_name(t, names)} ×1" for t in r["rare_info"])
         rew = ", ".join(its[i]["name"] for i in r["line"]["rewards"])
-        out.append(f"| {r['k']} | {r['line']['name']} ({r['line']['family']}) | {st} | {b}: {who} "
+        tamer = rival_texts().get(f"DriRival{r['k']}", "?")
+        out.append(f"| {r['k']} | {r['line']['name']} ({r['line']['family']}; Tamer: {tamer}) | {st} | {b}: {who} "
                    f"({rewards[b][1]} XP, {rewards[b][2]} Bits) | {cost} | {rew} | {r['line']['note']} |")
     out += ["", "DRI Agents: " + (", ".join(f"mapa 0x{m:X} ator {a}" if m >= 0 else f"ator {a} (qualquer mapa)"
                                          for m, a in AGENTS) or "nenhum ainda (rodar tools/find_dri_agents.py no lab)")]
