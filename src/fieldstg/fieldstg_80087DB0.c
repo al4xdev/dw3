@@ -1810,6 +1810,9 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
             if (dw3_travel_frame()) {
                 break; /* the Guardromon's SAVE / TELEPORT screen owns the field */
             }
+            if (def_bm_frame()) {
+                break; /* PRD 4 layers G and H: the Black Market's or a DRI Agent's screen owns the field */
+            }
 #endif
             fieldstg_manager_open_menu(obj, data);
             break;
@@ -3172,6 +3175,14 @@ s32 fieldstg_actor_talk_to(FieldstgActor *obj, FieldstgPos *pos) {
     s32 state;
     s32 i;
 
+#ifdef PC_PORT
+    /* PRD 4 layers G and H: the Black Market's trader and the DRI Agents open the port's own screens instead of their
+     * talk (on the next idle frame, as the Guardromon screen does); 1 stops the player as a talk does. The placed actor's
+     * own ID is asked, before the game's talk redirects. */
+    if (other != NULL && other->base.state == OBJECT_STATE_RUN && (def_bm_talk(gamestate_data.funcs.get_map(), other->base.key1))) {
+        return 1;
+    }
+#endif
     if (other != NULL && other->base.state == OBJECT_STATE_RUN && other->base.key1 != 0x180 && other->base.key1 != 0x181
         && other->base.key1 != 0x182) {
         for (i = 0; fieldstg_talk_redirects[i][0] != 0; i++) {

@@ -294,3 +294,30 @@ $HuntRareLabel: Rare Cores
 # separator of the requirements' line (quoted: its space is kept).
 $RecipeMissing: You don't have enough materials.
 $RecipeSep: ", "
+
+# PRD 4 layer G, the Black Market (port/game/definitive_market_screen.c): the title and its two tabs; the detail
+# lines' words, quoted where a space is kept ("Give: Datamon IV x1", "Get: Data Chip x12   Held: 30/99", "Cost: Datamon
+# IV, Bulbmon III", "Price: 40000 Bits   Held: 123456"; "Needs Cores of 2 different bosses."); the results and
+# refusals; the keys of the Exchange, of its material choice, of the Replicas and of a replica chosen once.
+$BMTitle: BLACK MARKET
+$BMTabTrade: Exchange
+$BMTabReplica: Replicas
+$BMGive: "Give: "
+$BMGet: "Get: "
+$BMHeld: "   Held: "
+$BMCost: "Cost: "
+$BMPrice: "Price: "
+$BMBits: " Bits"
+$BMNone: You have no Cores to trade.
+$BMTraded: Traded.
+$BMBought: Bought. A replica resells for 0 Bits.
+$BMArmed: A replica resells for 0 Bits. Buy it?
+$BMNoRoom: No room for that many more of it.
+$BMNeedA: "Needs Cores of "
+$BMNeedB: " different bosses."
+$BMNoBits: Not enough Bits.
+$BMBagFull: You can't carry any more of it.
+$BMKeysTrade: ↑↓ Choose   L1/R1 Tab<1>× button: Trade   △ button: Back
+$BMKeysPick: ↑↓ Material<1>× button: Trade one   △ button: Back
+$BMKeysReplica: ↑↓ Choose   L1/R1 Tab<1>× button: Buy   △ button: Back
+$BMKeysArmed: × button: Buy<1>△ button: Back

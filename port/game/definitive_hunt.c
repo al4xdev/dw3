@@ -73,6 +73,10 @@ static int lead_of(int t) {
     return fieldstg_battles[def_hunt_targets[t].battle].enemies[0]->digimon;
 }
 
+int def_hunt_target_lead(int t) {
+    return t >= 0 && t < def_hunt_target_count ? lead_of(t) : 0;
+}
+
 /* "<lead species> Core <numeral>", rare item `t`'s name. */
 static void put_rare_name(unsigned char *buf, int *p, int size, int t) {
     const unsigned char *name = def_species_name(lead_of(t));

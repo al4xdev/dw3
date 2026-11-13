@@ -23,6 +23,12 @@ RecordsItem *records_get_item(s32 i) {
     return i >= 1 && i <= 3 ? &items[i - 1] : NULL;
 }
 const DefItemPrice def_item_prices[] = { { 2, 90000, 9000 } };
+/* Layer G: item 2 is a Legendary Replica the player holds while `replica_held` (definitive_market.c's rule; its own
+ * test is tests/port/definitive_market.py). */
+static int replica_held;
+int def_bm_resale_zero(int item) {
+    return replica_held && item == 2;
+}
 const int def_item_price_count = 1;
 /* Item 10: 30 of common 3; item 20: 40 of common 12 and 2 of rare 5. */
 const DefRecipe def_recipes[] = { { 10, 3, 30, -1, 0 }, { 20, 12, 40, 5, 2 } };
@@ -71,6 +77,10 @@ int main(void) {
     check("an item it does not have: the game's", def_item_buy(1) == 400 && def_item_sell(1) == 200 &&
                                                       def_item_buy(3) == 100 && def_item_sell(3) == 50);
     check("no item: 0", def_item_buy(0) == 0 && def_item_sell(99) == 0);
+    replica_held = 1;
+    check("a replica held: its ID resells for 0, its price stays", def_item_sell(2) == 0 && def_item_buy(2) == 90000 &&
+                                                                       def_item_sell(1) == 200);
+    replica_held = 0;
 
     /* Layer E */
     check("an item without a recipe: no limit, no label", def_recipe_max(1) == 99 && def_recipe_can_buy(1) &&

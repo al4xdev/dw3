@@ -16,15 +16,17 @@ extern int fightstg_enemy_find_record(int id);
 #define REC_TABLE 8 /* offset of the table in the record (magic 4, version 1, checksum 1, 2 unused) */
 /* The record's spare bytes after the table carry the slot's other port state (the slot's own tail is full): at
  * REC_EXTRA "X1", the flags (DEF_SAVE_HARD), a byte unused, the Guardromon network's mask (4 bytes, low first), then the
- * hunt's region and chain (PRD 4 layer A), then the Hunt Materials, a byte each (layer B; the PRD's budget gives the
- * rest of the 48 bytes to the later layers). A record
- * without the "X1" (an older save) reads as none of it, and one written before the hunt existed reads its bytes as 0. */
+ * hunt's region and chain (PRD 4 layer A), then the Hunt Materials, a byte each (layer B), then the Legendary
+ * Replicas held, a bit each, low byte first (layer G; the PRD's budget gives the rest of the 48 bytes to the later
+ * layers). A record without the "X1" (an older save) reads as none of it, and one written before a layer existed reads
+ * its bytes as 0. */
 #define REC_EXTRA 0xD0
 
 static unsigned char extra_flags;
 static unsigned int extra_network;
 static unsigned char extra_region, extra_chain;
 static unsigned char extra_materials[DEF_HUNT_MATERIALS];
+static unsigned short extra_replicas; /* DEF_REPLICAS bits: two bytes of the record */
 /* The second record (PRD 4 layer B): "HUNT", version, XOR checksum of the rest, a byte unused, the rare items' counts,
  * then the bits of the ones ever held (the bestiary's collection); the rest of the 0x100 is the later layers'. */
 #define REC2_RARES 8
@@ -43,6 +45,7 @@ void def_bestiary_reset(void) {
     extra_region = 0;
     extra_chain = 0;
     memset(extra_materials, 0, sizeof(extra_materials));
+    extra_replicas = 0;
     memset(rares, 0, sizeof(rares));
     memset(rares_seen, 0, sizeof(rares_seen));
 }
@@ -85,6 +88,16 @@ void def_record_material_add(int material, int n) {
     extra_materials[material] = (unsigned char)(v < 0 ? 0 : v > DEF_HUNT_MATERIAL_CAP ? DEF_HUNT_MATERIAL_CAP : v);
 }
 
+int def_record_replica(int r) {
+    return r >= 0 && r < DEF_REPLICAS && ((extra_replicas >> r) & 1) != 0;
+}
+
+void def_record_replica_set(int r, int on) {
+    if (r >= 0 && r < DEF_REPLICAS) {
+        extra_replicas = (unsigned short)(on ? extra_replicas | (1u << r) : extra_replicas & ~(1u << r));
+    }
+}
+
 /* 1 when anything of the slot's other port state is set: the record (and its "X1" part) is written only then. */
 static int extra_any(void) {
     int i;
@@ -94,7 +107,7 @@ static int extra_any(void) {
             return 1;
         }
     }
-    return extra_flags != 0 || extra_network != 0 || extra_region != 0 || extra_chain != 0;
+    return extra_flags != 0 || extra_network != 0 || extra_region != 0 || extra_chain != 0 || extra_replicas != 0;
 }
 
 void def_save_flag_set(int flag, int on) {
@@ -124,6 +137,7 @@ void def_bestiary_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, extra_region);
     PORT_STATE_VAR(s, extra_chain);
     PORT_STATE_VAR(s, extra_materials);
+    PORT_STATE_VAR(s, extra_replicas);
     PORT_STATE_VAR(s, rares);
     PORT_STATE_VAR(s, rares_seen);
 }
@@ -164,6 +178,8 @@ void def_bestiary_record_write(unsigned char *out) {
         out[REC_EXTRA + 8] = extra_region;
         out[REC_EXTRA + 9] = extra_chain;
         memcpy(out + REC_EXTRA + 10, extra_materials, DEF_HUNT_MATERIALS);
+        out[REC_EXTRA + 26] = (unsigned char)extra_replicas;
+        out[REC_EXTRA + 27] = (unsigned char)(extra_replicas >> 8);
     }
 }
 
@@ -190,6 +206,7 @@ void def_bestiary_record_read(const unsigned char *in) {
             extra_materials[i] = in[REC_EXTRA + 10 + i] > DEF_HUNT_MATERIAL_CAP ? DEF_HUNT_MATERIAL_CAP
                                                                                : in[REC_EXTRA + 10 + i];
         }
+        extra_replicas = (unsigned short)(in[REC_EXTRA + 26] | in[REC_EXTRA + 27] << 8);
     }
     port_log("bestiary: the slot's record read: %d species known, flags %d, network 0x%X", known, extra_flags,
              extra_network);

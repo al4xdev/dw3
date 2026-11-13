@@ -230,6 +230,12 @@ s16 dw3_button_glyph(u8 code);
  * (fieldstg_manager_update) and returns 1 while it owns the field. */
 int dw3_travel_leave(s32 map, s32 next);
 int dw3_travel_frame(void);
+/* PRD 4 layer G, the Black Market (port/game/definitive_market_screen.c): the player talks to the actor whose key1 (its
+ * FieldstgPlacedActor.id) is `actor_key1` on `map`; 1 when it is the trader, and then the game's talk is skipped and the
+ * screen opens on the next idle frame. def_bm_frame runs it from FIELDSTG's idle step (fieldstg_manager_update, after
+ * dw3_travel_frame) and returns 1 while it owns the field. */
+int def_bm_talk(s32 map, s32 actor_key1);
+int def_bm_frame(void);
 /* Layout index of the story step's area on this map half, or 0. */
 s32 dw3_objective_spot(s32 region);
 

@@ -646,6 +646,64 @@ Substitui os bullets "Materiais" e "Linha na tela" acima (o resto do Feito vale)
   exigência de chefes distintos, revenda 0, bit de réplica gravado e relido.
 - Jogo: as duas abas, e tentar vender uma réplica.
 
+### Feito (2026-11-13, aplicado direto por decisão do dono)
+
+- **Acesso:** um figurante da cidade fala pelo Black Market. FIELDSTG pergunta a
+  `def_bm_talk(mapa, key1)` no `fieldstg_actor_talk_to` (depois do laço dos
+  redirecionamentos); quando é o comerciante, a fala do jogo não acontece e a
+  tela abre no quadro ocioso seguinte (`def_bm_frame`, logo depois de
+  `dw3_travel_frame` no passo 0 do `fieldstg_manager_update`). O comerciante é
+  uma linha da tabela `traders` (`port/game/definitive_market_screen.c`):
+  mapa 0x20C, ator 42 (WSTAG240, na cidade da pousada 0x20A: uma fala só,
+  sempre presente, sem flag e sem evento) e a mesma casa na segunda metade do
+  jogo (0x27B, WSTAG930). `[dono: confirmar o figurante]`;
+  `tools/bm_npc_candidates.py` lista os candidatos de cada cidade com a fala
+  decodificada (precisa do disco).
+- **Tela** (modelo da rede Guardromon: painéis em polígonos, a fonte do jogo,
+  `event_running` enquanto está aberta, o jogador parado como o menu do campo
+  faz). Duas abas, L1/R1 (ou esquerda/direita):
+  - **Câmbio:** os raros em mãos, um por linha ("Datamon IV x2"). Confirmar
+    num deles escolhe o comum (cima/baixo ou esquerda/direita pelos 16, com
+    "Get: Data Chip x12   Held: 30/99"); cada confirmação troca **um** raro
+    por `DEF_BM_COMMONS` (12) daquele comum. A troca só acontece se os 12
+    couberem no teto (`DEF_HUNT_MATERIAL_CAP`): nenhuma troca cria nem perde
+    nada fora da taxa. `[dono: 12 por raro, qualquer raro por qualquer comum]`
+  - **Réplicas:** as `DEF_REPLICAS` (16) de `def_replicas`
+    (`tools/gen_replicas.py`): equipamento que nenhuma loja vende, com preço de
+    venda, que nenhum evento cita (flag de item 0x80..0x8E numa lista de flags
+    ou em `set_flag`/`get_flag`, e `gamestate_cond_items`: as armas da
+    missão do ferreiro ficam fora), os 16 de maior venda, empate pelo ID: os
+    sete Power S, Machinegun, Magician Rod, Ghost Fang, Pulse Guard, Drill
+    Horn, Chain Saw, Naginata, Recover Crest e MP Mega Proxy. Preço:
+    `DEF_BM_REPLICA_BITS` (20) vezes a venda (40000, 30000, 25000, 20000) e
+    `DEF_BM_REPLICA_RARES` (2) raros de chefes **distintos** (a espécie à
+    frente do Alvo Raro: "Datamon IV" e "Datamon VII" são o mesmo chefe). A
+    tela escolhe os dois mais fartos (empate: o alvo mais fraco) e mostra
+    quais ("Cost: Datamon IV, Bulbmon III"); compra com duas confirmações, a
+    segunda avisando que a réplica revende por 0. Pode comprar de novo (uma por
+    Digimon). `[dono: lista e preços]`
+- **Revenda 0** (a simplificação do PRD): um bit por réplica no registro 1,
+  `REC_EXTRA + 26..27` (`def_record_replica`, gravado, relido, zerado num jogo
+  novo, no estado do MCP; um registro mais antigo lê zero). Com o bit ligado,
+  `def_item_sell` paga 0 por aquele ID, mesmo com um original junto; como a
+  lista de venda da loja pula o que vale 0, a réplica nem aparece para venda.
+  O bit desliga quando o jogador não tem mais nenhum daquele ID, na bolsa nem
+  equipado (`def_bm_sweep`, a cada quadro do campo): os pontos em que a
+  contagem muda (venda, evento, descarte) não têm gancho próprio, e até lá a
+  loja só paga 0 por um ID que nenhuma loja vende.
+- **Textos:** `$BM*` em `en.txt`; constantes `DEF_BM_*` e `DEF_REPLICAS` em
+  `definitive.h`. Num script de replay (`def_on`) nada muda.
+- **Teste de unidade:** `tests/port/definitive_market.py` (o câmbio com a
+  taxa e o teto, 400 trocas sem valor criado nem perdido, chefes distintos,
+  compra e recusas, revenda 0 e o fim do bit, equipado conta, o registro
+  grava e relê, registro antigo, jogo novo todo zero, replay) e
+  `gen_replicas.py --check`; o driver da economia confere a revenda 0 em
+  `def_item_sell`.
+- **Teste no jogo:** `market_ingame.py` (estado do campo do mapa 0x21D, a
+  tela aberta pelo pedido, uma troca, uma compra, uma recusa, o fechamento, a
+  varredura; e a lista de venda da loja com a réplica, se o script tiver o
+  checkpoint `shop_open`).
+
 ## Camada H — DRI Agents: simulações de evolução em cadeia (Gauntlet)
 
 ### Estrutura e acesso
