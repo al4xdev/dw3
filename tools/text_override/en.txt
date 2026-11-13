@@ -439,3 +439,153 @@ $DriStages: "Stages felled "
 $DriNewReward: New reward
 $DriNoReward: No new reward
 $DriOk: × button: OK
+
+# The Guide (port/game/definitive_quest.c, definitive_quest_screen.c): the field menu's entry, the screen's two tabs,
+# its keys, the auctions' states and the field's notices.
+$GuideMenu: GUIDE
+$GuideTitle: Guide
+$GuideTabQuest: Quest
+$GuideTabAuctions: Auctions
+$GuideMain: Main Quest
+$GuideGoTo: "Go to: "
+$GuideSep: " - "
+$GuideKeysQuest: L1/R1: Auctions<1>△ button: Back
+$GuideKeysAuctions: L1/R1: Quest<1>△ button: Back
+$GuideKeysTravel: × button: Travel to El Dorado<1>△ button: Back
+$GuideKeysTravel2: × button: Confirm the travel<1>△ button: Back
+$GuideBit: " BIT"
+$AucOpen: OPEN NOW
+$AucDone: Attended
+$AucMissed: Missed
+$AucSoon: Not open yet
+$AucOpenHint: At the Cargo Tower: down the ladder of<1>El Dorado, then the Water Tunnel.
+$AucMissedHint: A hidden shop in Amaterasu City sells<1>the items of the auctions you missed.
+$AucDoneHint: This auction is over.
+$NoticeQuest: NEW OBJECTIVE
+$NoticeAuction: AUCTION OPEN
+# When each auction opens (a line of the Auctions tab, for one not open yet), in the order of fieldstg_flag_events.
+$AucWhen0: After winning the Seiryu Badge.
+$AucWhen1: While looking for Sepikmon's mask.
+$AucWhen2: While looking for a way into the<1>Admin Center.
+$AucWhen3: After leaving the Admin Center.
+$AucWhen4: After escaping from Byakko City.
+$AucWhen5: While freeing Asuka City.
+$AucWhen6: Once Asuka City is free.
+$AucWhen7: After the earthquake near Suzaku City.
+$AucWhen8: After beating the Chief of Qing Long.
+$AucWhen9: With the Digi-Egg of Knowledge.
+$AucWhen10: After winning the Genbu Badge.
+$AucWhen11: After Lisa hears of the Resistance.
+$AucWhen12: After beating the Chief of Xuan Wu.
+$AucWhen13: On entering Amaterasu City.
+$AucWhen14: After beating the President of MAGAMI.
+$AucWhen15: After the Vemmon show up in Asuka.
+# The main quest: a title and what to do per story step ($Q<progress>, $Q<progress>T), and the variants an owned key
+# item picks ($Q5b...). Six lines of the 14-pixel font at most, each inside the panel (DW3_GUIDE_CHECK logs a wide one).
+$Q0: Digimon Online
+$Q0T: Wait for Teddy and Ivy, then set up<1>your account at the Online Center.
+$Q1: Log in
+$Q1T: Take the Chamber Capsule and log in to<1>Asuka Server.
+$Q2: Your partner Digimon
+$Q2T: Talk to the Tamer Service lady at the<1>counter of the Main Lobby.
+$Q3: First steps
+$Q3T: Leave the lobby. Tamer Genji wants a<1>Digimon Battle outside.
+$Q4: The Seiryu Badge
+$Q4T: Train near Asuka City, then go east by<1>the Wire Forest and the Wind Prairie to<1>Seiryu City. Its Leader trains at the<1>Protocol Ruins and only fights whoever<1>beat MasterTyrannomon (Tyranno Valley).
+$Q5: To the South Sector
+$Q5T: The gondola of East Station, past the<1>Kicking Forest, asks for a Blue Card.<1>A Guilmon has it: ask at the Asuka Inn,<1>the Forest Inn and the inn of Zephyr<1>Tower, in Seiryu City.
+$Q5b: A fake card
+$Q5bT: The 8lue Card is a fake! Tricky Guilmon<1>hides at the bottom of the Forest Inn's<1>basement.
+$Q5c: Ride the gondola
+$Q5cT: Register the Blue Card at the terminal<1>of East Station. Put your strongest<1>Digimon in front: a boss attacks on<1>the way.
+$Q6: Bulbmon
+$Q6T: Hold out against the Digimon that fell<1>on the gondola's track.
+$Q7: The Jungle Grave
+$Q7T: From South Station cross Bulk Swamp<1>and Bulk Bridge. Rest at the Swamp Inn,<1>then go south into the Jungle Grave.
+$Q8: Sepikmon's mask
+$Q8T: Zanbamon cannot be beaten. Sepikmon, in<1>the Shaman House, helps whoever finds<1>his mask. Follow the trail: Kail in Bulk<1>Swamp, Seiryu City, Baronmon in the<1>Protocol Ruins, Asuka City, its bridge,<1>and then Divermon's Lake.
+$Q9: The mask thief
+$Q9T: Etemon has the mask. He waits by the<1>tree on the lower level of Asuka City:<1>chase him through the Underground Path<1>into the Asuka Sewers.
+$Q9b: Return the mask
+$Q9bT: Take the Sepik Mask back to Sepikmon<1>in the Shaman House, Tranquil Swamp.
+$Q10: The Suzaku Badge
+$Q10T: Show the Smelly Herb to Zanbamon in the<1>Jungle Grave, cross Phoenix Bay and<1>challenge the Leader in Suzaku Hall.
+$Q11: A break
+$Q11T: Leave Suzaku Hall: Kail is waiting.<1>Then listen to the Game Master in the<1>Main Lobby of Asuka City.
+$Q12: Into the Admin Center
+$Q12T: Only staff and Digimon get in. Ask<1>Master John at the Lamb Chop, tell Kail,<1>then find out who dressed the old<1>couple of the park as Agumon: look in<1>the Asuka Sewers.
+$Q12b: Two Agumon
+$Q12bT: Meet Kail at the top of the ladder in<1>the Underground Path.
+$Q13: Looking for Teddy
+$Q13T: Dressed as Agumon, enter the Admin<1>Center from the Main Lobby. Kail is on<1>the second floor, by the Master Room.
+$Q14: The Digi-Egg of Sincerity
+$Q14T: Submarimon can reach the West Sector.<1>Nami, in Phoenix Bay, saw a crest behind<1>the shrine of Bios Swamp. To break its<1>wall ask Sepikmon, then take a TNT Ball<1>(Triceramon, Tyranno Valley) to Baronmon<1>in the Protocol Ruins.
+$Q14b: Behind the shrine
+$Q14bT: Use the TNT Chip behind the shrine of<1>Bios Swamp and take the Digi-Egg inside.
+$Q15: The Byakko Badge
+$Q15T: At the dock of South Cape, past the<1>Ether Jungle, call Submarimon and cross<1>to the West Sector. Go north by the<1>Noise Desert to Byakko City and<1>challenge its Leader.
+$Q16: The real Leader
+$Q16T: A trap! Leave by the hole in the wall.<1>From the Noise Desert go west to the<1>S Noise Desert and the Mobius Desert:<1>upper left, lower left, and again, up to<1>the Mirage Tower.
+$Q17: Dum Dum Factory
+$Q17T: North-west of Bullet Valley stands the<1>Dum Dum Factory. Chase Numemon through<1>the Duct Rooms, then face HiAndromon in<1>the Operation Room.
+$Q18: Under the stairs
+$Q18T: Follow Numemon down the Secret Stairs<1>and through the Sewers.
+$Q19: Lucky Mouse
+$Q19T: Hear Lucky Mouse out in the Secret<1>Room, and hold the A.o.A. off.
+$Q20: The Staff Pass
+$Q20T: Asuka City's gates are shut. From the<1>dock by Asuka Bridge, Submarimon leads<1>to the Asuka Sewers: beat Datamon in<1>the Control Room. He asks for a Staff<1>Pass: see Kurt, then find Keith and Nick<1>at Suzaku UG Lake (Suzaku City's dock).
+$Q21: Open the gate
+$Q21T: Show the Staff Pass to Datamon in the<1>Control Room of the Asuka Sewers.
+$Q22: Free Asuka City
+$Q22T: Enter the Admin Center by the gate of<1>the Asuka Sewers and climb to the<1>Master Room, on the second floor. Its<1>pictures spell MONSTER. Beat the Game<1>Master.
+$Q23: Asuka is free
+$Q23T: Meet Teddy in the Main Lobby.
+$Q24: A way to Amaterasu
+$Q24T: Byakko City is free too. Ask its Leader<1>in Byakko Dome, then the A.o.A. general<1>in the Underground Cave.
+$Q25: The earthquake
+$Q25T: Bulbmon carried the A.o.A. between the<1>servers. Take Submarimon to South Cape<1>and ask Patamon in Suzaku Hall.
+$Q26: The Bug Maze
+$Q26T: The Leader went to the Catacomb, past<1>the Jungle Shrine of the Ether Jungle.<1>Enter the hole she guards, find the<1>hidden ladder and beat Bulbmon in the<1>Bug Maze Pit.
+$Q27: Qing Long City
+$Q27T: This is Amaterasu Server. Stay away<1>from Amaterasu City and its Knightmon.<1>Go east by Divermon's Lake and the Wind<1>Prairie and beat the Chief in Qing Long<1>Tower.
+$Q28: Zhu Que City
+$Q28T: From the dock of Shell Beach take<1>Submarimon to Phoenix Bay, and beat the<1>Chief in Zhu Que Hall.
+$Q29: The Digi-Egg of Knowledge
+$Q29T: From the dock behind Zhu Que Hall dive<1>to the Zhu Que UG Lake and climb to its<1>top.
+$Q30: The Genbu Badge
+$Q30T: Back in Asuka Server by the Bug Maze,<1>call Digmon at the hole of Plug Cape.<1>Cross the Circuit Board north to Boot<1>Mountain and climb by Snow and Freeze<1>Mountain to Genbu City. Its Leader waits<1>at the Battle Gate.
+$Q31: The Matrix Chamber
+$Q31T: West of Boot Mountain, go down the<1>Kulon Mine to the Kulon Pit and cross<1>the Ice, Fire and Dark Dungeons. Show<1>the four badges in the Chamber Room.
+$Q32: 180 seconds
+$Q32T: Stop the Juggernaut in Magasta. A Mech<1>Soldier guards the panel at the far end<1>of B2F. Battles stop the clock.
+$Q33: Report to Lisa
+$Q33T: The Juggernaut is launched. Tell Lisa in<1>the Master Room of Asuka City.
+$Q34: The Resistance
+$Q34T: The hole in the west of Central Park<1>leads to Amaterasu's Jungle Grave. Find<1>the Resistance in the Mirage Tower of<1>the West Sector. Bai Hu City is shut:<1>ask Lisa for help, then beat its Chief.
+$Q35: The last ID Pass
+$Q35T: Take Submarimon from North Badland E to<1>Plug Cape, and Digmon north from there.<1>The Chief of Xuan Wu City waits at the<1>Battle Gate.
+$Q36: The front door
+$Q36T: With the four ID Passes, cross the<1>bridge of Central Park into Amaterasu<1>City.
+$Q37: The Headquarters
+$Q37T: Fight through the Admin Center of<1>Amaterasu City up to the Master Room,<1>and beat the President of MAGAMI.
+$Q38: Oinkmon everywhere
+$Q38T: Lisa and Nick wait by the bridge. Keith,<1>in Qing Long Tower, needs more wind:<1>wake Airdramon in the Gale Tower of<1>Seiryu City, by the hole of the Kicking<1>Forest. Then see Kurt in the Login Room<1>and look into Asuka's Master Room.
+$Q39: Vemmon
+$Q39T: Kail is on the bridge of Central Park.<1>Stock up, then enter the Headquarters<1>from the Master Room of Amaterasu City.
+$Q40: No way back
+$Q40T: Lord Megadeath waits on Gunslinger.<1>Save and stock up before stepping into<1>the warp gate: nobody comes back.
+$Q41: Gunslinger
+$Q41T: The green teleporters lead to the<1>control panels that clear the way.<1>Reach the Control Room.
+$Q43: The last battle
+$Q43T: Stop Lord Megadeath and what he made.
+$Q45: Free play
+$Q45T: The world is safe. The DRI Agents, the<1>tournaments and the card masters are<1>still out there.
+# The missions: shown while their key item is missing.
+$M0: El Dorado ID
+$M0T: Ponchomon, in El Dorado (the blue roof<1>of Asuka City), gives it on the second<1>talk to a party with 210 Charisma. It<1>opens the auctions of the Cargo Tower.
+$M1: Folder Bag
+$M1T: Divermon, in the Yellow Cruiser (the<1>yellow roof of Asuka City's lower<1>level), gives the bag Card Battles need.
+$M2: Tree Boots
+$M2T: Soccer Kid Hide, at Plug Cape, lost his<1>Gabumon card: it is on the shelves of<1>the Asuka Inn's basement. Then ask<1>Debbie at the Lamb Chop and find Veemon<1>at the east end of the Wind Prairie.
+$M3: Fishing Pole
+$M3T: Tai Kong Wang, at Shell Beach, makes<1>one from a Bamboo Spear (Asuka Armory),<1>a Spider Web (Dokugumon, Protocol<1>Forest) and the Red Snapper stuck in<1>the Divermon of Divermon's Lake.

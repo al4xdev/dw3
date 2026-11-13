@@ -22,6 +22,11 @@
 extern const unsigned char def_str_Unknown[], def_str_Bestiary[], def_str_BestiaryMenu[], def_str_BestiaryHint[],
     def_str_Slash[], def_str_Neutral[], def_str_HuntDrops[], def_str_HuntHeld[], def_str_HuntRareLabel[];
 int def_bestiary_active(void);
+/* The Guide (port/game/definitive_quest_screen.c): an entry before the bestiary's. It has no screen in this menu: the
+ * menu closes as on a cancel and the field opens the Guide's own. */
+extern const unsigned char def_str_GuideMenu[];
+int def_guide_active(void);
+void def_guide_request(void);
 #define BS_SPECIES 193 /* species in the table (DEF_BESTIARY_SPECIES) */
 #define BS_ROWS 6      /* names per page (DEF_BESTIARY_ROWS): the options' panel holds at least six rows */
 #define BS_STEP 100    /* fieldmenu_update's step of the open screen (the PS1 menu has 0..7) */
@@ -88,7 +93,8 @@ typedef struct FieldmenuWindows {
     /* 0x04 */ MessageWindow *money_unit; /* "BIT" */
     /* 0x08 */ MessageWindow *money;    /* the money */
 #ifdef PC_PORT
-    /* 0x0C */ MessageWindow *options[8]; /* the options; [6], [7]: the SAVE entry (global_save) and the bestiary (the PS1 has 6) */
+    /* 0x0C */ MessageWindow *options[9]; /* the options; from [5 + extended]: the SAVE entry (global_save), the Guide and
+                                           * the bestiary (the PS1 has 6) */
 #else
     /* 0x0C */ MessageWindow *options[6]; /* the options */
 #endif
@@ -118,6 +124,8 @@ typedef struct Fieldmenu {
 #ifdef PC_PORT
     s32 save_entry; /* the global_save mod's SAVE entry is there (option extended + 5) */
     s32 bestiary;   /* the bestiary entry is there (the last option) */
+    s32 guide;      /* the Guide's entry is there, */
+    s32 guide_at;   /* at this option */
     s32 bs_sel;     /* the bestiary screen's chosen species, or -1 while it is closed */
 #endif
 } Fieldmenu; /* size 0xA0 */
@@ -422,6 +430,8 @@ static s32 fieldmenu_bestiary_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 data->options[i]->set_text(data->options[i], cdload_module.files.get_file(records_language + 0x78), 1);
             } else if (i == obj->option_count - 1) {
                 data->options[i]->set_text(data->options[i], (u8 *)def_str_BestiaryMenu, -1);
+            } else if (obj->guide && i == obj->guide_at) {
+                data->options[i]->set_text(data->options[i], (u8 *)def_str_GuideMenu, -1);
             } else {
                 data->options[i]->set_text(data->options[i], cdload_module.files.get_file(records_language + 0xB0),
                                            fieldmenu_option_messages[obj->extended][i]);
@@ -491,6 +501,11 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         /* The bestiary, after SAVE, in the field's menu only; not in a replay script (shared with the emulator) */
         obj->bestiary = def_bestiary_active() && gamestate_data.funcs.get_map() != 0x1000;
         obj->bs_sel = -1;
+        /* The Guide, between SAVE and the bestiary (which stays the last entry), in the field's menu only */
+        obj->guide = def_guide_active() && gamestate_data.funcs.get_map() != 0x1000;
+        if (obj->guide) {
+            obj->guide_at = obj->option_count++;
+        }
         if (obj->bestiary) {
             obj->option_count++;
         }
@@ -526,6 +541,10 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                     }
                     if (obj->bestiary && obj->base.timer == obj->option_count - 1) {
                         data->options[obj->base.timer]->set_text(data->options[obj->base.timer], (u8 *)def_str_BestiaryMenu, -1);
+                        continue;
+                    }
+                    if (obj->guide && obj->base.timer == obj->guide_at) {
+                        data->options[obj->base.timer]->set_text(data->options[obj->base.timer], (u8 *)def_str_GuideMenu, -1);
                         continue;
                     }
 #endif
@@ -578,6 +597,13 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                     obj->base.step = BS_STEP;
                     break;
                 }
+                if (obj->guide && obj->cursor == obj->guide_at) {
+                    /* the menu closes as on a cancel (the field's menu only: substep 1 ends it without a map change),
+                     * and the field's next idle frame opens the Guide */
+                    def_guide_request();
+                    done = 1;
+                    obj->base.substep = 1;
+                } else {
 #endif
                 done = 1;
                 if (gamestate_data.funcs.get_map() == 0x1000) {
@@ -586,6 +612,9 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                     obj->base.substep = 0;
                 }
                 records_field_menu_choice.option = obj->cursor;
+#ifdef PC_PORT
+                }
+#endif
             } else if (PAD_PRESSED(14)) {
                 sound_module.play(0x800450BD);
                 done = 1;

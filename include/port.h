@@ -350,6 +350,13 @@ int def_rush_float(void);
 void def_rush_apply_quiet(struct DefRushSummary *out);
 void def_rush_panel_open(const struct DefRushSummary *s);
 void def_rush_panel_frame(void);
+/* The Guide (port/game/definitive_quest_screen.c): def_guide_frame runs its screen from FIELDSTG's idle step
+ * (fieldstg_manager_update) and returns 1 while it owns the field; the field menu's GUIDE entry asks for it. The
+ * notices (a new objective, an auction that opened): def_notice_frame once a frame from the camera's update,
+ * def_notice_reset when a map's load took the field's heap. */
+int def_guide_frame(void);
+void def_notice_frame(void);
+void def_notice_reset(void);
 void def_rush_panel_reset(void);
 /* PRD 4 layer A, the regional hunt (port/game/definitive_hunt.c): a map loaded (a new region resets the chain); a random
  * encounter starting (returns the battle to fight: the region's Rare Target in place of `battle` once the chain allows);

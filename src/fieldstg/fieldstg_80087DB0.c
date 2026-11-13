@@ -1702,6 +1702,7 @@ static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerD
     def_variants_hook(); /* PRD 4 layer F: the equipment variants, before a loaded save's first shop or status screen */
     def_hard_party_fix(); /* Hard Mode: a party of two, whatever set it */
     def_rush_panel_reset(); /* PRD 4 layer I: a floating Rush's panel went with the last stage's heap */
+    def_notice_reset(); /* and so did a Guide's notice's windows */
 #endif
     map = gamestate_data.funcs.get_prev_map();
     if ((map & 0xFF00) != 0x200 && (map & 0xFF00) != 0x300 && (map & 0xFF00) != 0xE00 && map != 0x1500
@@ -1814,6 +1815,9 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
             }
             if (def_bm_frame() || def_dri_frame()) {
                 break; /* PRD 4 layers G and H: the Black Market's or a DRI Agent's screen owns the field */
+            }
+            if (def_guide_frame()) {
+                break; /* the Guide, asked for by the field menu's entry */
             }
 #endif
             fieldstg_manager_open_menu(obj, data);
@@ -5124,6 +5128,7 @@ void fieldstg_rush_frame(void) {
         fieldstg_rush_update(&fieldstg_rush);
     }
     def_rush_panel_frame(); /* PRD 4 layer I: the floating results, while they are up */
+    def_notice_frame(); /* the Guide's notices: a new objective, an auction that opened */
 }
 #endif
 

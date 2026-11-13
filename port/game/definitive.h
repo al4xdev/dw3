@@ -506,6 +506,56 @@ void def_rush_panel_reset(void);
 struct PortState;
 void def_rush_savestate(struct PortState *s);
 
+/* The Guide (definitive_quest.c: the rules; definitive_quest_screen.c: the screen and the field's notices). The field
+ * menu gets a GUIDE entry: the main quest's current step, the missions still open and the Cargo Tower's auctions. */
+#define DEF_QUEST_NO_FLAG 0xFFFF  /* a quest row that asks for no game flag beside its story steps */
+#define DEF_QUEST_MISSIONS 4      /* rows of def_missions: what the Guide's list holds under the main quest */
+#define DEF_QUEST_AUCTIONS 16     /* the Cargo Tower's auctions (fieldstg_flag_events) */
+#define DEF_AUCTION_FLAG 0x400    /* auction N's "attended" flag is this + N (set by either answer) */
+#define DEF_GUIDE_TRAVEL_MAP 0x213 /* where the Guide's travel lands: El Dorado, at the stage's own start position */
+#define DEF_GUIDE_LAST_MAP 0x2D7  /* maps from here on (the real world, Gunslinger, the seabed) offer no travel */
+#define DEF_NOTICE_TICKS 300      /* how long a notice stays on the field, in 1/60 s */
+#define DEF_NOTICE_FADE 20        /* of which this slides it in, and out */
+typedef struct DefQuest {
+    unsigned char first, last; /* the story steps (gamestate_data.progress) it is shown at, inclusive */
+    unsigned short flag;       /* a game flag it also asks for (gamestate_flags.get_flag), or DEF_QUEST_NO_FLAG */
+    unsigned char value;       /* the value that flag must have */
+    unsigned short map;        /* where it sends the player (shown by the game's own map title), 0: nowhere */
+    const unsigned char *title, *text;
+} DefQuest;
+typedef struct DefAuction {
+    unsigned char progress; /* the one story step it runs at */
+    unsigned short item;    /* what the winning bid gives */
+    unsigned char money;    /* its price's index in gamestate_money_check */
+    const unsigned char *when;
+} DefAuction;
+enum { DEF_AUCTION_SOON, DEF_AUCTION_OPEN, DEF_AUCTION_DONE, DEF_AUCTION_MISSED };
+enum { DEF_NOTICE_NONE, DEF_NOTICE_QUEST, DEF_NOTICE_AUCTION };
+extern const DefQuest def_quests[];
+extern const int def_quest_count;
+extern const DefQuest def_missions[DEF_QUEST_MISSIONS];
+extern const DefAuction def_auctions[DEF_QUEST_AUCTIONS];
+int def_guide_active(void);
+int def_quest_main_index(void);
+const DefQuest *def_quest_main(void);
+int def_quest_missions(const DefQuest **out, int max);
+int def_auction_state(int a);
+int def_auction_open(void);
+int def_auction_price(int a);
+int def_guide_can_travel(int a, int map);
+int def_quest_notice(int *arg);
+void def_quest_notice_reset(void);
+/* The screen: the field menu's GUIDE entry asks for it (def_guide_request) and closes; def_guide_frame runs it from
+ * FIELDSTG's idle step (fieldstg_manager_update) and returns 1 while it owns the field. The notices: def_notice_frame
+ * runs once a frame from the camera's update, def_notice_reset when a map's load took the field's heap. */
+void def_guide_request(void);
+int def_guide_frame(void);
+void def_notice_frame(void);
+void def_notice_reset(void);
+struct PortState;
+void def_guide_savestate(struct PortState *s);
+void def_quest_savestate(struct PortState *s);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

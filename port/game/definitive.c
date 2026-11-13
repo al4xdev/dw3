@@ -515,6 +515,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, records_state.gauges);
     PORT_STATE_VAR(s, def_evo_seen_bits);
     def_dri_savestate(s); /* PRD 4 layer H: a battle loaded mid-simulation is still one */
+    def_guide_savestate(s); /* the Guide's screen and notice, with the field's heap they point into */
 }
 
 static int target_slot(void) {
