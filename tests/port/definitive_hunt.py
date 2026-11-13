@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 4 layers A and B (the regional hunt and the Rare Target's rewards): port/game/definitive_hunt.c and definitive_bestiary.c compiled alone against a
+"""PRD 4 layers A, B and C (the regional hunt, the Rare Target's rewards, the bestiary's drops): port/game/definitive_hunt.c and definitive_bestiary.c compiled alone against a
 driver with stand-ins for the game's state: the chance curve, the chain (won encounters only, not the Rush's, not
 scripted battles), its resets (region, teleport, a Rare Target fought), the swap and the enemies' raise, the card
 record (written, read back, an older record as zero) and a replay script (nothing changes, nothing is drawn). Also

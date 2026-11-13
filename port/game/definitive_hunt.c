@@ -10,12 +10,14 @@
  *
  * A Rare Target won (layer B) pays DEF_HUNT_XP_MULT times the XP of the encounter it replaced, drops a rare Booster
  * when the battle left no item, and gives its battle's own Hunt Material (the table's), counted in the card record at
- * once and shown on the results screen after the item.
+ * once and shown on the results screen after the item. The bestiary (layer C) lists under each species the materials of
+ * the target battles it fights in.
  *
  * Off in a replay script (def_on): no state changes and no pad_random draw, so the scripts' battles are the emulator's. */
 #include "common.h"
 #include "pad.h"
 #include "records.h"
+#include "fieldstg.h"
 
 #include "psxstack/savestate.h"
 
@@ -183,6 +185,22 @@ const unsigned char *def_hunt_material_name(int material) {
     };
 
     return names[material < 0 ? 0 : material >= DEF_HUNT_MATERIALS ? DEF_HUNT_MATERIALS - 1 : material];
+}
+
+unsigned int def_hunt_species_materials(int species) {
+    unsigned int mask = 0;
+    int i, k;
+
+    for (i = 0; i < def_hunt_target_count && species != 0; i++) {
+        const FieldstgBattle *b = &fieldstg_battles[def_hunt_targets[i].battle];
+
+        for (k = 0; k < 3; k++) { /* an empty slot is fieldstg_battle_enemies[0], species 0 */
+            if (b->enemies[k]->digimon == species) {
+                mask |= 1u << def_hunt_targets[i].material;
+            }
+        }
+    }
+    return mask;
 }
 
 int def_hunt_reward_battle(void) {

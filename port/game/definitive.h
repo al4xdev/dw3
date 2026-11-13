@@ -184,6 +184,9 @@ extern const int def_hunt_target_count;
 int def_hunt_chance(int chain);
 /* A Hunt Material's name (glyph bytes, 0-ended). */
 const unsigned char *def_hunt_material_name(int material);
+/* PRD 4 layer C: the Hunt Materials species `species` drops on the bestiary screen, those of the Rare Target battles
+ * it fights in (a bit per material; 0 for none). */
+unsigned int def_hunt_species_materials(int species);
 /* The results screen of a Rare Target won (PRD 4 layer B; STFGTREP): the battle whose XP it pays DEF_HUNT_XP_MULT times
  * (-1: none pending), the rare Booster it drops when the battle left no item (0: none), 1 while its material's line has
  * not been shown, that line (glyph bytes, marks it shown), and the end of the screen. */

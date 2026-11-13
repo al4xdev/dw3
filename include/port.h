@@ -344,6 +344,11 @@ int def_hunt_encounter(int battle);
 void def_hunt_scale(void);
 int def_hunt_active(void);
 void def_hunt_skipped(void);
+/* PRD 4 layer C, the bestiary's drops: the Hunt Materials a species drops (a bit each), a material's name (glyph
+ * bytes) and how many of it the player holds. */
+unsigned int def_hunt_species_materials(int species);
+const unsigned char *def_hunt_material_name(int material);
+int def_record_material(int material);
 void def_new_game_difficulty(int hard);
 void def_new_game_apply(void);
 void def_hard_party_fix(void);

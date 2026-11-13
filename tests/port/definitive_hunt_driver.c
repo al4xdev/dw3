@@ -8,6 +8,7 @@
 #include "common.h"
 #include "pad.h"
 #include "records.h"
+#include "fieldstg.h"
 
 #include "definitive.h"
 
@@ -40,6 +41,13 @@ PadRandom pad_random = { 0, NULL, next };
  * rewards' levels (layer B). */
 const DefHuntTarget def_hunt_targets[] = { { 0x05, 40, 30, 4 }, { 0x07, 41, 70, 9 }, { 0x08, 42, 15, 0 } };
 const int def_hunt_target_count = 3;
+/* Their battles' enemies (layer C): species 100 in battles 40 and 41, 101 in 41 and 42; an empty slot is species 0. */
+static RecordsEnemy none, e100 = { 100, 0, 0, 0, 0 }, e101 = { 101, 0, 0, 0, 0 };
+FieldstgBattle fieldstg_battles[43] = {
+    [40] = { { &e100, &none, &none }, 0, 0, { 0 } },
+    [41] = { { &e101, &e100, &none }, 0, 0, { 0 } },
+    [42] = { { &none, &e101, &none }, 0, 0, { 0 } },
+};
 
 #define MAP_A 0x210 /* region 0x05 */
 #define MAP_B 0x211 /* region 0x05 too */
@@ -154,6 +162,11 @@ int main(void) {
     check("a level-15 target drops R-Booster 01 and its own material",
           def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST && def_record_material(0) == 1);
     def_hunt_reward_done();
+
+    /* Layer C: what the bestiary lists under a species. */
+    check("a species drops the materials of the target battles it fights in; others and the empty slot none",
+          def_hunt_species_materials(100) == (1u << 4 | 1u << 9) && def_hunt_species_materials(101) == (1u << 9 | 1u << 0) &&
+              def_hunt_species_materials(102) == 0 && def_hunt_species_materials(0) == 0);
 
     for (i = 0; i < 3; i++) {
         encounter(7, 1);

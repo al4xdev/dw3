@@ -273,3 +273,8 @@ $HuntMat12: Red Digizoid
 $HuntMat13: Gold Digizoid
 $HuntMat14: Black Digizoid
 $HuntMat15: Obsidian Digizoid
+
+# PRD 4 layer C: the bestiary's Hunt Materials, under the elements: "Hunt" (the results screen's "Hunt material:";
+# "Drops" ran into the names' column), then each material and the count held after this mark ("x12").
+$HuntDrops: Hunt
+$HuntHeld: x

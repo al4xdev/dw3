@@ -20,7 +20,7 @@
  * its own (fieldmenu_bestiary_panel) carries the chosen species: its name, then a line per element (picture, name,
  * Weak / Resist / - / ???). */
 extern const unsigned char def_str_Unknown[], def_str_Bestiary[], def_str_BestiaryMenu[], def_str_BestiaryHint[],
-    def_str_Slash[];
+    def_str_Slash[], def_str_Neutral[], def_str_HuntDrops[], def_str_HuntHeld[];
 int def_bestiary_active(void);
 #define BS_SPECIES 193 /* species in the table (DEF_BESTIARY_SPECIES) */
 #define BS_ROWS 6      /* names per page (DEF_BESTIARY_ROWS): the options' panel holds at least six rows */
@@ -38,6 +38,9 @@ int def_bestiary_active(void);
 #define BS_STATE_X 100 /* its state */
 #define BS_HINT_Y 0xA5
 #define BS_PAGE_X 0x112 /* the page, at the title bar's right end */
+#define BS_DROPS_Y (BS_ROW_Y + BS_FAMILIES * 14) /* PRD 4 layer C: the Hunt Materials' two lines, under the families' */
+#define BS_HELD_X 136   /* a material's count, clear of the longest name */
+#define BS_MATERIALS 16 /* DEF_HUNT_MATERIALS */
 #endif
 
 /* A window's position and message: a party member's name (fieldmenu_name_pos), the labels (fieldmenu_label_pos) and
@@ -96,6 +99,7 @@ typedef struct FieldmenuWindows {
     MessageWindow *bs_states[7]; /* and states */
     MessageWindow *bs_page;      /* "3/33" */
     MessageWindow *bs_hint;      /* the page buttons */
+    MessageWindow *bs_drops;     /* "Drops" (PRD 4 layer C): the materials' names and counts take bs_info[6..7], bs_states[5..6] */
 #endif
 } FieldmenuWindows; /* size 0xAC */
 
@@ -142,6 +146,7 @@ void fieldmenu_create_windows(Fieldmenu *obj, FieldmenuWindows *data) {
         }
         data->bs_page = message_create_window(obj->layer_id, 1, BS_PAGE_X, 0x13);
         data->bs_hint = message_create_window(obj->layer_id, 1, BS_TEXT_X, BS_HINT_Y);
+        data->bs_drops = message_create_window(obj->layer_id, 1, BS_TEXT_X, BS_DROPS_Y);
     }
 #endif
     data->cursor = message_create_cursor(obj->layer_id, 0, 0xB0, obj->cursor * 14 + 0x31);
@@ -227,6 +232,54 @@ static void fieldmenu_bestiary_name(MessageWindow *win, s32 index, s32 chosen) {
     }
 }
 
+/* PRD 4 layer C: under the families, the Hunt Materials the chosen species drops (the Rare Target battles it fights in)
+ * and how many of each the player holds, greyed at none; "???" while nothing of the species is known, "-" when it drops
+ * none. Two lines: a species in more target battles shows its first two materials. */
+static void fieldmenu_bestiary_drops(Fieldmenu *obj, FieldmenuWindows *data, s32 species) {
+    static u8 held[2][8]; /* "x12": the windows keep the pointers */
+    static const u8 none[1] = { 0 };
+    s32 known = def_bestiary_known(obj->bs_sel) != 0;
+    u32 mask = known ? def_hunt_species_materials(species) : 0;
+    s32 line = 0;
+    s32 count;
+    s32 m;
+    s32 n;
+    s32 i;
+
+    data->bs_drops->set_text(data->bs_drops, (u8 *)def_str_HuntDrops, -1);
+    for (m = 0; m < BS_MATERIALS && line < 2; m++) {
+        if (!(mask & (1u << m))) {
+            continue;
+        }
+        count = def_record_material(m);
+        n = 0;
+        for (i = 0; def_str_HuntHeld[i] != 0 && n < (s32)sizeof(held[0]) - 3; i++) {
+            held[line][n++] = def_str_HuntHeld[i];
+        }
+        if (count >= 10) {
+            held[line][n++] = 4 + count / 10; /* the font's digits (glyph 4 is 0) */
+        }
+        held[line][n++] = 4 + count % 10;
+        held[line][n] = 0;
+        data->bs_info[6 + line]->set_text(data->bs_info[6 + line], (u8 *)def_hunt_material_name(m), -1);
+        data->bs_info[6 + line]->set_palette(data->bs_info[6 + line], 0);
+        data->bs_states[5 + line]->set_text(data->bs_states[5 + line], held[line], -1);
+        data->bs_states[5 + line]->set_palette(data->bs_states[5 + line], count != 0 ? 0 : 7);
+        data->bs_states[5 + line]->set_pos(data->bs_states[5 + line], BS_HELD_X, BS_DROPS_Y + line * 14);
+        line++;
+    }
+    if (line == 0) {
+        data->bs_info[6]->set_text(data->bs_info[6], (u8 *)(known ? def_str_Neutral : def_str_Unknown), -1);
+        data->bs_info[6]->set_palette(data->bs_info[6], 7);
+        data->bs_states[5]->set_text(data->bs_states[5], (u8 *)none, -1);
+        line = 1;
+    }
+    for (; line < 2; line++) {
+        data->bs_info[6 + line]->set_text(data->bs_info[6 + line], (u8 *)none, -1);
+        data->bs_states[5 + line]->set_text(data->bs_states[5 + line], (u8 *)none, -1);
+    }
+}
+
 /* Fills the screen for the chosen species: its page of names in the options' windows, its elements in the info ones. */
 static void fieldmenu_bestiary_draw(Fieldmenu *obj, FieldmenuWindows *data) {
     static u8 page[10]; /* the window keeps the pointer */
@@ -245,7 +298,8 @@ static void fieldmenu_bestiary_draw(Fieldmenu *obj, FieldmenuWindows *data) {
         }
     }
     fieldmenu_bestiary_name(data->bs_info[0], obj->bs_sel, 0);
-    /* A line per family; the two windows left over of the seven carry the pairs' second pictures, on their lines. */
+    /* A line per family. Of the seven lines' windows the two left over carry the pairs' second pictures (on those lines)
+     * and the Hunt Materials' names and counts (fieldmenu_bestiary_drops). */
     for (i = 0; i < 7; i++) {
         if (i < BS_FAMILIES) {
             data->bs_icons[i]->set_text(data->bs_icons[i], (u8 *)def_family_icon(i, 0), -1);
@@ -253,15 +307,13 @@ static void fieldmenu_bestiary_draw(Fieldmenu *obj, FieldmenuWindows *data) {
             data->bs_states[i]->set_text(data->bs_states[i], (u8 *)def_bestiary_family_state(&recs[obj->bs_sel], obj->bs_sel, i, &palette), -1);
             data->bs_states[i]->set_palette(data->bs_states[i], palette);
         } else {
-            static const u8 none[1] = { 0 };
             s32 f = i == BS_FAMILIES ? 1 : 3; /* Water+Ice, Thunder+Machine */
 
             data->bs_icons[i]->set_text(data->bs_icons[i], (u8 *)def_family_icon(f, 1), -1);
             data->bs_icons[i]->set_pos(data->bs_icons[i], BS_TEXT_X + BS_PAIR_DX, f * 14 + BS_ROW_Y);
-            data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)none, -1);
-            data->bs_states[i]->set_text(data->bs_states[i], (u8 *)none, -1);
         }
     }
+    fieldmenu_bestiary_drops(obj, data, recs[obj->bs_sel].id);
     /* "page/pages" in the font's digits (glyph 4 is 0) */
     i = first / BS_ROWS + 1;
     n = 0;
@@ -300,7 +352,7 @@ static void fieldmenu_bestiary_rect(Fieldmenu *obj, s32 x, s32 y, s32 w, s32 h, 
 static void fieldmenu_bestiary_panel(Fieldmenu *obj) {
     s32 i;
 
-    for (i = 1; i < BS_FAMILIES; i++) {
+    for (i = 1; i <= BS_FAMILIES; i++) { /* between the families' lines, and above the Hunt Materials' (PRD 4 layer C) */
         fieldmenu_bestiary_rect(obj, BS_PANEL_X + 6, BS_ROW_Y + i * 14 - 1, BS_PANEL_W - 12, 1, 41, 41, 115);
     }
     fieldmenu_bestiary_rect(obj, BS_PANEL_X + 2, BS_PANEL_Y + 2, BS_PANEL_W - 4, BS_ROW_Y - 4 - BS_PANEL_Y, 0, 0, 74);
@@ -340,6 +392,7 @@ static s32 fieldmenu_bestiary_update(Fieldmenu *obj, FieldmenuWindows *data) {
         }
         data->bs_page->set_visible(data->bs_page, 0);
         data->bs_hint->set_visible(data->bs_hint, 0);
+        data->bs_drops->set_visible(data->bs_drops, 0);
         for (i = 0; i < 3; i++) {
             fieldmenu_show_member(obj, data, i, 1);
         }

@@ -2,8 +2,8 @@
 
 Dono: Alex. Data: 2026-11-13. Estado: desenho completo; as decisões do dono estão
 marcadas `[dono]`, cada uma com uma proposta padrão (fim do arquivo);
-implementação por camadas, cada camada só depois do ok da anterior. **Camadas A
-e B implementadas em 2026-11-13**, a A com a tabela de alvos provisória (abaixo).
+implementação por camadas, cada camada só depois do ok da anterior. **Camadas A,
+B e C implementadas em 2026-11-13**, a A com a tabela de alvos provisória (abaixo).
 
 Continuação de `definitive-combat-prd.md`, `definitive-progression-prd.md` e
 `definitive-rebalance-prd.md`. Mesmas regras de trabalho: camadas pequenas,
@@ -376,6 +376,31 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   `bs_info[6]`, `bs_info[7]` e `bs_states[5]`, `bs_states[6]` estão livres
   (recebem texto vazio hoje).
 - Teste: screenshot da tela para um alvo com material e para uma espécie sem.
+
+### Feito (2026-11-13)
+
+- Duas linhas abaixo das famílias, com uma régua acima: o rótulo "Hunt"
+  (`$HuntDrops`, o mesmo nome da linha "Hunt material:" da tela de resultados;
+  "Drops" invadia a coluna dos nomes), o nome de cada material na coluna dos
+  nomes das famílias (x 42) e a quantidade em mãos ("x12", cinza em zero) em
+  `BS_HELD_X` (136). Espécie desconhecida mostra `???`; conhecida que não luta
+  em nenhuma batalha de alvo mostra `-`.
+- Espécie → materiais: `def_hunt_species_materials(espécie)` percorre as
+  batalhas da tabela (`fieldstg_battles[...].enemies`, já compiladas no port) e
+  marca o material de cada batalha em que a espécie luta. Nenhum dado novo é
+  gerado. Com a tabela provisória, 22 espécies do Bestiário derrubam algo, no
+  máximo 2 materiais (Bulbmon: batalhas 323 e 315). Uma espécie com mais de 2
+  mostraria só os 2 primeiros.
+- Janelas: `bs_info[6..7]` (nomes) e `bs_states[5..6]` (quantidades), que
+  estavam livres, e uma nova, `bs_drops`, para o rótulo.
+- Largura: o nome mais longo, "Obsidian Digizoid", mede 89 px na fonte do jogo
+  (medido na tela de resultados). De x 42 vai até 131, antes da quantidade.
+- Teste de unidade: o driver da caçada confere os materiais por espécie (duas
+  batalhas, uma, nenhuma, e o espaço vazio, espécie 0).
+- Teste no jogo: Kunemon conhecido e sem alvo (`-`), espécie desconhecida
+  (`???`), Bulbmon com Bit Shard x3 e Core Fragment x12, BK Imperialdramon com
+  Core Crystal x0 em cinza (`.dumps/tasks/hunt/bestiary_c2.ppm`).
+- PS1: `src/main/fieldmenu.c` pré-processa igual sem `PC_PORT`.
 
 ## Camada D — Rebalanceamento de preços
 
