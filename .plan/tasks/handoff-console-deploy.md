@@ -69,6 +69,12 @@ scp -r /home/alex/git/my/dw3/portmaster/dw3/mods/. <console>:<PORTS>/dw3/mods/
 ssh <console> 'chmod +x <PORTS>/dw3/dw2003'
 ```
 
+Os mods `party_xp`, `xp_boost` e `evo_buff` não existem mais (viraram regra do jogo ou foram removidos): **mova** as
+pastas antigas para o backup em vez de apagar:
+`ssh <console> 'for m in party_xp xp_boost evo_buff; do [ -d <PORTS>/dw3/mods/$m ] && mv <PORTS>/dw3/mods/$m <B>/; done'`.
+O launcher (`dw3-menu.py`) também mudou (sem a tela de XP e sem EVO BUFF): copie-o junto. Um `settings.json` antigo com
+essas chaves continua funcionando (o jogo as ignora).
+
 Só se o dono pedir, copie também `dw3-menu.py`, `ledd.py`, `probe.sh` e o launcher (`chmod +x` neles).
 Confira o hash: `sha1sum` local e remoto do `dw2003` devem ser iguais.
 
