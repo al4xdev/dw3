@@ -904,6 +904,26 @@ com texto da fonte do jogo, que o campo já sabe desenhar.
   acima do nível; screenshot do painel andando, e um level up forçado
   (`mem_write` do XP perto do próximo nível).
 
+### Feito (2026-11-13, aplicado direto por decisão do dono)
+
+- Troca do destino em `fieldstg_rush_leave` (`fieldstg_rush_float`): com `def_rush_float()` (`DEF_RUSH_FLOAT`;
+  `DW3_RUSH_FLOAT=0/1` ou `def_rush_float_mode` para o teste) o gerente guarda estado, passos, `next_map` e
+  `map_entry`, `fieldstg_start_battle` monta a luta como antes (inclusive o prêmio do Cardmon), tudo volta,
+  `event_running` e `battle_starting` vão a 0, e vêm `def_rush_results`, `def_rush_apply_quiet` e
+  `def_rush_panel_open`.
+- `def_rush_apply_quiet` (em STFGTREP, sob `PC_PORT`): as mesmas chamadas, na mesma ordem da tela (XP dividido, item
+  0x141, parte da party, `DEF_XP_ALL_FORMS`, técnicas, `add_exp`/`raise_stats`/TP por faixa/nota de TP perdido, formas
+  novas, Bits com 0x142 e OVERFINISH, item com Boosters, linhas de material, `def_hunt_reward_done`).
+- Painel (`definitive_rush.c` puro, `definitive_rush_panel.c`): fonte de 11 px na camada 0x1004, acima do jogador e
+  preso à tela: `+N EXP` e `LV UP!` por membro, `NEW TECH!`, `TP FULL!`, Bits, item (`???` até o arquivo de nomes
+  chegar), materiais; 120 ticks; fecha quando o campo segura o jogador; um segundo Rush fecha o painel ao começar e
+  abre o seu.
+- Decisões: o painel basta para técnica e forma nova (sem tela cheia); a dica de "mais de 3 formas" da tela não
+  aparece; o ganho de status no level up sai do mesmo sorteio da tela, mas num momento diferente, então os números
+  podem diferir dos que a tela daria naquele instante (a regra é a mesma).
+- Testes: `tests/port/definitive_rush.py` (31 casos) e `rush_float_ingame.py` no lab (equivalência com e sem level up,
+  painel andando, segundo Rush).
+
 ---
 
 ## Ordem e dependências

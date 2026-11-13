@@ -341,6 +341,16 @@ s32 def_overfinish_take_bits(void);
 int def_rush_offer(void);
 void def_rush_results(void);
 int def_rush_auto(void);
+/* PRD 4 layer I (port/game/definitive_rush_panel.c; the summary's type is in definitive.h): the Rush gives its results on
+ * the field (DEF_RUSH_FLOAT, DW3_RUSH_FLOAT for a test); the report's rewards without its screen (STFGTREP's routines);
+ * the panel that shows them, opened (a second one replaces the first), run once a frame from the camera's update and
+ * forgotten at a map's load. */
+struct DefRushSummary;
+int def_rush_float(void);
+void def_rush_apply_quiet(struct DefRushSummary *out);
+void def_rush_panel_open(const struct DefRushSummary *s);
+void def_rush_panel_frame(void);
+void def_rush_panel_reset(void);
 /* PRD 4 layer A, the regional hunt (port/game/definitive_hunt.c): a map loaded (a new region resets the chain); a random
  * encounter starting (returns the battle to fight: the region's Rare Target in place of `battle` once the chain allows);
  * after fieldstg_start_battle, the Rare Target's enemies raised to its level; 1 while a Rare Target is being fought (the

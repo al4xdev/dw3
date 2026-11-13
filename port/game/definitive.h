@@ -351,6 +351,68 @@ void def_variants_hook(void);
 #define DEF_TEXT_ITMINF 0x63      /* the item descriptions' file (records_language + 0x63), JPN ID */
 int def_variant_text_hidden(int file, int index);
 
+/* Append a whole number (0 and up, every digit) at buf[*p] (definitive_glyph.c). */
+void def_glyph_number(unsigned char *buf, int *p, int size, int n);
+
+/* PRD 4 layer I: the Overlevel Rush's results on the field, without the battle's report (definitive_rush.c, pure: the
+ * panel's rows and clock; definitive_rush_panel.c: the panel and the switch; def_rush_apply_quiet in
+ * src/stfgtrep/stfgtrep_80082E70.c: the report's rewards, by its own routines and in its order). DW3_RUSH_FLOAT (read
+ * once: 0 the report, else the panel) overrides DEF_RUSH_FLOAT for a test; def_rush_float_mode is that switch. */
+#define DEF_RUSH_FLOAT 1          /* a taken Rush gives its results at once in a panel over the player, not on the report */
+#define DEF_RUSH_FLOAT_FRAMES 120 /* how long that panel stays up, in ticks (1/60 s: two seconds at 50 Hz too) */
+#define DEF_RUSH_ROWS 10          /* rows the panel lists at most (the rest is given, not listed) */
+typedef struct DefRushMember {
+    short digimon;              /* its gamestate_data.digimon index; -1: no member in this party slot */
+    short level;                /* its level after the rewards */
+    int exp;                    /* the experience it got (the bonus item and the party's share counted) */
+    unsigned char levels;       /* levels it went up */
+    unsigned char learnt;       /* techniques and forms the report would have announced */
+    unsigned char tp_full;      /* a level's TP did not fit under the ceiling (the report's "TP full: train!") */
+    const unsigned char *name;  /* its name, glyph bytes (its record's) */
+} DefRushMember;
+typedef struct DefRushSummary {
+    DefRushMember members[3];   /* by party slot */
+    int bits;                   /* the Bits given (before the wallet's ceiling) */
+    short item;                 /* the item given, 0: none */
+    short item_count;           /* how many of it (Booster Packs: DEF_CARD_BOOST_PACKS) */
+    int materials;              /* Hunt Material lines below */
+    unsigned char material[DEF_HUNT_LINES][DEF_HUNT_LINE_SIZE]; /* as the report would have shown them (glyph bytes) */
+    int random;                 /* pad_random's index before the rewards (logged: the in-game test lines the report's
+                                 * level-ups up with it) */
+} DefRushSummary;
+enum { DEF_RUSH_ROW_MEMBER, DEF_RUSH_ROW_TECH, DEF_RUSH_ROW_TP, DEF_RUSH_ROW_BITS, DEF_RUSH_ROW_ITEM, DEF_RUSH_ROW_MATERIAL };
+typedef struct DefRushRow {
+    signed char kind;           /* DEF_RUSH_ROW_* */
+    signed char index;          /* the party slot (member, tech, TP rows) or the material line */
+} DefRushRow;
+/* The panel's rows for `s`, at most `max`; their count. */
+int def_rush_rows(const DefRushSummary *s, DefRushRow *rows, int max);
+/* A row's two texts (glyph bytes, `size` each): the left one, and the right one the panel aligns on its right edge
+ * (empty when the row has none). `item_name` is the item's name, NULL while the item names' file is not in ("???"). */
+void def_rush_row_text(const DefRushSummary *s, DefRushRow row, const unsigned char *item_name, unsigned char *left,
+                       unsigned char *right, int size);
+/* A results screen's material line as one panel line: what follows its first line break, its control codes dropped. */
+void def_rush_material_text(unsigned char *buf, int *p, int size, const unsigned char *line);
+/* The panel's clock: a Rush's results open it for DEF_RUSH_FLOAT_FRAMES (one still up is replaced, never stacked:
+ * returns 1 then); `ticks` more of the field leave it up while time remains, and close it at once when `held` (the
+ * field holds the player: a menu, an event, a battle's start, the map's end), so it never sits over another screen. */
+typedef struct DefRushClock {
+    int left;                   /* ticks it has left, 0: no panel up */
+    int opened;                 /* panels opened so far (the in-game test watches it) */
+} DefRushClock;
+int def_rush_clock_open(DefRushClock *c);
+int def_rush_clock_tick(DefRushClock *c, int ticks, int held);
+/* The game side (also declared in include/port.h): the switch; the report's rewards given without it, into `out`; the
+ * panel opened, run once a frame (fieldstg_rush_frame) and forgotten at a map's load (that heap went with the stage). */
+extern int def_rush_float_mode;
+int def_rush_float(void);
+void def_rush_apply_quiet(DefRushSummary *out);
+void def_rush_panel_open(const DefRushSummary *s);
+void def_rush_panel_frame(void);
+void def_rush_panel_reset(void);
+struct PortState;
+void def_rush_savestate(struct PortState *s);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

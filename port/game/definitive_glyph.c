@@ -36,3 +36,22 @@ void def_glyph_roman(unsigned char *buf, int *p, int size, int n) {
         def_glyph_put(buf, p, size, *u == 'I' ? def_str_HuntRomanI : def_str_HuntRomanV);
     }
 }
+
+void def_glyph_number(unsigned char *buf, int *p, int size, int n) {
+    unsigned char digits[10];
+    int k = 0;
+
+    n = n < 0 ? 0 : n;
+    do {
+        digits[k++] = (unsigned char)(n % 10);
+        n /= 10;
+    } while (n > 0 && k < 10);
+    if (*p + k > size - 1) { /* a number cut short would read as another one: none at all */
+        buf[*p] = 0;
+        return;
+    }
+    while (k > 0) {
+        buf[(*p)++] = (unsigned char)(4 + digits[--k]);
+    }
+    buf[*p] = 0;
+}

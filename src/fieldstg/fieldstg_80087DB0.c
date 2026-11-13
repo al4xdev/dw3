@@ -1701,6 +1701,7 @@ static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerD
     def_hunt_map(gamestate_data.funcs.get_map()); /* PRD 4 layer A: another region resets the hunt's chain */
     def_variants_hook(); /* PRD 4 layer F: the equipment variants, before a loaded save's first shop or status screen */
     def_hard_party_fix(); /* Hard Mode: a party of two, whatever set it */
+    def_rush_panel_reset(); /* PRD 4 layer I: a floating Rush's panel went with the last stage's heap */
 #endif
     map = gamestate_data.funcs.get_prev_map();
     if ((map & 0xFF00) != 0x200 && (map & 0xFF00) != 0x300 && (map & 0xFF00) != 0xE00 && map != 0x1500
@@ -2914,7 +2915,7 @@ void fieldstg_camera_update(FieldstgCamera *obj) {
     FieldstgPos sign;
 
 #ifdef PC_PORT
-    fieldstg_rush_frame(); /* the Overlevel Rush's question, while it is up */
+    fieldstg_rush_frame(); /* the Overlevel Rush's question, while it is up, and its results' panel on the field */
 #endif
 
     switch (obj->base.state) {
@@ -4987,7 +4988,9 @@ void fieldstg_encounter_reset(void) {
 /* The Overlevel Rush's question and its run (port/game/definitive.c, def_rush_offer): the random battle is set up as
  * ever, but the field's leave for it waits on this object. It asks ("EASY FIGHT! RUSH IT?", left/right, circle; cross
  * is no) in the callouts' polygon letters; no goes on to the battle; yes shows the rush for DEF_RUSH_TICKS and leaves
- * for the battle's report instead, with the results def_rush_results fills. */
+ * for the battle's report instead, with the results def_rush_results fills. With DEF_RUSH_FLOAT (PRD 4 layer I) yes
+ * keeps the field: the report's rewards are given at once and a panel over the player shows them while they walk on
+ * (port/game/definitive_rush_panel.c). */
 #include "port/game/definitive.h" /* DEF_RUSH_TICKS */
 typedef struct FieldstgRush {
     s32 active; /* 0: none; 1: asking; 2: rushing */
@@ -5021,11 +5024,44 @@ static void fieldstg_rush_text(GfxLayer *layer, s32 x, s32 y, s32 size, const ch
     def_poly_text(layer, 0, x + 1, y + 1, size, text, edge);
 }
 
+/* PRD 4 layer I: the rush taken, the field stays. fieldstg_start_battle still sets the battle up as for the report
+ * (records_state, which def_rush_results reads, and a Cardmon's prize with its draw); then its leave is undone: the
+ * manager's state, steps and next map as they were (it was running the map) and the player free again. The encounter
+ * timer was re-armed when the encounter started (fieldstg_encounter_reset). The report's rewards are given here and the
+ * panel shows them; event_running stays 0, so the player walks on under it. */
+static void fieldstg_rush_float(FieldstgRush *obj, FieldstgManager *mgr) {
+    DefRushSummary summary;
+    s32 state = mgr->base.state;
+    s32 step = mgr->base.step;
+    s32 substep = mgr->base.substep;
+    s32 timer = mgr->base.timer;
+    s32 next_map = mgr->next_map;
+    s32 map_entry = mgr->map_entry;
+
+    fieldstg_start_battle(obj->battle);
+    mgr->base.state = state;
+    mgr->base.step = step;
+    mgr->base.substep = substep;
+    mgr->base.timer = timer;
+    mgr->next_map = next_map;
+    mgr->map_entry = map_entry;
+    fieldstg_stage.event_running = 0;
+    fieldstg_stage.battle_starting = 0;
+    def_rush_results();
+    def_rush_apply_quiet(&summary);
+    def_rush_panel_open(&summary);
+    obj->active = 0;
+}
+
 static void fieldstg_rush_leave(FieldstgRush *obj, s32 rushed) {
     FieldstgManager *mgr;
 
     fieldstg_stage.event_running = 0;
     fieldstg_stage.battle_starting = 0;
+    if (rushed && def_rush_float() && (mgr = (FieldstgManager *)heap_objects.find(7, -1, -1)) != NULL) {
+        fieldstg_rush_float(obj, mgr);
+        return;
+    }
     fieldstg_start_battle(obj->battle);
     if (rushed && (mgr = (FieldstgManager *)heap_objects.find(7, -1, -1)) != NULL) {
         def_rush_results();
@@ -5085,6 +5121,7 @@ void fieldstg_rush_frame(void) {
     if (fieldstg_rush.active != 0) {
         fieldstg_rush_update(&fieldstg_rush);
     }
+    def_rush_panel_frame(); /* PRD 4 layer I: the floating results, while they are up */
 }
 #endif
 

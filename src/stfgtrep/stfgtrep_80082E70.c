@@ -1167,6 +1167,200 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
     }
 }
 
+#ifdef PC_PORT
+/* PRD 4 layer I: the report's rewards without the report, for the Overlevel Rush's panel on the field (the field calls
+ * this right after def_rush_results, port/game/definitive_rush_panel.c). STFGTREP is not the loaded overlay then, but
+ * on the port its code and its tables (stfgtrep_rewards, the learn lists, the gain tables: constants, none set up by
+ * the stage) are the binary's own, as the Digi-Lab's Next Forms panel reads the learn lists from STGDGLAB.
+ *
+ * The same calls in the same order as stfgtrep_main_update's set-up and stfgtrep_main_run's / stfgtrep_member_run's
+ * steps, so the game's state after it is the report's: the members' experience (bonus item, party share), the forms'
+ * (DEF_XP_ALL_FORMS) and their skills, each member that gets experience in slot order (its fought forms, their skills,
+ * its level-ups with their stats and TP, the forms it learns), then the Bits, the item and the Hunt Materials' lines.
+ * The level-ups' stat gains are pad_random's, drawn in the report's order from wherever the generator stands; the
+ * report draws them a few seconds later (the generator moves once a frame), as a press later would. The stand-in
+ * panels carry only the fields those steps read. What the report would have announced goes to `out`. */
+void def_rush_apply_quiet(DefRushSummary *out) {
+    StfgtrepMember panels[3];
+    s32 member_exp[3];
+    GamestateRecord *rec;
+    DefRushMember *o;
+    s32 member_count = 0;
+    s32 techniques_used = 0;
+    s32 n = 0;
+    s32 exp;
+    s32 money;
+    s32 before;
+    s32 tech;
+    s32 lv;
+    s32 id;
+    s32 i;
+    s32 j;
+    s32 t;
+
+    __builtin_memset(panels, 0, sizeof(panels));
+    __builtin_memset(out, 0, sizeof(*out));
+    out->random = pad_random.index;
+    for (i = 0; i < 3; i++) {
+        member_exp[i] = 0;
+        out->members[i].digimon = -1;
+    }
+    /* stfgtrep_main_update, INIT: the experience of a member, split between those who fought */
+    for (i = 0; i < 3; i++) {
+        if (gamestate_data.funcs.get_party_member(i) >= 0) {
+            member_count++;
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        if (records_battle_results.members[i].took_part != 0) {
+            n++;
+            for (j = 0; j < 3; j++) {
+                if (records_battle_results.members[i].forms[j] != 0) {
+                    techniques_used++;
+                }
+            }
+        }
+    }
+    switch (n) {
+    case 1:
+    default:
+        exp = stfgtrep_rewards[records_battle_results.battle].exp;
+        break;
+    case 2:
+        exp = stfgtrep_rewards[records_battle_results.battle].exp * 6 / 10;
+        break;
+    case 3:
+        exp = stfgtrep_rewards[records_battle_results.battle].exp / 3;
+        break;
+    }
+    if (def_hunt_reward_battle() >= 0) {
+        exp = stfgtrep_rewards[def_hunt_reward_battle()].exp * DEF_HUNT_XP_MULT;
+        exp = n == 2 ? exp * 6 / 10 : n == 3 ? exp / 3 : exp;
+    }
+    for (i = 0; i < member_count; i++) {
+        panels[i].slot = i;
+        if (records_battle_results.members[i].took_part != 0) {
+            panels[i].exp_gained = exp;
+            member_exp[i] = stfgtrep_member_get_exp(&panels[i]);
+        }
+    }
+    if (def_on()) {
+        for (i = 0; i < member_count; i++) {
+            panels[i].exp_gained = port_party_xp_share(i, records_battle_results.members[i].took_part, exp);
+            panels[i].bonus_applied = 0;
+            member_exp[i] = stfgtrep_member_get_exp(&panels[i]);
+        }
+    }
+    if (def_on() && DEF_XP_ALL_FORMS) {
+        for (i = 0; i < member_count; i++) {
+            stfgtrep_grant_party_forms(i, stfgtrep_rewards[records_battle_results.battle].tech_exp, techniques_used,
+                                       &panels[i]);
+        }
+    }
+    /* stfgtrep_main_run, steps 6..12: each member with experience, its panel's steps 20..50 */
+    for (i = 0; i < member_count; i++) {
+        StfgtrepMember *m = &panels[i];
+
+        o = &out->members[i];
+        id = gamestate_data.funcs.get_party_member(i);
+        rec = gamestate_data.funcs.get_record(id);
+        o->digimon = (short)id;
+        o->name = (const unsigned char *)rec->name;
+        o->exp = member_exp[i];
+        before = rec->stats.values[0];
+        o->level = (short)before;
+        if (member_exp[i] == 0) {
+            continue;
+        }
+        for (t = 0; t < 3; t++) { /* steps 20..24: each chosen form */
+            id = gamestate_data.funcs.get_party_member(i);
+            gamestate_data.funcs.get_chosen_forms(id, m->chosen_forms);
+            if (records_battle_results.members[i].forms[t] != 0) {
+                tech = m->chosen_forms[t];
+                if (tech >= 4) {
+                    s32 form_exp = stfgtrep_funcs.get_technique_exp(
+                        id, tech, stfgtrep_rewards[records_battle_results.battle].tech_exp, techniques_used);
+
+                    m->tech_level_ups[t].level_up = stfgtrep_funcs.add_technique_exp(id, m->chosen_forms[t], form_exp);
+                }
+            }
+            if (m->tech_level_ups[t].level_up == 0) {
+                continue;
+            }
+            do { /* step 22, again while it teaches one */
+                id = gamestate_data.funcs.get_party_member(i);
+                gamestate_data.funcs.get_chosen_forms(id, m->chosen_forms);
+                lv = stfgtrep_funcs.learn_skill(id, m->chosen_forms[t]);
+                o->learnt += lv != 0;
+            } while (lv != 0);
+            do { /* step 23 */
+                id = gamestate_data.funcs.get_party_member(i);
+                gamestate_data.funcs.get_chosen_forms(id, m->chosen_forms);
+                lv = stfgtrep_funcs.mark_skill(id, m->chosen_forms[t]);
+                o->learnt += lv != 0;
+            } while (lv != 0);
+        }
+        id = gamestate_data.funcs.get_party_member(i); /* step 40 */
+        if (stfgtrep_funcs.add_exp(id, m->exp_gained) != 0) {
+            m->level_up = 1;
+            o->tp_full = def_tp_lost_take(id) != 0;
+        }
+        while ((lv = stfgtrep_funcs.learn_technique(gamestate_data.funcs.get_party_member(i))) != 0) { /* step 41 */
+            o->learnt++;
+        }
+        rec = gamestate_data.funcs.get_record(gamestate_data.funcs.get_party_member(i));
+        o->level = rec->stats.values[0];
+        o->levels = (unsigned char)(rec->stats.values[0] - before);
+    }
+    /* step 20: the Bits */
+    rec = gamestate_data.funcs.get_record(gamestate_data.funcs.get_party_member(records_battle_results.member));
+    money = stfgtrep_rewards[records_battle_results.battle].money;
+    if (rec->equipment[4] == 0x142 || rec->equipment[5] == 0x142) {
+        money += stfgtrep_rewards[records_battle_results.battle].money / 5;
+    }
+    money += def_overfinish_take_bits();
+    gamestate_data.money += money;
+    if (gamestate_data.money > 9999999) {
+        gamestate_data.money = 9999999;
+    }
+    out->bits = money;
+    /* step 21: the item */
+    if (records_battle_results.item == 0) {
+        records_battle_results.item = def_hunt_take_pack();
+    }
+    if (records_battle_results.item != 0) {
+        s32 item_gain = 1;
+
+        if (def_on() && (records_battle_results.item == 91 ||
+                         (records_battle_results.item >= 361 && records_battle_results.item <= 394))) {
+            item_gain = DEF_CARD_BOOST_PACKS;
+        }
+        if (def_hunt_pack_count(records_battle_results.item) != 0) {
+            item_gain = def_hunt_pack_count(records_battle_results.item);
+        }
+        gamestate_data.items[records_battle_results.item] += item_gain;
+        if (gamestate_data.items[records_battle_results.item] >= 100) {
+            gamestate_data.items[records_battle_results.item] = 99;
+        }
+        out->item = records_battle_results.item;
+        out->item_count = (short)item_gain;
+    }
+    /* step 22: the Hunt Materials' lines, every one taken as the report takes them; step 50: its end */
+    while (def_hunt_material_pending()) {
+        const unsigned char *line = def_hunt_material_text();
+
+        if (out->materials < DEF_HUNT_LINES) {
+            for (j = 0; j < DEF_HUNT_LINE_SIZE - 1 && line[j] != 0; j++) {
+                out->material[out->materials][j] = line[j];
+            }
+            out->material[out->materials][j] = 0;
+            out->materials++;
+        }
+    }
+    def_hunt_reward_done();
+}
+#endif
+
 StfgtrepMain *stfgtrep_main_create(void) {
     StfgtrepMain *obj = object_new(stfgtrep_main_update, sizeof(StfgtrepMain), sizeof(StfgtrepMainData));
 

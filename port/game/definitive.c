@@ -504,6 +504,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, resist_turns);
     def_bestiary_savestate(s);
     def_hunt_savestate(s);
+    def_rush_savestate(s); /* PRD 4 layer I: the floating Rush's panel and the field's heap it points into */
     PORT_STATE_VAR(s, hit_class);
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
@@ -988,8 +989,9 @@ int def_train_no_stat_loss(void) {
 /* ---- Overlevel Rush: a random battle against enemies DEF_OVERLEVEL_GAP levels or more under the party's best is
  * offered as a skip (the field asks; fieldstg_rush_update). Taken, the battle is not loaded: the field leaves for the
  * battle's report (STFGTREP, map 0x1400) with the results a win by the first member would have left, so experience,
- * Bits and the drop come from the game's own routine. DW3_RUSH_TEST (a test's): 1 offers it whatever the levels,
- * 2 also takes it without asking. */
+ * Bits and the drop come from the game's own routine. With DEF_RUSH_FLOAT (PRD 4 layer I) the field stays instead and
+ * the report's routines give them there, shown in a panel over the player (definitive_rush_panel.c, def_rush_float).
+ * DW3_RUSH_TEST (a test's): 1 offers it whatever the levels, 2 also takes it without asking. */
 int def_rush_test_mode = -1; /* -1: DW3_RUSH_TEST not read yet (a debug session may set it directly) */
 
 static int rush_test(void) {

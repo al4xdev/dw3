@@ -383,3 +383,14 @@ ITMNAM 290: Aegis Wall
 ITMINF 290: More Guard and Spirit, less Boost.
 ITMNAM 291: Titan Shield
 ITMINF 291: More Guard and Spirit, less Boost.
+
+# PRD 4 layer I, the floating Rush's panel on the field (port/game/definitive_rush.c): "120 EXP  LV UP!" after a
+# member's name, NEW TECH! / TP FULL! under it, "240 Bits", "<item> x15", "<material> x2" (quoted: the spaces are kept).
+# $RushPlus stays empty: the panel's 11-pixel font has no "+" (it drew a 0 there).
+$RushPlus:
+$RushExp: " EXP"
+$RushLvUp: "  LV UP!"
+$RushNewTech: NEW TECH!
+$RushTpFull: TP FULL!
+$RushBits: " Bits"
+$RushTimes: " x"
