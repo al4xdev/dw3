@@ -9,8 +9,8 @@
  * music, its enemies raised to the region's level, and the party can always flee from it. The Overlevel Rush never offers to skip it: fieldstg_encounter_start asks here before the Rush.
  *
  * A Rare Target won (layer B) pays DEF_HUNT_XP_MULT times the XP of the encounter it replaced, drops a rare Booster
- * when the battle left no item, and gives one Hunt Material of its level band, counted in the card record at once and
- * shown on the results screen after the item.
+ * when the battle left no item, and gives its battle's own Hunt Material (the table's), counted in the card record at
+ * once and shown on the results screen after the item.
  *
  * Off in a replay script (def_on): no state changes and no pad_random draw, so the scripts' battles are the emulator's. */
 #include "common.h"
@@ -30,6 +30,7 @@ static struct {
     signed char rare;           /* and it is the Rare Target */
     short level;                /* the Rare Target's level */
     short base;                 /* the encounter's own battle, the one it replaced (layer B's XP) */
+    signed char material;       /* the Rare Target's Hunt Material (layer B) */
 } hunt;
 
 /* A Rare Target won, until its results screen ends (layer B). */
@@ -37,7 +38,7 @@ static struct {
     signed char pending;  /* a results screen has this reward to show */
     signed char shown;    /* its material's line was shown */
     short base;           /* the battle whose XP it pays DEF_HUNT_XP_MULT times */
-    short level;          /* the target's level: the material's band and the Booster */
+    short level;          /* the target's level: the Booster's */
     signed char material; /* the material it gave */
 } reward;
 
@@ -110,6 +111,7 @@ int def_hunt_encounter(int battle) {
     hunt.rare = 1;
     hunt.level = t->level;
     hunt.base = (short)battle;
+    hunt.material = (signed char)t->material;
     port_log("hunt: chain %d in region 0x%X: the Rare Target (battle %d, level %d)", chain, region, t->battle, t->level);
     return t->battle;
 }
@@ -156,7 +158,7 @@ void def_hunt_battle_end(int result) {
                 reward.shown = 0;
                 reward.base = hunt.base;
                 reward.level = hunt.level;
-                reward.material = (signed char)def_hunt_material_of_level(hunt.level);
+                reward.material = hunt.material;
                 def_record_material_add(reward.material, 1); /* in the record now: a save right after keeps it */
                 port_log("hunt: material %d (now %d)", reward.material, def_record_material(reward.material));
             }
@@ -167,12 +169,6 @@ void def_hunt_battle_end(int result) {
     }
     hunt.from_encounter = 0;
     hunt.rare = 0;
-}
-
-int def_hunt_material_of_level(int level) {
-    int m = (level - 1) / DEF_HUNT_MATERIAL_LEVELS;
-
-    return m < 0 ? 0 : m >= DEF_HUNT_MATERIALS ? DEF_HUNT_MATERIALS - 1 : m;
 }
 
 const unsigned char *def_hunt_material_name(int material) {

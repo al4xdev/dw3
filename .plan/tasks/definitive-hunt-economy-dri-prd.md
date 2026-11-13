@@ -333,12 +333,18 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   `DEF_HUNT_PACK_LEVELS` (15) níveis, 05 a partir do 70. O PRD 3 já faz um drop
   de Booster valer `DEF_CARD_BOOST_PACKS` (15). Não usei a tabela dos Cardmons.
   `[dono: proposta aplicada; trocar por carta avulsa é só mudar def_hunt_reward_pack]`
-- **Materiais:** 16, um por faixa de `DEF_HUNT_MATERIAL_LEVELS` (6) níveis do
-  alvo (1..6 o primeiro, 91+ o último): Bit Shard, Byte Shard, Data Chip, Code
-  Chip, Core Fragment, Core Crystal, Mega Crystal, Giga Crystal, Tera Prism, Peta
-  Prism, Chrome Digizoid, Blue Digizoid, Red Digizoid, Gold Digizoid, Black
-  Digizoid, Obsidian Digizoid (`$HuntMat0..15` em `en.txt`).
-  `[dono: confirmar nomes e faixas]` Contador em `REC_EXTRA + 10..25`, teto 99;
+- **Materiais:** um por batalha de alvo, no campo `material` da tabela
+  (gerado por `tools/gen_hunt_targets.py`), na ordem do menor nível em que a
+  batalha luta: o alvo mais fraco dá o primeiro. A primeira versão usava faixas
+  de 6 níveis do alvo, mas os alvos da tabela provisória lutam em poucos níveis
+  (15, 34, 38 a 65) e 9 dos 16 materiais ficavam sem fonte. Com as 15 batalhas
+  distintas da tabela, 15 materiais têm fonte; o 16º (Obsidian Digizoid) fica
+  livre para um alvo novo. Se houver mais batalhas que materiais, elas dividem
+  os materiais na mesma ordem. Nomes, do mais fraco ao mais forte: Bit Shard,
+  Byte Shard, Data Chip, Code Chip, Core Fragment, Core Crystal, Mega Crystal,
+  Giga Crystal, Tera Prism, Peta Prism, Chrome Digizoid, Blue Digizoid, Red
+  Digizoid, Gold Digizoid, Black Digizoid, Obsidian Digizoid (`$HuntMat0..15` em
+  `en.txt`). `[dono: confirmar nomes]` Contador em `REC_EXTRA + 10..25`, teto 99;
   a leitura corta um valor acima do teto, porque nenhum checksum cobre o
   registro. O material entra na vitória (`def_hunt_battle_end`), não na tela, e
   por isso não se perde se o jogo fechar nela.
@@ -354,8 +360,8 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   teto. Um jogo novo continua gravando o registro todo zero.
 - **Teste no jogo:** Alvo Raro forçado (mapa 0x21D, batalha 323, nível 15),
   três membros: "EXP gained: 60 EXP" para cada um, "BIT gained: 275 BIT",
-  "Item gained: R-Booster 01", "Hunt material: Data Chip", e o contador do
-  material 2 foi de 0 a 1. Frames em `.dumps/tasks/hunt/item_*.ppm`.
+  "Item gained: R-Booster 01", "Hunt material: Bit Shard" (a batalha 323 é a
+  mais fraca da tabela), e o contador do material 0 foi de 0 a 1. Frames em `.dumps/tasks/hunt/item_*.ppm`.
 
 ## Camada C — Bestiário mostra os materiais
 

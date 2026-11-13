@@ -170,20 +170,19 @@ void def_callout_frame(void);
 #define DEF_HUNT_XP_MULT 10           /* XP: this many times the random encounter the Rare Target replaced */
 #define DEF_HUNT_MATERIALS 16         /* Hunt Materials: one u8 counter each in the card record (REC_EXTRA + 10..25) */
 #define DEF_HUNT_MATERIAL_CAP 99      /* the most of one material the player can hold */
-#define DEF_HUNT_MATERIAL_LEVELS 6    /* a material per band of this many target levels: level 1..6 the first, ... */
 #define DEF_HUNT_PACK_FIRST 0x186     /* the rare Booster (R-Booster 01..05, items 0x186..0x18A) a Rare Target drops... */
 #define DEF_HUNT_PACK_LEVELS 15       /* ...one more per this many levels from level 25 (01 below 25, 05 from 70) */
 typedef struct DefHuntTarget {
     unsigned char region; /* ststatus_map_areas's byte: the world map area, bit 7 the server */
     short battle;         /* an existing boss battle: an index into fieldstg_battles */
     short level;          /* the level its enemies fight at */
+    unsigned char material; /* its Hunt Material (layer B): one per target battle, the weakest battle's first */
 } DefHuntTarget;
 extern const DefHuntTarget def_hunt_targets[];
 extern const int def_hunt_target_count;
 /* The % chance of the Rare Target for a region's chain (0 under the minimum). */
 int def_hunt_chance(int chain);
-/* The material a Rare Target of `level` drops (0..DEF_HUNT_MATERIALS-1) and its name (glyph bytes, 0-ended). */
-int def_hunt_material_of_level(int level);
+/* A Hunt Material's name (glyph bytes, 0-ended). */
 const unsigned char *def_hunt_material_name(int material);
 /* The results screen of a Rare Target won (PRD 4 layer B; STFGTREP): the battle whose XP it pays DEF_HUNT_XP_MULT times
  * (-1: none pending), the rare Booster it drops when the battle left no item (0: none), 1 while its material's line has

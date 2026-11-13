@@ -15,14 +15,18 @@ OUT = ROOT / "build/port-test/definitive_hunt"
 
 def table_ok():
     gen = (ROOT / "port/game/definitive_hunt_targets.c").read_text()
-    rows = [tuple(int(x, 0) for x in m) for m in re.findall(r"\{\s*(0x[0-9A-Fa-f]+),\s*(\d+),\s*(\d+)\s*\}", gen)]
+    rows = [tuple(int(x, 0) for x in m)
+            for m in re.findall(r"\{\s*(0x[0-9A-Fa-f]+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\}", gen)]
     count = int(re.search(r"def_hunt_target_count = (\d+);", gen).group(1))
     n = int(re.search(r"FieldstgBattle fieldstg_battles\[(\d+)\]",
                       (ROOT / "src/fieldstg/fieldstg_80083784.c").read_text()).group(1))
     regions = [r[0] for r in rows]
-    ok = (len(rows) == count and len(set(regions)) == len(regions) and all(0 < b < n for _, b, _ in rows)
-          and all(0 < lv <= 99 for _, _, lv in rows))
-    print(f"{'ok' if ok else 'FAIL'} the generated table: {count} regions, each once, existing battles, levels 1..99")
+    mats = {m for _, _, _, m in rows}
+    ok = (len(rows) == count and len(set(regions)) == len(regions) and all(0 < b < n for _, b, _, _ in rows)
+          and all(0 < lv <= 99 for _, _, lv, _ in rows) and mats == set(range(len(mats))) and len(mats) <= 16
+          and all(len({m for _, b2, _, m in rows if b2 == b}) == 1 for _, b, _, _ in rows))
+    print(f"{'ok' if ok else 'FAIL'} the generated table: {count} regions, each once, existing battles, levels 1..99, "
+          f"one material per battle, {len(mats)} materials from the first without a gap")
     return ok
 
 

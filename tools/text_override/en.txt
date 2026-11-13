@@ -253,7 +253,8 @@ $TravelKeys: × button: Choose<1>△ button: Back
 $TravelKeys2: × button: Travel<1>△ button: Back
 
 # PRD 4 layer B: the Rare Target's Hunt Material line on the results screen (ESFGTRPT 11's layout,
-# without the indent: the loader trims a text's ends), and the materials' names, by band of target levels.
+# without the indent: the loader trims a text's ends), and the materials' names: one per Rare Target battle, the
+# weakest battle's first (tools/gen_hunt_targets.py).
 $HuntGotPrefix: Hunt material:<1>
 $HuntGotSuffix: <2,2>
 $HuntMat0: Bit Shard

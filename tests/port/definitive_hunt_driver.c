@@ -36,9 +36,10 @@ static s32 next(void) {
 }
 PadRandom pad_random = { 0, NULL, next };
 
-/* Region 0x05 has a target (battle 40 at level 30); region 0x06 has none. */
-const DefHuntTarget def_hunt_targets[] = { { 0x05, 40, 30 } };
-const int def_hunt_target_count = 1;
+/* Region 0x05 has a target (battle 40 at level 30, material 4); region 0x06 has none; 0x07 and 0x08 are there for the
+ * rewards' levels (layer B). */
+const DefHuntTarget def_hunt_targets[] = { { 0x05, 40, 30, 4 }, { 0x07, 41, 70, 9 }, { 0x08, 42, 15, 0 } };
+const int def_hunt_target_count = 3;
 
 #define MAP_A 0x210 /* region 0x05 */
 #define MAP_B 0x211 /* region 0x05 too */
@@ -57,6 +58,14 @@ static int chain_now(void) {
 
     def_record_hunt(&region, &chain);
     return chain;
+}
+
+/* A Rare Target won in `region` (its chain at the cap, a draw that always hits): layer B's reward is then pending. */
+static void win_rare(int region) {
+    def_record_set_hunt(region, DEF_HUNT_CHAIN_CAP);
+    next_value = 0;
+    def_hunt_encounter(7);
+    def_hunt_battle_end(1);
 }
 
 /* A random encounter won (or lost): what fieldstg_encounter_start and wfightmn do. Returns the battle fought. */
@@ -129,17 +138,22 @@ int main(void) {
     def_hunt_battle_end(1);
     check("fighting the Rare Target resets the chain and ends the escape rule", chain_now() == 0 && !def_hunt_active());
 
-    /* Layer B: the reward of that win (the stand-in target is level 30: band (30-1)/6 = 4; R-Booster 02 from 25). */
-    check("the win gives one material of the target's band, in the record at once", def_record_material(4) == 1 &&
-                                                                                     def_hunt_material_of_level(30) == 4);
+    /* Layer B: the reward of that win (the stand-in target is level 30, material 4; R-Booster 02 from 25). */
+    check("the win gives the target's own material, in the record at once", def_record_material(4) == 1);
     check("its results screen pays the replaced encounter's XP and drops the band's rare Booster",
           def_hunt_reward_battle() == 7 && def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST + 1);
     check("the material's line is pending, is a text, and is shown once",
           def_hunt_material_pending() && def_hunt_material_text()[0] != 0 && !def_hunt_material_pending());
     def_hunt_reward_done();
     check("the screen's end clears the reward", def_hunt_reward_battle() == -1 && def_hunt_reward_pack() == 0);
-    check("the Booster rises with the level: 01 under 25, 02 from 25, 05 from 70",
-          def_hunt_material_of_level(1) == 0 && def_hunt_material_of_level(99) == DEF_HUNT_MATERIALS - 1);
+    win_rare(0x07);
+    check("a level-70 target drops R-Booster 05 and its own material",
+          def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST + 4 && def_record_material(9) == 1);
+    def_hunt_reward_done();
+    win_rare(0x08);
+    check("a level-15 target drops R-Booster 01 and its own material",
+          def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST && def_record_material(0) == 1);
+    def_hunt_reward_done();
 
     for (i = 0; i < 3; i++) {
         encounter(7, 1);
