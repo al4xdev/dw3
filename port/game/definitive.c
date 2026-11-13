@@ -69,6 +69,7 @@ void def_log_begin(void) {
     def_chain_reset(&chain);
     def_callout_show(DEF_CALLOUT_NONE, 0);
     def_hunt_reward_done(); /* PRD 4 layer B: a reward a results screen never showed does not carry over */
+    def_dri_battle_begin(); /* PRD 4 layer H: whether this battle is the DRI simulation just set up */
     if (def_hunt_active()) {
         def_callout_show(DEF_CALLOUT_RARE, 1); /* PRD 4 layer A */
     }
@@ -259,6 +260,7 @@ void def_log_end(int result) {
     int i;
 
     def_hunt_battle_end(result); /* PRD 4 layer A: counted whether or not the log is on */
+    def_dri_battle_end(result);  /* PRD 4 layer H: a simulation's stages felled and their rewards */
     if (!log_on()) {
         return;
     }
@@ -512,6 +514,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, overfinish_damage);
     PORT_STATE_VAR(s, records_state.gauges);
     PORT_STATE_VAR(s, def_evo_seen_bits);
+    def_dri_savestate(s); /* PRD 4 layer H: a battle loaded mid-simulation is still one */
 }
 
 static int target_slot(void) {

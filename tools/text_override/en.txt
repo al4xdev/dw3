@@ -394,3 +394,24 @@ $RushNewTech: NEW TECH!
 $RushTpFull: TP FULL!
 $RushBits: " Bits"
 $RushTimes: " x"
+
+# PRD 4 layer H, the DRI Agents' Gauntlet (port/game/definitive_dri_screen.c): the list's title, the separator of a
+# line's stages ("Tyrannomon / MetalGreymon / BK WarGreymon"), a locked row's mark, the chosen challenge's lines (quoted:
+# the space after the colon is kept; the unlock's line goes on with the forge's requirements), the keys, and the panel
+# after a simulation.
+$DriTitle: DRI Simulations
+$DriSep: " - "
+$DriDash: --
+# The 11-pixel font of the list, the details and the debrief has no "/", ":" or ",": " - " and " of " there.
+$DriOf: " of "
+$DriReward: "Reward "
+$DriUnlock: "Unlock "
+$DriBest: "Best "
+$DriClear: Cleared every stage
+$DriKeysUnlock: × button: Unlock<1>△ button: Back
+$DriKeysStart: × button: Start<1>△ button: Back
+$DriKeysConfirm: × button: Confirm<1>△ button: Back
+$DriStages: "Stages felled "
+$DriNewReward: New reward
+$DriNoReward: No new reward
+$DriOk: × button: OK

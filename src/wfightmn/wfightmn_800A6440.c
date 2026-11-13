@@ -814,6 +814,12 @@ void wfightmn_battle_end(WfightmnMain *obj, WfightmnMainData *data) {
             }
             break;
         case 2:
+#ifdef PC_PORT
+            if (def_dri_defeat()) { /* PRD 4 layer H: a lost DRI simulation is no game over: back to the field */
+                gamestate_data.funcs.set_next_map(gamestate_data.field_map, 0);
+                break;
+            }
+#endif
             gamestate_data.funcs.set_next_map(0xE00, 0);
             break;
         }
@@ -1286,6 +1292,9 @@ void wfightmn_knockout(WfightmnMain *obj, WfightmnMainData *data) {
     case 3:
         if (data->wait.scene->done != 0) {
             fightstg_battle.state.current[1] = obj->msg_args[0];
+#ifdef PC_PORT
+            def_dri_stage_enters(obj->msg_args[0]); /* PRD 4 layer H: a DRI simulation's next stage, its callout */
+#endif
             obj->base.substep++;
         }
         break;

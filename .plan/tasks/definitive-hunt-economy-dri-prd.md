@@ -835,6 +835,78 @@ antes de construir o resto.
 - Jogo: uma linha completa, uma derrota no meio (voltar ao mapa sem perder
   nada), party mantendo HP/MP entre estágios.
 
+### Feito (2026-11-13, aplicado direto por decisão do dono)
+
+- **Sem prova de conceito de troca de espécie.** Uma simulação é uma batalha comum cujos três inimigos são os
+  três estágios da linha, em ordem (Champion, Ultimate, Mega). O motor já faz o "a batalha não termina, a próxima
+  forma entra": quando o inimigo da vez cai, `wfightmn_knockout` (`src/wfightmn/wfightmn_800A6440.c`, passo 1) procura
+  o primeiro membro inimigo ainda de pé, toca a entrada dele (`fightstg_entrance_create`: carrega o modelo, flash de
+  60 frames com som, o modelo novo assume o slot `0x10`) e mostra o nome; ele entra com o HP cheio que recebeu no
+  começo (`wfightmn_init_members`), e a party fica como estava (HP, MP, itens gastos). Os modelos **não** são todos
+  carregados no começo: só o do primeiro (`slots->add(0x10, enemies[0])`); cada próximo é carregado na entrada dele,
+  como em toda batalha de vários inimigos do jogo (as batalhas 305–308 já encadeiam três chefes assim).
+  Na entrada de cada estágio um aviso novo `DIGIVOLVE!` (`DEF_CALLOUT_EVOLVE`, `definitive_callout.c`) aparece
+  sobre o modelo novo (`def_dri_stage_enters`, chamado em `wfightmn_knockout` passo 3).
+- **"Inimigos espelhados":** só existem como inimigos as espécies do arquivo `0x1CF` (193). Os Ultimate dos
+  rivais (MetalGreymon, Paildramon, WarGrowlmon, MagnaAngemon, Taomon, Kyukimon, Armormon, GrapLeomon: 449–456) e os
+  Mega BK (WarGreymon, Imperialdramon, Seraphimon, MegaGargomon, WarGrowlmon) estão lá; Greymon, Garurumon e linha,
+  Growlmon, ExVeemon, Angemon e Gallantmon não. Por isso o Champion de cada linha é um equivalente da ISO, e a linha
+  do Gabumon não existe (é o plano B do PRD, "chefes equivalentes da ISO").
+- **Montagem** (`port/game/definitive_dri_screen.c`, `sim_start`): `fieldstg_start_battle` numa batalha de chefe
+  existente (o modelo: tipo, imunidades `blocked[]` e, na vitória, XP e Bits dela) e depois `records_state.enemies`
+  = os três estágios, `stage` 19 e música `0x60880000` (os das batalhas de chefe: `DEF_DRI_STAGE`, `DEF_DRI_MUSIC`),
+  `blocked[11]` ligado (sem fuga), `has_prize` 0. Não passa por `fieldstg_encounter_start`: sem Overlevel Rush, sem
+  Alvo Raro, sem cadeia de caçada nem materiais comuns.
+- **Tabela** (`tools/gen_dri_challenges.py`, `port/game/definitive_dri_table.c`, lista em
+  `.dumps/tasks/dri/desafios.md`): 5 desafios, na ordem da batalha de história do Mega. Nível do Champion
+  `DEF_DRI_LEVEL_FIRST` (24) + 8 por desafio, cada estágio +3. HP e `stat_scale` vêm das linhas da própria espécie na
+  tabela de batalhas (interpolação entre dois níveis dela; fora deles, a linha mais perto vezes (razão dos
+  níveis)^0,8, o crescimento das linhas do próprio jogo); MP da linha. Batalha-modelo: a de tipo 2 sem nenhuma das
+  espécies da linha (o roteiro de um chefe pode testar o índice da própria batalha), nível mais perto do Mega.
+
+  | # | linha | estágios | destravar | recompensa |
+  | --- | --- | --- | --- | --- |
+  | 0 | Terriermon (Guardromon) | Guardromon 24, Andromon 27, BK MegaGargomon 30 | Core Fragment ×15, Bulbmon Core I | Metal Power 1/2/S |
+  | 1 | Veemon | Devidramon 32, Paildramon 35, BK Imperialdramon 38 | Core Crystal ×20, Datamon Core I | Bolt Power 1/2/S |
+  | 2 | Patamon | Airdramon 40, MagnaAngemon 43, BK Seraphimon 46 | Tera Prism ×25, Bulbmon Core VII, Zanbamon Core VI | Wind Power 1/2/S |
+  | 3 | Agumon | Tyrannomon 48, MetalGreymon 51, BK WarGreymon 54 | Gold Digizoid ×35, BK WarGreymon Core I, BK Imperialdramon Core XIII | Fire Power 1/2/S |
+  | 4 | Guilmon | Flarerizamon 56, WarGrowlmon 59, BK WarGrowlmon 62 | Obsidian Digizoid ×40, WarGrowlmon Core I, MetalSeadramon Core I | Dark Power 1/2/S |
+
+  Destravar: o comum mais forte cuja faixa termina no nível do Champion ou abaixo, 15 a 40 dele (`DEF_DRI_COMMON_*`);
+  um raro (dois a partir do 3º desafio, `DEF_DRI_TWO_RARES`) de Alvos Raros até `DEF_DRI_RARE_OVER` (5) níveis acima
+  do Champion, primeiro os da própria linha ("BK WarGreymon Core I" para a linha do Agumon).
+- **Recompensas:** os acessórios elementais "Power" do próprio jogo (`records.c` 339–359: "Fire Power 1", "2", "S"),
+  nenhum item novo. n estágios derrubados alcançam o tier n; cada tier é dado **uma vez**, na primeira vez que é
+  alcançado (a primeira vitória completa dá os três). Melhor estágio por desafio só sobe. Uma repetição não dá
+  acessório; dá o XP e os Bits da batalha-modelo se vencida, como qualquer batalha. Os itens entram no inventário no
+  fim da batalha (`def_log_end`), ganhando ou perdendo.
+- **Sem game over:** a derrota (`fightstg_events.result` 2) numa simulação não vai para o título (`0xE00`): volta
+  para `gamestate_data.field_map` como a fuga volta (`def_dri_defeat`, em `wfightmn_battle_end`), com o HP e o MP da
+  party **como eram antes da simulação** (uma simulação não fere ninguém; os itens gastos continuam gastos). Na
+  vitória o resultado é o de qualquer batalha (membro caído com 1 HP) e a tela de resultados segue normal.
+- **Depois da simulação**, de volta ao campo, um painel conta os estágios derrubados e o acessório novo ("No new
+  reward" numa repetição); fecha com um toque.
+- **Estado no save:** segundo registro do cartão, bytes 152–153 (destravados, 1 bit cada) e 154–157 (melhor estágio, 2
+  bits cada), logo depois dos bits de "já tive" dos raros. Versão continua 1: um registro gravado antes da camada
+  tem zeros ali (o checksum já os cobria) e lê como nada destravado. O registro passa a ser gravado também quando só
+  há estado DRI. Espaço para `DEF_DRI_CHALLENGES` (16).
+- **DRI Agents:** não identificáveis só pelo código (os IDs de ator são tipos de sprite compartilhados: o 21 é o
+  Guardromon das 25 pousadas, o 33 está em 58 mapas). A tabela `AGENTS` de `tools/gen_dri_challenges.py` (mapa, ID do
+  ator; mapa -1 = qualquer) está vazia: `tools/find_dri_agents.py` no lab decodifica as falas dos atores de cada
+  `wstag*.c` e imprime as linhas para colar. Sem agente na tabela, ninguém abre a lista.
+- **Tela:** no estilo da rede Guardromon (painéis, cores, fonte do jogo): título, lista (melhor estágio "2/3" ou
+  "--", os três nomes de espécie compostos em tempo de execução, cinza enquanto travado, verde completo), painel do
+  desafio (recompensas pelo nome do item, níveis, o custo "Unlock: Code Chip 12/15" / "Bulbmon I 0/1", laranja
+  enquanto falta) e as teclas. Confirmar escolhe e um segundo toque destrava (paga) ou começa.
+- **Ganchos no FIELDSTG** (aplicados pelo líder, compartilhados com o Black Market): `def_dri_talk(mapa, key1)` em
+  `fieldstg_actor_talk_to` e `def_dri_frame()` logo depois de `dw3_travel_frame` no passo 0 do RUN do gerente.
+- **Teste de unidade** (`tests/port/definitive_dri.py`): tier por estágio, agentes, destravar uma vez (paga exato,
+  nunca de novo, desafio só de raros), recompensa por tier uma vez, melhor estágio só sobe e é limitado a 3,
+  registro 2 (bytes 152–157 gravados e relidos, registro só com estado DRI, registro antigo lê nada destravado,
+  checksum, reset do primeiro registro), script de replay (nada); e `gen_dri_challenges.py --check` com a coerência da
+  tabela. Teste no jogo: `dri_ingame.py` (lista, destravar, começar pela lista, derrota depois de um estágio, vitória,
+  repetição).
+
 ## Camada I — Resultados do Rush flutuantes, sem sair do campo
 
 ### Regras

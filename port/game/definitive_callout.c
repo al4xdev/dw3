@@ -94,6 +94,9 @@ static const Style styles[DEF_CALLOUT_COUNT] = {
     /* PRD 4 layer A: the Rare Target, shown as its battle starts. */
     [DEF_CALLOUT_RARE] = { "RARE!", { 255, 255, 240 }, { 255, 236, 140 }, { 232, 160, 0 }, { 56, 32, 0 }, 0, 256, 300, 10, 60,
                            10 },
+    /* PRD 4 layer H: a DRI simulation's next stage comes in (definitive_dri_screen.c, def_dri_stage_enters). */
+    [DEF_CALLOUT_EVOLVE] = { "DIGIVOLVE!", { 255, 255, 255 }, { 200, 255, 220 }, { 24, 200, 96 }, { 0, 48, 16 }, 0, 256, 300,
+                             10, 60, 10 },
 };
 
 static struct {

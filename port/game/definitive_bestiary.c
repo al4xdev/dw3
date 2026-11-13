@@ -34,6 +34,13 @@ static unsigned short extra_replicas; /* DEF_REPLICAS bits: two bytes of the rec
 static unsigned char rares[DEF_HUNT_RARES];
 static unsigned char rares_seen[DEF_HUNT_RARES / 8];
 static unsigned char buffer2[DEF_RECORD2_SIZE];
+/* PRD 4 layer H, after the rares' bits: the DRI challenges unlocked, a bit each (2 bytes, low first), then each one's best
+ * stage, 2 bits each (4 bytes, low first). The record's version stays 1: one written before the layer reads them as 0, and
+ * the checksum already covered these bytes as zeros. */
+#define REC2_DRI (REC2_SEEN + DEF_HUNT_RARES / 8)
+typedef char rec2_dri_fits[DEF_DRI_CHALLENGES <= 16 && REC2_DRI + 6 <= DEF_RECORD2_SIZE ? 1 : -1];
+static unsigned short dri_unlocked;
+static unsigned int dri_best;
 
 static unsigned char table[DEF_BESTIARY_SPECIES];
 static unsigned char buffer[DEF_BESTIARY_RECORD_SIZE];
@@ -48,6 +55,8 @@ void def_bestiary_reset(void) {
     extra_replicas = 0;
     memset(rares, 0, sizeof(rares));
     memset(rares_seen, 0, sizeof(rares_seen));
+    dri_unlocked = 0;
+    dri_best = 0;
 }
 
 unsigned int def_network_mask(void) {
@@ -140,6 +149,8 @@ void def_bestiary_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, extra_replicas);
     PORT_STATE_VAR(s, rares);
     PORT_STATE_VAR(s, rares_seen);
+    PORT_STATE_VAR(s, dri_unlocked);
+    PORT_STATE_VAR(s, dri_best);
 }
 
 static unsigned char sum(const unsigned char *p, int n) {
@@ -239,13 +250,19 @@ void def_record2_write(unsigned char *out) {
     memset(out, 0, DEF_RECORD2_SIZE);
     for (i = 0; i < sizeof(rares_seen) && rares_seen[i] == 0; i++) {
     }
-    if (i == sizeof(rares_seen)) { /* no rare ever held (a count needs one): the card stays as it was */
-        return;
+    if (i == sizeof(rares_seen) && dri_unlocked == 0 && dri_best == 0) {
+        return; /* no rare ever held (a count needs one) and no DRI challenge: the card stays as it was */
     }
     memcpy(out, "HUNT", 4);
     out[4] = DEF_RECORD2_VERSION;
     memcpy(out + REC2_RARES, rares, sizeof(rares));
     memcpy(out + REC2_SEEN, rares_seen, sizeof(rares_seen));
+    for (i = 0; i < 2; i++) {
+        out[REC2_DRI + i] = (unsigned char)(dri_unlocked >> (8 * i));
+    }
+    for (i = 0; i < 4; i++) {
+        out[REC2_DRI + 2 + i] = (unsigned char)(dri_best >> (8 * i));
+    }
     out[5] = sum(out + REC2_RARES, DEF_RECORD2_SIZE - REC2_RARES);
     port_log("hunt: the slot's second record written");
 }
@@ -255,6 +272,8 @@ void def_record2_read(const unsigned char *in) {
 
     memset(rares, 0, sizeof(rares));
     memset(rares_seen, 0, sizeof(rares_seen));
+    dri_unlocked = 0;
+    dri_best = 0;
     if (in == NULL || memcmp(in, "HUNT", 4) != 0 || in[4] != DEF_RECORD2_VERSION ||
         in[5] != sum(in + REC2_RARES, DEF_RECORD2_SIZE - REC2_RARES)) {
         return;
@@ -263,7 +282,33 @@ void def_record2_read(const unsigned char *in) {
         rares[i] = in[REC2_RARES + i] > DEF_HUNT_RARE_CAP ? DEF_HUNT_RARE_CAP : in[REC2_RARES + i];
     }
     memcpy(rares_seen, in + REC2_SEEN, sizeof(rares_seen));
+    dri_unlocked = (unsigned short)(in[REC2_DRI] | in[REC2_DRI + 1] << 8);
+    for (i = 0; i < 4; i++) {
+        dri_best |= (unsigned int)in[REC2_DRI + 2 + i] << (8 * i);
+    }
     port_log("hunt: the slot's second record read");
+}
+
+int def_record_dri_unlocked(int c) {
+    return c >= 0 && c < DEF_DRI_CHALLENGES && ((dri_unlocked >> c) & 1);
+}
+
+void def_record_dri_unlock(int c) {
+    if (c >= 0 && c < DEF_DRI_CHALLENGES) {
+        dri_unlocked = (unsigned short)(dri_unlocked | 1u << c);
+    }
+}
+
+int def_record_dri_best(int c) {
+    return c >= 0 && c < DEF_DRI_CHALLENGES ? (int)((dri_best >> (2 * c)) & 3) : 0;
+}
+
+void def_record_dri_raise_best(int c, int stage) {
+    if (c < 0 || c >= DEF_DRI_CHALLENGES || stage <= def_record_dri_best(c)) {
+        return;
+    }
+    stage = stage > 3 ? 3 : stage;
+    dri_best = (dri_best & ~(3u << (2 * c))) | (unsigned int)stage << (2 * c);
 }
 
 unsigned char *def_record2_buffer(void) {

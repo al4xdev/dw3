@@ -360,6 +360,13 @@ int def_hunt_encounter(int battle);
 void def_hunt_scale(void);
 int def_hunt_active(void);
 void def_hunt_skipped(void);
+/* PRD 4 layer H, the DRI Agents' Gauntlet (port/game/definitive_dri_screen.c): a talk to `map`'s actor `actor` (1 when a
+ * DRI Agent's list takes it), FIELDSTG's idle frame (1 while its screen owns the field), the next enemy member's entrance
+ * (wfightmn_knockout) and a lost battle (1 when it was a simulation: it goes back to the field, no game over). */
+int def_dri_talk(s32 map, s32 actor);
+int def_dri_frame(void);
+void def_dri_stage_enters(int member);
+int def_dri_defeat(void);
 /* PRD 4 layer D: an item's buying and selling price in a shop, the definitive ones (port/game/definitive_economy.c). */
 int def_item_buy(int item);
 int def_item_sell(int item);
