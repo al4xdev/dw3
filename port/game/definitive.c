@@ -287,6 +287,9 @@ void *def_text_override(void *data, s32 i) {
         }
         for (k = 0; k < def_text_override_count; k++) {
             if (def_text_overrides[k].file + records_language == ent->id && def_text_overrides[k].index == i) {
+                if (def_variant_text_hidden(def_text_overrides[k].file, i)) {
+                    return NULL; /* PRD 4 layer F: a variant's name and description go with its data (replay: the disc's) */
+                }
                 {
                     static unsigned char seen[512]; /* one line per entry, not per frame it is drawn */
                     if (k < 512 && !seen[k]) {
@@ -772,6 +775,7 @@ void def_mp_hook(void) {
     if (def_on()) {
         def_mp_apply();
         patch_techniques();
+        def_variants_hook(); /* PRD 4 layer F: the equipment variants, written the same way at the same points */
     }
 }
 

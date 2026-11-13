@@ -321,3 +321,65 @@ $BMKeysTrade: ↑↓ Choose   L1/R1 Tab<1>× button: Trade   △ button: Back
 $BMKeysPick: ↑↓ Material<1>× button: Trade one   △ button: Back
 $BMKeysReplica: ↑↓ Choose   L1/R1 Tab<1>× button: Buy   △ button: Back
 $BMKeysArmed: × button: Buy<1>△ button: Back
+
+# PRD 4 layer F: the equipment variants (shop items converted in place), their names and descriptions; the entry is
+# the item's ID. tools/gen_equipment.py picks the items and checks that each has both lines, nothing else has one, and
+# the lengths (a name no longer than the game's longest, a description within the window). Shown only where the
+# variants' data is (def_on, DEF_EQUIP_ON): definitive_variants.c, def_variant_text_hidden.
+# Speed: one-handed weapons, power for Boost.
+ITMNAM 167: Breeze Spear
+ITMINF 167: Light, fast. Boost for less Power.
+ITMNAM 168: Swift Pike
+ITMINF 168: Light, fast. Boost for less Power.
+ITMNAM 159: Quick Sword
+ITMINF 159: Light, fast. Boost for less Power.
+ITMNAM 160: Gale Saber
+ITMINF 160: Light, fast. Boost for less Power.
+ITMNAM 161: Zephyr Sword
+ITMINF 161: Light, fast. Boost for less Power.
+ITMNAM 162: Rapid Edge
+ITMINF 162: Light, fast. Boost for less Power.
+ITMNAM 99: Hayatemaru
+ITMINF 99: Light, fast. Boost for less Power.
+ITMNAM 165: Sonic Blade
+ITMINF 165: Light, fast. Boost for less Power.
+ITMNAM 166: Flash Sword
+ITMINF 166: Light, fast. Boost for less Power.
+# Elemental: head pieces, guard for one family's Affinity.
+ITMNAM 215: Ember Band
+ITMINF 215: Fire Affinity up for WEAK! hits.
+ITMNAM 216: Frost Visor
+ITMINF 216: Water/Ice Affinity for WEAK! hits.
+ITMNAM 238: Gust Helmet
+ITMINF 238: Wind Affinity up for WEAK! hits.
+ITMNAM 229: Volt Crown
+ITMINF 229: Thunder/Machine Affinity up.
+ITMNAM 219: Tide Cap
+ITMINF 219: Water/Ice Affinity for WEAK! hits.
+ITMNAM 241: Circuit Helm
+ITMINF 241: Thunder/Machine Affinity up.
+ITMNAM 223: Shade Goggles
+ITMINF 223: Dark Affinity up for WEAK! hits.
+ITMNAM 234: Blaze Crown
+ITMINF 234: Fire Affinity up for WEAK! hits.
+ITMNAM 235: Tempest Crown
+ITMINF 235: Wind Affinity up for WEAK! hits.
+# Tank: body armour and shields, guard and Spirit for Boost.
+ITMNAM 249: Padded Coat
+ITMINF 249: More Guard and Spirit, less Boost.
+ITMNAM 250: Quilted Suit
+ITMINF 250: More Guard and Spirit, less Boost.
+ITMNAM 277: Heavy Shield
+ITMINF 277: More Guard and Spirit, less Boost.
+ITMNAM 252: Bulwark Suit
+ITMINF 252: More Guard and Spirit, less Boost.
+ITMNAM 266: Rampart Mail
+ITMINF 266: More Guard and Spirit, less Boost.
+ITMNAM 280: Tower Shield
+ITMINF 280: More Guard and Spirit, less Boost.
+ITMNAM 259: Fortress Vest
+ITMINF 259: More Guard and Spirit, less Boost.
+ITMNAM 290: Aegis Wall
+ITMINF 290: More Guard and Spirit, less Boost.
+ITMNAM 291: Titan Shield
+ITMINF 291: More Guard and Spirit, less Boost.

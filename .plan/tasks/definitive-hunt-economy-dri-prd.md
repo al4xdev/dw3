@@ -606,6 +606,59 @@ Substitui os bullets "Materiais" e "Linha na tela" acima (o resto do Feito vale)
   cabe).
 - Jogo: equipar uma de cada arquétipo e conferir o efeito na batalha.
 
+### Feito (2026-11-13, aplicado direto por decisão do dono)
+
+- **O que levantei:** não há ID livre (`records_items` vai de 1 a 402, o inventário do save é `items[0x193]`, nenhum
+  item vazio ou duplicado), então cada variação é um item de loja **convertido no lugar**: mesmo ID, ícone (`type`),
+  slot, grupo, quem usa, carisma, preço e receita da forja; mudam o poder ou a defesa, a precisão ou a evasão, os dois
+  bônus e o nome e a descrição. Item "estritamente dominado" no próprio tier (outro do mesmo slot, que todo usuário dele
+  pode usar, não mais caro, pelo menos igual em todo stat) só há dois: Long Sword e Kulon Sword. A regra de escolha
+  abaixo começa por eles e segue pela redundância. Os stats saem dos dados do item toda vez que são usados
+  (`gamestate_get_stats`, a prévia da loja, `fightstg_rules_get_stats`): nada fica gravado no save, então um item
+  equipado num save antigo passa a ter os stats da variação.
+- **Arquétipos e regra** (`tools/gen_equipment.py`, constantes `DEF_EQUIP_*`): um de cada em cada tier de loja (as 9
+  listas de armas e armaduras; a loja 18, só peças de conjunto, fica de fora), portanto em toda loja de equipamento da
+  campanha.
+  - **Speed**, arma de uma mão (não cajado nem braçadeira): poder da melhor arma do tier menos 50%, Boost completa o
+    orçamento (+5 no tier 1 a +85 no 9, 15% a 25% do Boost esperado do rookie no nível da loja). Calibrado pela regra
+    definitiva de turnos: o jogador abre e o primeiro turno do inimigo vem depois do atraso inteiro dele
+    (`1000 * raiz(Boost nosso / Boost dele)`, 707 a 1414), então quem tem mais Boost que o inimigo age duas vezes antes
+    dele, e no longo prazo faz `Boost / Boost do inimigo` ações por ação dele (até 2).
+  - **Elemental**, peça de cabeça: defesa da melhor do tier menos 50%, as resistências de uma família completam o
+    orçamento (Água+Gelo e Trovão+Máquina divididos no par, que `def_affinity` soma; Trevas pesa o dobro), no máximo
+    400 por elemento: de +85 Fire no tier 1 a +355 Wind no 9 (afinidade +0,025 a +0,107 no WEAK! e de novo no alvo
+    aberto). A família é a do elemento que o item já tinha, senão a menos usada até ali; as cinco aparecem.
+  - **Tank**, corpo ou escudo: defesa da melhor do tier mais 50%, Espírito 25% dela, Boost negativo que volta ao
+    orçamento (−6 a −30).
+  - **Orçamento:** cada stat vale um peso em pontos de Power (`DEF_EQUIP_W_*`: Guard, Spirit e Boost 1; Wisdom 0,5;
+    precisão e evasão 0,25; uma resistência 0,05, porque no combate definitivo ela só dá afinidade). Uma variação nunca
+    passa a maior pontuação dos itens comuns do tier no mesmo slot que dividem um usuário com ela.
+  - **Escolha:** dominado primeiro; depois o traço (um item que já puxa para o arquétipo antes, Wing Sword e Fenrir
+    Sword para Speed, Wool Cap e Night Vision para Elemental; um com bônus de outro arquétipo por último, para o Kung
+    Fu Cap de velocidade e os itens de Espírito e Sabedoria ficarem); depois a redundância (quem pode usar continua com
+    uma opção comum do mesmo slot pelo menos tão forte); depois o mais barato. Nunca: item com efeito por ID no
+    FIGHTSTG (veneno, crítico...), com tipo forte, ou de conjunto; os acessórios ficam intactos (inclusive os Fire
+    Power da camada H). Lista completa em `.dumps/tasks/equipment/variantes.md`.
+- **Como entra:** a tabela gerada (`port/game/definitive_equipment.c`) e `def_variants_hook`
+  (`port/game/definitive_variants.c`), que grava os valores nos `RecordsWeapon`/`RecordsArmor` dos itens toda vez,
+  como o MP dos rookies: chamado dentro de `def_mp_hook` (jogo novo, início de batalha) e a cada mapa de campo
+  (`fieldstg_80087DB0.c`, no bloco `PC_PORT` do layer A), para um save carregado do título já ter as variações antes da
+  primeira loja ou tela de status. Valores absolutos: rodar de novo grava os mesmos números, nunca acumula; o reset
+  restaura a tabela do disco e o próximo gancho grava de novo. Num script de replay nada é gravado, e os nomes e
+  descrições (`ITMNAM`/`ITMINF` em `tools/text_override/en.txt`, entrada = ID do item) também não aparecem:
+  `def_text_override` devolve o texto do disco quando `def_variant_text_hidden` diz que o texto é de uma variação
+  (`DEF_EQUIP_ON` 0 desliga tudo).
+- **Preços e receitas:** herdados do item (as tabelas das camadas D e E são por ID). Cada variação está no orçamento do
+  tier, então o preço do tier serve, e mudar preço mexeria nas duas regras (as duas leem o preço antigo).
+- **Teste:** `tests/port/definitive_variants.py` (o driver com os dados de `records.c`: num replay tudo fica igual e os
+  textos das variações ficam escondidos; com `def_on` as 27 variações têm os stats da tabela e o resto delas e dos outros
+  itens fica; o segundo gancho não muda nada; linha de categoria errada não grava; os IDs dos arquivos de texto são os
+  que o `gen_text_override.py` resolveu) e `gen_equipment.py --check` (tabela = regra, orçamento, nenhuma variação é
+  upgrade direto de outro item do tier, nomes até 15 letras e descrições até 34). No jogo, o script do lab
+  `equip_ingame.py` (fora do repositório, como os das camadas anteriores; quatro batalhas com os mesmos sorteios: equipamento próprio, depois uma variação de
+  cada arquétipo no líder; stats antes e depois, o bloco de stats da batalha, a linha `twice` e quantos turnos do
+  jogador vêm antes do primeiro do inimigo).
+
 ## Camada G — Black Market
 
 ### Regras

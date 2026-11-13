@@ -353,6 +353,9 @@ void def_hunt_skipped(void);
 /* PRD 4 layer D: an item's buying and selling price in a shop, the definitive ones (port/game/definitive_economy.c). */
 int def_item_buy(int item);
 int def_item_sell(int item);
+/* PRD 4 layer F: the equipment variants written into the items' data (port/game/definitive_variants.c; nothing in a
+ * replay script), at every field map besides def_mp_hook's new game and battle start. */
+void def_variants_hook(void);
 /* PRD 4 layer E, the forge in the shops: how many the materials make, whether one, taking them, the requirements' line
  * (NULL without a recipe; palette 3 while short) and the refusal's text. */
 int def_recipe_max(int item);

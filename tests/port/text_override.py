@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The port's text overrides (definitive combat PRD, layer 1): port/game/definitive_text.c is what
-tools/gen_text_override.py makes of tools/text_override/en.txt, and every description fits the window (34 characters,
-the longest text of the disc). Needs the disc (the glyph table is read from the EXE)."""
+tools/gen_text_override.py makes of tools/text_override/en.txt, and every technique or item description fits the window
+(34 characters, the longest text of the disc). Needs the disc (the glyph table is read from the EXE)."""
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +19,8 @@ def main():
         return 1
     bad = 0
     for n, line in enumerate((ROOT / "tools/text_override/en.txt").read_text().splitlines(), 1):
-        if line.startswith("SKLINF "):  # the technique descriptions have a window; the other texts are the game's own widths
+        if line.startswith(("SKLINF ", "ITMINF ")):  # the technique and item descriptions have a window; the other
+            # texts are the game's own widths
             text = line.split(":", 1)[1].strip()
             if len(text) > MAX:
                 print(f"text_override: en.txt:{n}: {len(text)} characters, the limit is {MAX}: {text}")

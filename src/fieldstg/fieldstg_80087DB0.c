@@ -1699,6 +1699,7 @@ static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerD
     gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
 #ifdef PC_PORT
     def_hunt_map(gamestate_data.funcs.get_map()); /* PRD 4 layer A: another region resets the hunt's chain */
+    def_variants_hook(); /* PRD 4 layer F: the equipment variants, before a loaded save's first shop or status screen */
     def_hard_party_fix(); /* Hard Mode: a party of two, whatever set it */
 #endif
     map = gamestate_data.funcs.get_prev_map();
