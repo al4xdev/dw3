@@ -141,6 +141,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/definitive_tp.py"    # TP table + save converter DFV2 (definitive progression, layer D)
             "$PY" "$ROOT/tests/port/definitive_pity.py"  # training pity counter & guarantee (definitive progression, layer E)
             "$PY" "$ROOT/tests/port/definitive_gauges.py" # Blast Gauge slot save/load & clamp (definitive progression, layer F)
+            "$PY" "$ROOT/tests/port/definitive_evo_anim.py" # short/skippable digivolve animation state (definitive progression, layer G)
             "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's
             "$PY" "$ROOT/tests/port/subpixel_jitter.py" run   # the GTE shadow in the first battle (sub-pixel precision, ~40 s)
             "$PY" "$ROOT/tests/port/debug.py"      # the debug channel (--debug) and tools/mcp's offline self-test

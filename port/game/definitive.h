@@ -127,6 +127,14 @@ int def_gauge_clamp(int val);
 void def_gauges_encode(const short gauges[DEF_GAUGE_SLOTS], unsigned char out[DEF_GAUGE_SLOTS * 2]);
 void def_gauges_decode(const unsigned char in[DEF_GAUGE_SLOTS * 2], short out[DEF_GAUGE_SLOTS]);
 
+#define DEF_EVO_FORM_MAX 512            /* form ID bitset ceiling in RAM (all playable + blast forms) */
+#define DEF_EVO_SEEN_WORDS (DEF_EVO_FORM_MAX / 32)
+#define DEF_EVO_SKIP_HOLD_FRAMES 4      /* frames Circle or Cross must be held to skip digivolve scene */
+void def_evo_seen_reset(unsigned int bits[DEF_EVO_SEEN_WORDS]);
+int def_evo_seen_get(const unsigned int bits[DEF_EVO_SEEN_WORDS], int form_id);
+void def_evo_seen_set(unsigned int bits[DEF_EVO_SEEN_WORDS], int form_id);
+int def_evo_skip_update(int *hold_frames, int skip_pressed);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

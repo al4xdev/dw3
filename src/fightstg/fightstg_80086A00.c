@@ -1529,6 +1529,63 @@ FightstgEffect *fightstg_effect_create(s32 id, SVECTOR *pos) {
     return obj;
 }
 
+#ifdef PC_PORT
+static s32 def_digivolve_hold;
+static s32 def_digivolve_skipped;
+
+static void fightstg_digivolve_end_effects(FightstgDigivolveData *data) {
+    s32 i;
+    s32 j;
+
+    for (i = 0; i < 4; i++) {
+        FightstgEffect *eff = data->effects[i];
+        if (eff != NULL) {
+            FightstgSpriteAnim **anims = (FightstgSpriteAnim **)eff->base.children;
+            for (j = 0; j < eff->anim_count; j++) {
+                if (anims[j] != NULL) {
+                    anims[j]->base.set_state((Object *)anims[j], OBJECT_STATE_END);
+                    anims[j] = NULL;
+                }
+            }
+            eff->base.set_state((Object *)eff, OBJECT_STATE_END);
+            data->effects[i] = NULL;
+        }
+    }
+    if (data->flash != NULL) {
+        data->flash->set_state(data->flash, OBJECT_STATE_END);
+        data->flash = NULL;
+    }
+}
+
+static void fightstg_digivolve_apply_ready(FightstgDigivolve *obj, FightstgDigivolveData *data,
+                                           s32 need_add, s32 need_swap) {
+    FightstgSlots *slots = obj->slots;
+    FightstgModelParams *model;
+    GfxLayer *layer;
+
+    fightstg_digivolve_end_effects(data);
+    layer = gfx_module.funcs.get_layer(0x1004);
+    layer->set_clip_pos(layer, 0, 0);
+    layer->set_clip_size(layer, 320, 240);
+    layer = gfx_module.funcs.get_layer(0x1003);
+    layer->set_clip_pos(layer, 0, 240);
+    layer->set_clip_size(layer, 320, 0);
+    if (need_add) {
+        slots->add(slots, 1, obj->base.key1, 0);
+    }
+    if (need_swap) {
+        slots->set_id(slots, 1, 0);
+        slots->reset_pos(slots, 0);
+    }
+    model = slots->get_params(slots, 0);
+    model->layers[0].shown = 1;
+    model->layers[0].layer_id = 0x1004;
+    model->layers[0].edges = 0;
+    model->layers[1].shown = 0;
+    model->anim = 13;
+}
+#endif
+
 /* A model's scene (fightstg_digivolve_create): loads model base.key1 into slot 1 and its files (0x8A2: an
  * image), then shows it between two black bars (layers 0x1004 and 0x1003, closing and opening),
  * with effects 0x3E8... (fightstg_effect_create) and a fade; base.key2 picks the variant. */
@@ -1557,6 +1614,10 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
             switch (obj->base.substep) {
             case 0:
             default:
+#ifdef PC_PORT
+                def_digivolve_hold = 0;
+                def_digivolve_skipped = 0;
+#endif
                 sound_module.load_extra_bank(0x45);
                 obj->base.next_substep(obj);
                 /* fallthrough */
@@ -1596,9 +1657,32 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
         }
         break;
     case OBJECT_STATE_RUN:
+#ifdef PC_PORT
+        if (def_on() && !def_digivolve_skipped && obj->base.step >= 1 && obj->base.step <= 10 &&
+            def_evo_skip_update(&def_digivolve_hold, (PAD_HELD(13) || PAD_HELD(14)))) {
+            s32 need_add = (obj->base.step == 1 && obj->base.substep == 0);
+            s32 need_swap = (obj->base.step < 6);
+            def_digivolve_skipped = 1;
+            def_evo_form_mark(obj->base.key1);
+            fightstg_digivolve_apply_ready(obj, data, need_add, need_swap);
+            obj->base.timer = 0;
+            obj->base.step = 11;
+            obj->base.substep = 0;
+            break;
+        }
+#endif
         switch (obj->base.step) {
         case 0:
         default:
+#ifdef PC_PORT
+            if (def_on() && def_evo_form_seen(obj->base.key1)) {
+                fightstg_digivolve_apply_ready(obj, data, 1, 1);
+                obj->base.timer = 0;
+                obj->base.step = 15;
+                obj->base.substep = 0;
+                break;
+            }
+#endif
             stage->change(stage, obj->base.key2 != 0 ? 0x1F : 0x1C, 0x20, 0x20);
             obj->base.next_step(obj);
             /* fallthrough */
@@ -1812,10 +1896,28 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
                 if (obj->base.timer < 60) {
                     break;
                 }
+#ifdef PC_PORT
+                if (def_on()) {
+                    def_evo_form_mark(obj->base.key1);
+                }
+#endif
                 obj->base.set_state(obj, OBJECT_STATE_END);
                 break;
             }
             break;
+#ifdef PC_PORT
+        case 15:
+            obj->base.timer += gfx_module.funcs.get_frame_ticks();
+            if (obj->base.timer < 10) {
+                break;
+            }
+            slots->get_params(slots, 0x10)->layers[0].shown = 1;
+            slots->get_params(slots, 0)->anim = (obj->base.key2 != 0 || obj->idle_anim == 0) ? 1 : 2;
+            camera->set(camera, camera->get_default(camera));
+            def_evo_form_mark(obj->base.key1);
+            obj->base.set_state(obj, OBJECT_STATE_END);
+            break;
+#endif
         }
         break;
     case OBJECT_STATE_DONE:

@@ -91,3 +91,36 @@ void def_gauges_decode(const unsigned char in[DEF_GAUGE_SLOTS * 2], short out[DE
         out[i] = (short)def_gauge_clamp(raw);
     }
 }
+
+void def_evo_seen_reset(unsigned int bits[DEF_EVO_SEEN_WORDS]) {
+    int i;
+
+    for (i = 0; i < DEF_EVO_SEEN_WORDS; i++) {
+        bits[i] = 0;
+    }
+}
+
+int def_evo_seen_get(const unsigned int bits[DEF_EVO_SEEN_WORDS], int form_id) {
+    if (form_id < 0 || form_id >= DEF_EVO_FORM_MAX) {
+        return 0;
+    }
+    return (int)((bits[form_id >> 5] >> (form_id & 31)) & 1u);
+}
+
+void def_evo_seen_set(unsigned int bits[DEF_EVO_SEEN_WORDS], int form_id) {
+    if (form_id < 0 || form_id >= DEF_EVO_FORM_MAX) {
+        return;
+    }
+    bits[form_id >> 5] |= 1u << (form_id & 31);
+}
+
+int def_evo_skip_update(int *hold_frames, int skip_pressed) {
+    if (!skip_pressed) {
+        *hold_frames = 0;
+        return 0;
+    }
+    if (*hold_frames < DEF_EVO_SKIP_HOLD_FRAMES) {
+        (*hold_frames)++;
+    }
+    return *hold_frames >= DEF_EVO_SKIP_HOLD_FRAMES;
+}

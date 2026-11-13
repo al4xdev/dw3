@@ -364,6 +364,8 @@ int def_on(void) {
 
 extern s32 wfightmn_update_idle_anim(u8 side, s32 amount);
 
+static unsigned int def_evo_seen_bits[DEF_EVO_SEEN_WORDS];
+
 void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, chain);
     PORT_STATE_VAR(s, baton_paid);
@@ -374,6 +376,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
     PORT_STATE_VAR(s, records_state.gauges);
+    PORT_STATE_VAR(s, def_evo_seen_bits);
 }
 
 static int target_slot(void) {
@@ -813,4 +816,16 @@ void def_gauges_slot_read(const void *slot_save) {
         return;
     }
     def_gauges_decode((const unsigned char *)slot_save + DEF_GAUGE_SLOT_OFFSET, records_state.gauges);
+}
+
+/* ---- PRD 2, layer G: session RAM tracking of seen digivolution/blast animations. */
+int def_evo_form_seen(int form_id) {
+    return def_on() && def_evo_seen_get(def_evo_seen_bits, form_id);
+}
+
+void def_evo_form_mark(int form_id) {
+    if (!def_on()) {
+        return;
+    }
+    def_evo_seen_set(def_evo_seen_bits, form_id);
 }
