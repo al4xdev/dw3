@@ -76,20 +76,19 @@
 <text x="488" y="531" font-size="15.5" fill="#f0efec" font-weight="700">Experience</text>
 <text x="594" y="531" font-size="15" fill="#c3c2b7">far more than the encounter</text>
 <text x="594" y="558" font-size="15" fill="#c3c2b7">it replaced</text>
-<text x="488" y="594" font-size="14" fill="#9a9a94">Rares are spent later: forge, Black Market, DRI (planned).</text>
+<text x="488" y="594" font-size="14" fill="#9a9a94">Rares are spent at the forge, the Black Market and the DRI.</text>
 <rect x="30" y="376" width="400" height="240" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
 <circle cx="54" cy="402" r="13" fill="#f0efec"/>
 <text x="54" y="407.5" font-size="15" fill="#14161c" font-weight="800" text-anchor="middle">4</text>
 <text x="76" y="408" font-size="17" fill="#f0efec" font-weight="700">The Bestiary keeps the collection</text>
 <rect x="48" y="430" width="364" height="104" rx="6" fill="#12151c" stroke="#3a4257" stroke-width="1.5"/>
-<text x="64" y="464" font-size="15" fill="#c98500" font-weight="700">Rare</text>
-<text x="150" y="464" font-size="15" fill="#f0efec">Rare Cores</text>
-<text x="390" y="464" font-size="15" fill="#f0efec" font-weight="700" text-anchor="end">4/13</text>
-<text x="64" y="504" font-size="15" fill="#c3c2b7" font-weight="700">Common</text>
-<text x="150" y="504" font-size="15" fill="#f0efec">Bit Shard</text>
-<text x="390" y="504" font-size="15" fill="#f0efec" font-weight="700" text-anchor="end">x12</text>
-<text x="48" y="562" font-size="14.5" fill="#c3c2b7">Under each species: the rare items you have</text>
-<text x="48" y="581" font-size="14.5" fill="#c3c2b7">collected, and its common material held.</text>
+<text x="64" y="464" font-size="15" fill="#c3c2b7" font-weight="700">Hunt</text>
+<text x="150" y="464" font-size="15" fill="#f0efec">Bit Shard</text>
+<text x="390" y="464" font-size="15" fill="#f0efec" font-weight="700" text-anchor="end">x12</text>
+<text x="150" y="504" font-size="15" fill="#f0efec">Rare Cores</text>
+<text x="390" y="504" font-size="15" fill="#f0efec" font-weight="700" text-anchor="end">4/13</text>
+<text x="48" y="562" font-size="14.5" fill="#c3c2b7">Under each species: its common material and how</text>
+<text x="48" y="581" font-size="14.5" fill="#c3c2b7">many you hold, then its rares as a collection.</text>
 <line x1="434" y1="216" x2="464" y2="216" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
 <line x1="670.0" y1="339" x2="670.0" y2="370" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
 <line x1="466" y1="496" x2="436" y2="496" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>

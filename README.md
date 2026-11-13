@@ -6,8 +6,8 @@ RK3326 handhelds (the R36S, the XF35H and their clones) and on PC.
 
 - **Fights you think through.** Find the weakness, stagger the enemy, earn one more action, pass the baton.
 - **Less grinding, same journey.** The late game arrives around level 40-50, where most players used to stop.
-- **A reason to roam.** Every battle can drop Hunt Materials, and a long enough winning streak in one region brings
-  out its Rare Target, with a rare item only it drops.
+- **A reason to roam.** Every battle can drop Hunt Materials, a long winning streak in one region brings out its Rare
+  Target, and what you collect pays for forged gear, Black Market replicas and the DRI Gauntlet.
 - **Nothing hidden.** Enemy weaknesses, digivolution requirements and what each technique really does are on screen.
 - **Your old save still works.**
 
@@ -248,7 +248,7 @@ lab, and the lab keeps the third slot closed. The choice is saved with the game.
 ## The hunt
 
 Optional, and open all game long: every battle can drop Hunt Materials, and a winning streak in one region brings out
-its rarest prey.
+its rarest prey. The materials then pay for the forge, the Black Market and the DRI Gauntlet.
 
 <p align="center"><img src="docs/images/definitive/hunt.svg" width="800" alt="The Rare Target loop: 1 the regional chain, from 5 wins a 5% chance rising to 40%; 2 the Rare Target, a boss battle at the region's level shown with its region's numeral, such as Datamon IV; 3 its rewards, the region's numbered rare item, an R-Booster pack and far more experience; 4 the Bestiary keeps the collection."></p>
 
@@ -294,34 +294,93 @@ There are two kinds, and they do different jobs:
 - A Rare Target pays ten times the experience of the encounter it replaced. Its R-Booster is 01 below level 25, 02
   from 25, 03 from 40, 04 from 55 and 05 from 70.
 
-<p align="center"><img src="docs/images/definitive/hunt-materials.svg" width="800" alt="Common materials drop from any common Digimon by its level band, from Bit Shard to the Digizoids; rare items only from Rare Targets, numbered like the target (Datamon IV gives Datamon Core IV). You hold commons as counts and rares as a collection, both in the Bestiary. Planned: the forge, the Black Market and the DRI Gauntlet spend them."></p>
+### Spending them
 
-### Coming next (planned)
+What you collect pays for better gear: every shop is also a forge, a trader in the first town runs a Black Market,
+and the DRI Agents open the Gauntlet.
 
-The rest of the hunt is designed but not built yet; the lists and numbers are still to be approved.
+<p align="center"><img src="docs/images/definitive/economy.svg" width="800" alt="The economy loop: common materials from random battles and rare items from Rare Targets feed the forge in every shop, the Black Market (one rare for 12 commons, replicas for two rares of different bosses plus Bits) and the DRI Gauntlet, which give shop equipment and its 27 variants, 16 replicas that resell for 0 and the Power accessories. Shop gear from 10000 Bits costs 150% and resells for 5000 plus 8% of its old price above 10000."></p>
 
-- **Prices**, next: rare and auction equipment resells for much less (an item bought for 2,000 Bits will no longer sell
-  for 30,000), and advanced equipment costs more, so the Bits from OVERFINISH have somewhere to go.
-- **Forge**: in the ordinary shops, intermediate and top equipment asks for rare items and large amounts of common
-  materials as well as Bits, shown when you select it, so commons stay worth collecting. The starting gear stays Bits
-  only.
-- **New equipment** for building a team of two or three: variations of existing items around speed (acting twice from
-  the first turn), elements (more affinity, bigger weakness hits) and defence.
-- **Black Market**: a back-alley trader who takes your rare items in exchange for common materials, and sells replicas
-  of auction and event items you can miss (replicas resell for nothing).
-- **DRI Gauntlet**: the DRI Agents run digivolution-chain simulations (Agumon, then Greymon, MetalGreymon and WarGreymon
-  in one fight); handing in a set of rare items unlocks one for good. Every stage you beat unlocks a higher tier of
-  that line's Synergy Accessory, and losing only ends the simulation.
-- **Rush results on the field**: the Overlevel Rush shows its rewards in a small panel while you keep walking, instead
-  of the results screen.
+### Prices
+
+Advanced gear costs more and resells for much less, so the Bits from OVERFINISH have somewhere to go and a lucky find
+no longer sells for a fortune. A weapon, armour or accessory that a shop sells for 10,000 Bits or more now costs 150%
+of that, and resells for 5,000 plus 8% of its old price above 10,000 (never more than half the new price, rounded to
+100): a 60,000 sword costs 90,000 and resells for 9,000 instead of 30,000, a 15,000 one costs 22,500 and resells for
+5,400. Everything else keeps the game's prices.
+
+### The forge
+
+Shop equipment whose original price is 5,000 Bits or more asks for Hunt Materials as well as its Bits (107 pieces):
+
+| Original price | Materials |
+|---|---|
+| Under 5,000 | None: Bits only, so the start of the game is unchanged |
+| 5,000 to 19,999 | One common material, 10 to 25 of it |
+| 20,000 and up | One of the seven strongest commons, 30 to 50 of it, and a region's rare item (two from 50,000) |
+
+Select an item and its description shows what it takes against what you have, orange while you are short: "Peta Prism
+0/30, Bulbmon V 0/1" (a rare is named by the Rare Target that drops it). Without them the shop refuses, as it does when
+you lack the Bits ("You don't have enough materials."), and how many you can buy at once is capped by your materials.
+
+### Equipment variants
+
+The game has no free item slots, so 27 shop items were turned into variants in place: one of each kind in every shop
+tier, each built around a style instead of a bigger number. They keep their icon, price and recipe, and a Digimon
+already wearing one simply gets the new stats.
+
+- **Speed** (one-handed weapons): half the power of the tier's best weapon, for Boost, from +5 in the first tier to +85
+  in the last. With this edition's turn order, more Boost than the enemy means two actions before its first. Breeze
+  Spear, Swift Pike, Quick Sword, Gale Saber, Zephyr Sword, Rapid Edge, Hayatemaru, Sonic Blade, Flash Sword.
+- **Elemental** (head pieces): half the guard of the tier's best, for one family's resistances, which in this edition
+  are your affinity: from +85 Fire to +355 Wind, about +0.03 to +0.11 on every WEAK! hit and again on a staggered
+  target. Ember Band, Frost Visor, Gust Helmet, Volt Crown, Tide Cap, Circuit Helm, Shade Goggles, Blaze Crown, Tempest
+  Crown.
+- **Tank** (body armour and shields): 50% more guard than the tier's best, plus some Spirit, for a Boost penalty of −6
+  to −30. Padded Coat, Quilted Suit, Heavy Shield, Bulwark Suit, Rampart Mail, Tower Shield, Fortress Vest, Aegis Wall,
+  Titan Shield.
+
+### The Black Market
+
+A sleepy townsperson in a house of the first town (the same house later in the game) runs the Black Market. Talking
+to them opens two tabs (L1/R1):
+
+- **Exchange**: one rare item for 12 of any common material you pick, as long as all 12 fit under the 99 cap.
+- **Replicas**: 16 pieces of equipment no shop sells, as good as the original: the seven Power S accessories,
+  Machinegun, Magician Rod, Ghost Fang, Pulse Guard, Drill Horn, Chain Saw, Naginata, Recover Crest and MP Mega Proxy.
+  Each costs two rare items of different bosses (Datamon IV and Datamon VII are the same boss), taken from your most
+  plentiful ones and named before you confirm, plus 20 times the original's selling price in Bits: 20,000 to 40,000.
+  A replica resells for 0 Bits, so the shop does not even offer to buy it.
+
+### The DRI Gauntlet
+
+Talk to a DRI Agent for the list of simulations. Each is one battle against an evolution line's three stages,
+Champion, Ultimate and Mega: when one falls the next comes in at full HP with a **DIGIVOLVE!** callout, while your
+party keeps the HP, MP and items it has spent. There is no running away and no game over: lose and you are back on the
+field with your HP and MP as they were before (spent items stay spent). A simulation is unlocked once, for good, by
+handing in its materials.
+
+| Line | Stages and levels | Unlock | Rewards |
+|---|---|---|---|
+| Terriermon (Guardromon) | Guardromon 24, Andromon 27, BK MegaGargomon 30 | Core Fragment ×15, Bulbmon Core I | Metal Power 1, 2, S |
+| Veemon | Devidramon 32, Paildramon 35, BK Imperialdramon 38 | Core Crystal ×20, Datamon Core I | Bolt Power 1, 2, S |
+| Patamon | Airdramon 40, MagnaAngemon 43, BK Seraphimon 46 | Tera Prism ×25, Bulbmon Core VII, Zanbamon Core VI | Wind Power 1, 2, S |
+| Agumon | Tyrannomon 48, MetalGreymon 51, BK WarGreymon 54 | Gold Digizoid ×35, BK WarGreymon Core I, BK Imperialdramon Core XIII | Fire Power 1, 2, S |
+| Guilmon | Flarerizamon 56, WarGrowlmon 59, BK WarGrowlmon 62 | Obsidian Digizoid ×40, WarGrowlmon Core I, MetalSeadramon Core I | Dark Power 1, 2, S |
+
+Every stage you fell reaches a tier of the line's Power accessory (one stage: 1, two: 2, all three: S), even if you
+lose afterwards. Each tier is given once, the first time you reach it, so a first full clear gives all three; the list
+keeps your best stage. A replay pays the battle's experience and Bits, but no accessory.
 
 ## Comfort and fixes
 
 - **The Blast Gauge is saved.** The original reset it every time the game was closed, even after saving.
 - **Battle text that does not stop the fight**: message boxes no longer wait for a button.
 - **Overlevel Rush**: when your strongest Digimon is 15 or more levels above every enemy of a random battle, the game
-  offers to skip it. Take it and you go straight to the results a win by your lead Digimon would give: experience,
-  Bits and the drop.
+  offers to skip it. Take it and the rewards a win by your lead Digimon would give (experience, Bits, the drop and
+  Hunt Materials) are yours at once: a small panel over your Digimon lists them for two seconds while you keep walking
+  (+EXP and LV UP! for each member, NEW TECH!, TP FULL!, the Bits, the item and the materials). A battle you fight
+  still ends on the results screen.
 - **A Guardromon network**: at any Guardromon, `SAVE` or `TELEPORT` to the others you have met, a **map objective
   marker**, **fast-forward**, button glyphs that match your pad, and full remapping.
 - **A gamepad menu** for every setting, with no keyboard needed.

@@ -1,10 +1,13 @@
 # PRD 4 — Versão definitiva: Caçada, Forja, Black Market, DRI Gauntlet e Rush flutuante
 
-Dono: Alex. Data: 2026-11-13. Estado: desenho completo; as decisões do dono estão
-marcadas `[dono]`, cada uma com uma proposta padrão (fim do arquivo);
-implementação por camadas, cada camada só depois do ok da anterior. **Camadas A,
-B e C implementadas em 2026-11-13**; a tabela de alvos e os nomes dos materiais
-aprovados pelo dono no mesmo dia.
+Dono: Alex. Data: 2026-11-13. Estado: **as nove camadas (A a I) implementadas em
+2026-11-13**, as de D em diante aplicadas direto por decisão do dono (cada uma
+com um "Feito" que diz o que foi decidido no lugar dele); a tabela de alvos e os
+nomes dos materiais aprovados pelo dono no mesmo dia. As marcas `[dono]` abaixo
+ficam como histórico das propostas. Falta testar no jogo: gravar e carregar o
+segundo registro do cartão num Guardromon (camadas B, G e H), e ver a linha da
+forja na tela de uma loja de equipamento (camada E; a lógica tem teste de
+unidade).
 
 Continuação de `definitive-combat-prd.md`, `definitive-progression-prd.md` e
 `definitive-rebalance-prd.md`. Mesmas regras de trabalho: camadas pequenas,
@@ -557,7 +560,7 @@ Substitui os bullets "Materiais" e "Linha na tela" acima (o resto do Feito vale)
   materiais, a recusa é a mesma da falta de dinheiro com o texto "You don't
   have enough materials."; o máximo comprável fica limitado pelo que os
   materiais fazem; a compra tira os materiais com os Bits. No painel do item,
-  a linha do slot mostra os requisitos ("Data Chip 12/30, Datamon IV 0/1": o
+  a linha do slot mostra os requisitos (o Tenjinmaru: "Peta Prism 0/30, Bulbmon V 0/1"; o
   raro pelo nome do Alvo Raro que o deixa, que cabe na linha), laranja
   enquanto falta.
 - `definitive_glyph.c`: os textos montados (string, contagem, algarismo
@@ -892,11 +895,11 @@ antes de construir o resto.
   há estado DRI. Espaço para `DEF_DRI_CHALLENGES` (16).
 - **DRI Agents:** não identificáveis só pelo código (os IDs de ator são tipos de sprite compartilhados: o 21 é o
   Guardromon das 25 pousadas, o 33 está em 58 mapas). A tabela `AGENTS` de `tools/gen_dri_challenges.py` (mapa, ID do
-  ator; mapa -1 = qualquer) está vazia: `tools/find_dri_agents.py` no lab decodifica as falas dos atores de cada
-  `wstag*.c` e imprime as linhas para colar. Sem agente na tabela, ninguém abre a lista.
-- **Tela:** no estilo da rede Guardromon (painéis, cores, fonte do jogo): título, lista (melhor estágio "2/3" ou
+  ator; mapa -1 = qualquer) foi preenchida no lab com `tools/find_dri_agents.py`, que decodifica as falas dos atores
+  de cada `wstag*.c`: 10 linhas, os atores cuja fala cita DRI (um ID que só eles usam vale em qualquer mapa).
+- **Tela:** no estilo da rede Guardromon (painéis, cores, fonte do jogo): título, lista (melhor estágio "2 of 3" ou
   "--", os três nomes de espécie compostos em tempo de execução, cinza enquanto travado, verde completo), painel do
-  desafio (recompensas pelo nome do item, níveis, o custo "Unlock: Code Chip 12/15" / "Bulbmon I 0/1", laranja
+  desafio (recompensas pelo nome do item, níveis, o custo "Unlock Code Chip 12 of 15" / "Bulbmon I 0 of 1", laranja
   enquanto falta) e as teclas. Confirmar escolhe e um segundo toque destrava (paga) ou começa.
 - **Ganchos no FIELDSTG** (aplicados pelo líder, compartilhados com o Black Market): `def_dri_talk(mapa, key1)` em
   `fieldstg_actor_talk_to` e `def_dri_frame()` logo depois de `dw3_travel_frame` no passo 0 do RUN do gerente.
@@ -906,6 +909,14 @@ antes de construir o resto.
   checksum, reset do primeiro registro), script de replay (nada); e `gen_dri_challenges.py --check` com a coerência da
   tabela. Teste no jogo: `dri_ingame.py` (lista, destravar, começar pela lista, derrota depois de um estágio, vitória,
   repetição).
+- **Corrigido no lab (2026-11-13):** a fonte de 11 px da lista, do painel e do resumo não tem "/", ":" nem ","
+  (saíam como "0"): ali o separador é " - " e as contagens são "12 of 15". A derrota: o WFIGHTMN escolhe o próximo
+  mapa antes de o log da batalha terminar, então `def_dri_defeat` encerra a simulação ele mesmo; e o WFIGHTMN
+  pergunta a cada frame até o mapa mudar, então a resposta fica 1 até a próxima batalha ou o resumo no campo (um 0
+  num frame seguinte deixava o 0xE00 do game over sobrescrever o campo).
+- **Teste no jogo (2026-11-13):** lista, destravar pagando os materiais, começar; derrota de volta ao campo (0x21D)
+  com HP e MP restaurados; vitória com os três estágios em sequência (DIGIVOLVE! a cada entrada), a tela de
+  resultados, o campo e os três tiers (Metal Power 1, 2 e S); repetir não dá nada novo.
 
 ## Camada I — Resultados do Rush flutuantes, sem sair do campo
 

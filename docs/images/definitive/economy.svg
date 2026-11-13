@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700" role="img" aria-labelledby="title desc">
+<title id="title">The economy loop</title>
+<desc id="desc">Common materials come from random battles won or skipped with the Rush, by the species' level band; rare items only from Rare Targets, numbered like the target. The forge in every shop asks for commons on gear from 5000 Bits and also a region's rare from 20000; the Black Market trades one rare for 12 commons and sells replicas for two rares of different bosses plus 20 times the sell price; the DRI Gauntlet is unlocked once with commons and rares. They give shop equipment including 27 variants, 16 replicas that resell for 0, and the Power accessories in tiers 1, 2 and S. Shop gear from 10000 Bits costs 150% and resells for 5000 plus 8% of its old price above 10000.</desc>
+<defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,&quot;Noto Sans&quot;,&quot;Liberation Sans&quot;,sans-serif}</style>
+
+<symbol id="i-fire" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-8 11,-3 10,5 C9.5,11 5,15 0,15 C-5,15 -10,11 -10,5 C-10,-1 -6,-4 -4,-9 C-2,-4 0,-2 2,-1 C4,-6 3,-10 0,-15 Z"/></symbol>
+<symbol id="i-water" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0,-15 C5,-7 10,-1 10,5 A10,10 0 0 1 -10,5 C-10,-1 -5,-7 0,-15 Z"/></symbol>
+<symbol id="i-ice" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path transform="rotate(0)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(60)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(120)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(180)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(240)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/><path transform="rotate(300)" d="M0,0 V-14 M-4,-12 L0,-8 L4,-12"/></g></symbol>
+<symbol id="i-wind" viewBox="-16 -16 32 32"><g stroke="currentColor" stroke-width="2.8" stroke-linecap="round" fill="none"><path d="M-14,-5 H4 C9,-5 10,-12 5,-12 C2,-12 1,-9 2,-8"/><path d="M-14,2 H9 C14,2 14,9 9,9 C6,9 5,6 6,5"/><path d="M-11,9 H-1"/></g></symbol>
+<symbol id="i-thunder" viewBox="-16 -16 32 32"><path fill="currentColor" d="M4,-15 L-9,2 H-1 L-4,15 L9,-3 H1 Z"/></symbol>
+<symbol id="i-machine" viewBox="-16 -16 32 32"><circle r="11" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="4.32 4.32"/><path fill="currentColor" fill-rule="evenodd" d="M9,0 A9,9 0 1 0 -9,0 A9,9 0 1 0 9,0 Z M3.5,0 A3.5,3.5 0 1 1 -3.5,0 A3.5,3.5 0 1 1 3.5,0 Z"/></symbol>
+<symbol id="i-dark" viewBox="-16 -16 32 32"><path fill="currentColor" d="M0.00,-15.00 L3.64,-5.02 L14.27,-4.64 L5.90,1.92 L8.82,12.14 L0.00,6.20 L-8.82,12.14 L-5.90,1.92 L-14.27,-4.64 L-3.64,-5.02 Z"/></symbol>
+<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#9085e9" fill-opacity="0.28"/><rect width="3" height="7" fill="#9085e9"/></pattern>
+<linearGradient id="ladder" x1="0" x2="1"><stop offset="0" stop-color="#8f8e88"/><stop offset="1" stop-color="#c98500"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#c3c2b7"/></marker>
+</defs>
+<rect width="900" height="700" rx="16" fill="#171a21"/>
+<text x="30" y="46" font-size="26" fill="#f0efec" font-weight="800">The economy: from the hunt to your gear</text>
+<text x="30" y="76" font-size="15.5" fill="#c3c2b7">Battles give the materials; the forge, the Black Market and the DRI Gauntlet turn them into equipment.</text>
+<rect x="30" y="100" width="250" height="190" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="48" y="130" font-size="17" fill="#f0efec" font-weight="700">Common materials</text>
+<text x="48" y="158" font-size="15" fill="#c3c2b7">Random battles you win (or</text>
+<text x="48" y="179" font-size="15" fill="#c3c2b7">skip with the Rush): each enemy</text>
+<text x="48" y="200" font-size="15" fill="#c3c2b7">may leave its species' material,</text>
+<text x="48" y="221" font-size="15" fill="#c3c2b7">by its level band.</text>
+<rect x="48" y="248" width="214" height="28" rx="6" fill="#12151c" stroke="#3a4257" stroke-width="1.5"/>
+<text x="155" y="267" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">Bit Shard … Obsidian Digizoid</text>
+<rect x="30" y="330" width="250" height="190" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="48" y="360" font-size="17" fill="#c98500" font-weight="700">Rare items</text>
+<text x="48" y="388" font-size="15" fill="#c3c2b7">Only from Rare Targets: one per</text>
+<text x="48" y="409" font-size="15" fill="#c3c2b7">region, numbered like the target</text>
+<text x="48" y="430" font-size="15" fill="#c3c2b7">you met there.</text>
+<rect x="48" y="478" width="214" height="28" rx="6" fill="#12151c" stroke="#3a4257" stroke-width="1.5"/>
+<text x="155" y="497" font-size="13.5" fill="#f0efec" font-weight="700" text-anchor="middle">Datamon IV → Datamon Core IV</text>
+<rect x="330" y="100" width="270" height="160" rx="12" fill="#232a3a" stroke="#30374a" stroke-width="1.5"/>
+<text x="348" y="130" font-size="17" fill="#f0efec" font-weight="700">Forge, in every shop</text>
+<text x="348" y="158" font-size="15" fill="#c3c2b7">Gear from 5000 Bits (old price)</text>
+<text x="348" y="179" font-size="15" fill="#c3c2b7">asks for commons too; from</text>
+<text x="348" y="200" font-size="15" fill="#c3c2b7">20000, a region's rare too.</text>
+<rect x="348" y="218" width="234" height="28" rx="6" fill="#12151c" stroke="#3a4257" stroke-width="1.5"/>
+<text x="465" y="237" font-size="13.5" fill="#e0662f" font-weight="700" text-anchor="middle">Peta Prism 0/30, Bulbmon V 0/1</text>
+<rect x="330" y="280" width="270" height="160" rx="12" fill="#232a3a" stroke="#30374a" stroke-width="1.5"/>
+<text x="348" y="310" font-size="17" fill="#f0efec" font-weight="700">Black Market</text>
+<text x="348" y="338" font-size="15" fill="#c3c2b7">1 rare: 12 of any common.</text>
+<text x="348" y="359" font-size="15" fill="#c3c2b7">Replica: 2 rares of different</text>
+<text x="348" y="380" font-size="15" fill="#c3c2b7">bosses + 20 × its sell price.</text>
+<rect x="330" y="460" width="270" height="160" rx="12" fill="#232a3a" stroke="#30374a" stroke-width="1.5"/>
+<text x="348" y="490" font-size="17" fill="#f0efec" font-weight="700">DRI Gauntlet</text>
+<text x="348" y="518" font-size="15" fill="#c3c2b7">Unlock once with commons and</text>
+<text x="348" y="539" font-size="15" fill="#c3c2b7">rares; three stages in one</text>
+<text x="348" y="560" font-size="15" fill="#c3c2b7">battle, a tier per new stage.</text>
+<rect x="650" y="100" width="220" height="160" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="668" y="130" font-size="17" fill="#f0efec" font-weight="700">Shop equipment</text>
+<text x="668" y="158" font-size="15" fill="#c3c2b7">107 pieces ask for</text>
+<text x="668" y="179" font-size="15" fill="#c3c2b7">materials; 27 shop items</text>
+<text x="668" y="200" font-size="15" fill="#c3c2b7">are Speed, Elemental or</text>
+<text x="668" y="221" font-size="15" fill="#c3c2b7">Tank variants.</text>
+<line x1="602" y1="180" x2="646" y2="180" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="650" y="280" width="220" height="160" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="668" y="310" font-size="17" fill="#f0efec" font-weight="700">Legendary replicas</text>
+<text x="668" y="338" font-size="15" fill="#c3c2b7">16 pieces no shop sells,</text>
+<text x="668" y="359" font-size="15" fill="#c3c2b7">as good as the original;</text>
+<text x="668" y="380" font-size="15" fill="#c3c2b7">they resell for 0 Bits.</text>
+<line x1="602" y1="360" x2="646" y2="360" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="650" y="460" width="220" height="160" rx="12" fill="#1f2430" stroke="#30374a" stroke-width="1.5"/>
+<text x="668" y="490" font-size="17" fill="#f0efec" font-weight="700">Power accessories</text>
+<text x="668" y="518" font-size="15" fill="#c3c2b7">Metal, Bolt, Wind, Fire</text>
+<text x="668" y="539" font-size="15" fill="#c3c2b7">and Dark Power: tiers 1,</text>
+<text x="668" y="560" font-size="15" fill="#c3c2b7">2 and S, each given once.</text>
+<line x1="602" y1="540" x2="646" y2="540" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M282,195 H305 M282,425 H305 M305,180 V540" fill="none" stroke="#c3c2b7" stroke-width="2.2"/>
+<line x1="305" y1="180" x2="326" y2="180" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="305" y1="360" x2="326" y2="360" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="305" y1="540" x2="326" y2="540" stroke="#c3c2b7" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M330,330 C300,318 296,300 270,294" fill="none" stroke="#c98500" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+<text x="30" y="548" font-size="14.5" fill="#9a9a94">Dashed: the Exchange turns</text>
+<text x="30" y="567" font-size="14.5" fill="#9a9a94">a surplus rare back into</text>
+<text x="30" y="586" font-size="14.5" fill="#9a9a94">commons.</text>
+<line x1="30" y1="636" x2="870" y2="636" stroke="#30374a" stroke-width="1.5"/>
+<text x="30" y="662" font-size="15" fill="#f0efec">Prices: shop gear from 10000 Bits costs 150% and resells for 5000 + 8% of its old price above</text>
+<text x="30" y="686" font-size="15" fill="#c3c2b7">10000: a 60000 sword costs 90000 and resells for 9000, so OVERFINISH Bits have somewhere to go.</text>
+</svg>
