@@ -992,7 +992,7 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
 }
 
 #ifdef PC_PORT
-/* xp_boost's "all forms": the three chosen forms of each party member, nine at most. A form left in the
+/* DEF_XP_ALL_FORMS (was xp_boost's "all forms"): the three chosen forms of each party member, nine at most. A form left in the
  * lab is not chosen, so it earns nothing here. It used to, and could reach 99 without a skill, because
  * learn_skill only runs for a chosen slot. The panel still credits a marked form, so those are skipped.
  * A member with no panel never reaches that step, so its chosen forms learn one skill here. */
