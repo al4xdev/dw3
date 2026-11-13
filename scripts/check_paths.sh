@@ -8,8 +8,9 @@
 #
 #   scripts/check_paths.sh      exit 1, printing the offending lines
 #
-# Excluded: this file (its patterns are the thing it searches for) and the game's own decompiled strings, where a
-# "C:\DEVELOP\..." is data from the original disc, not a path of ours.
+# Excluded: this file (its patterns are the thing it searches for), the game's own decompiled strings, where a
+# "C:\DEVELOP\..." is data from the original disc, not a path of ours, and .plan/, the owner's working notes,
+# which name the lab machine by design.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -20,7 +21,7 @@ patterns="$patterns|/mnt/[c-z]/"
 patterns="$patterns|C:\\\\Users\\\\[A-Za-z0-9]"
 patterns="$patterns|/media/[a-z0-9_][a-z0-9_.-]*/"
 
-if git grep -nIE "$patterns" -- . ':!scripts/check_paths.sh'; then
+if git grep -nIE "$patterns" -- . ':!scripts/check_paths.sh' ':!.plan/'; then
     echo >&2
     echo "check_paths: the lines above carry a path from a specific machine." >&2
     echo "Rewrite them as placeholders (<name>, \$HOME, /roms) or make them relative to the checkout." >&2

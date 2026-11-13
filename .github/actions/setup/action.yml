@@ -43,7 +43,9 @@ runs:
         echo "DW3_GAMEDATA=$GITHUB_WORKSPACE/dw2003-gamedata" >> "$GITHUB_ENV"
 
     # The psxstack submodule (the PC port's runtime, shim, build and launcher; DECISIONS "The port stack lives in
-    # psxstack"): a public repository, fetched at the commit the gitlink names.
+    # psxstack") at the commit the gitlink names. The job's actions/checkout fetches it (submodules: recursive, with
+    # PSXSTACK_TOKEN when the repository is private: ci.yml's header), so this is a no-op then; a job whose checkout
+    # does not fetches it here, which works only while it is public.
     - name: psxstack submodule
       shell: bash
       run: |

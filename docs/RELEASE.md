@@ -1,14 +1,28 @@
 # Releases
 
-The rules are in DECISIONS "Releases: tagged drafts, published by hand": **one Linux x86_64 AppImage** and **one
-Windows x86_64 zip** for players (each the launcher, the game and the mods' manifests; the player supplies the disc in
-the launcher and never compiles anything), both built on CI's `ubuntu-24.04` runner (the AppImage against glibc 2.39,
-the Windows programs cross-compiled with llvm-mingw: DECISIONS "Windows: cross-built from Linux"), **only for a pushed
-tag `vX.Y.Z`**, and only as a **draft** GitHub Release: the maintainer downloads them, tests them and presses Publish.
-The Windows build is tested on Linux under Wine and Proton; real Windows comes from testers.
+**One Linux x86_64 AppImage** and **one Windows x86_64 zip** for players (each the launcher, the game and the mods'
+manifests; the player supplies the disc in the launcher and never compiles anything), both built on CI's
+`ubuntu-24.04` runner (the AppImage against glibc 2.39, the Windows programs cross-compiled with llvm-mingw and linked
+statically: DECISIONS "Windows: cross-built from Linux"), for a pushed tag `vX.Y.Z` or a manual run given a tag, and
+**published** as a GitHub Release. (Upstream's rule, DECISIONS "Releases: tagged drafts, published by hand", made a
+draft; the repository variable `RELEASE_DRAFT` = `true` brings that back.) No release file ever holds game data:
+`scripts/check_release_contents.py` holds every package to the list of files a release has (programs, the mods'
+`mod.json`, licences, READMEs), before it is kept and again before it is published. The Windows build is tested on Linux
+under Wine; real Windows comes from testers.
 
 The handheld (PortMaster) zip is not part of this flow; `portmaster/make_release.sh` builds it and
 [`portmaster/PUBLISHING.md`](../portmaster/PUBLISHING.md) is its publishing checklist.
+
+## What the repository needs
+
+- **psxstack** (`.gitmodules`: `al4xdev/dw3-psxstack`): the pinned commit pushed there. Public, nothing else; private, a
+  repository secret `PSXSTACK_TOKEN` holding a token that can read it (a fine-grained token, Contents: read on that
+  repository), which every checkout then uses.
+- Nothing else is required. Optional: the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of the private data
+  checkout `<owner>/dw2003-gamedata`): with it the game's Release build passes the port's M1 test and both smoke tests
+  run the bundled game on the disc; without it the smoke tests are disc-free. The repository variables (Settings >
+  Secrets and variables > Actions > Variables) `RELEASE_RUN_CI` = `true` (the whole of `ci.yml` before the packages, a
+  failure there stops the release) and `RELEASE_DRAFT` = `true` (drafts instead of published releases).
 
 ## Making a release
 
@@ -19,25 +33,25 @@ The handheld (PortMaster) zip is not part of this flow; `portmaster/make_release
    ```
    The pattern is `v[0-9]+.[0-9]+.[0-9]+*` (`v0.1.0`, `v0.2.0-rc1`); the decomp's milestone tags such as
    `v0.1-matching-closed` do not match it and start nothing.
-3. `.github/workflows/release.yml` runs (`gh run watch`): the whole of `ci.yml` (every area, with the disc), then two
-   jobs side by side: `appimage` (the game's Release build through the port's M1 test, the AppImage build and its
-   smoke test) and `windows` (the Windows package cross-built and tested unzipped under Wine, "The Windows package"
-   below), then a **draft** release named `dw2003recomp v0.1.0` with `dw2003-0.1.0-x86_64.AppImage`,
-   `dw2003-0.1.0-x86_64.debug` (the game's debug info, for crash reports; below), `dw2003-0.1.0-windows-x86_64.zip`,
-   `dw2003-0.1.0-windows-x86_64-symbols.zip` (the PDBs), `SHA256SUMS`, `SHA256SUMS-windows` and notes generated from
-   the merged pull requests.
-4. Download the draft's AppImage, run it on a desktop (Play with the real disc, a window, sound, a gamepad), run the
-   Windows zip under Wine or Proton the same way (or on a Windows machine when one is at hand), and **Publish** the
-   release on GitHub when it is good (or delete the draft and the tag). Publishing puts binaries built from the
-   decompiled code on the public page: the maintainer's decision each time (DECISIONS "Releases: tagged drafts, published by hand").
+3. `.github/workflows/release.yml` runs (`gh run watch`): with `RELEASE_RUN_CI` the whole of `ci.yml` first, then two
+   jobs side by side: `appimage` (with the disc the game's Release build through the port's M1 test; the AppImage
+   build, its smoke test and the contents check) and `windows` (the Windows package cross-built and tested unzipped
+   under Wine, "The Windows package" below), then a release named `Digimon World 3: Definitive Edition v0.1.0` with
+   `dw2003-0.1.0-x86_64.AppImage`, `dw2003-0.1.0-x86_64.debug` (the game's debug info, for crash reports; below),
+   `dw2003-0.1.0-windows-x86_64.zip`, `dw2003-0.1.0-windows-x86_64-symbols.zip` (the PDBs), `SHA256SUMS`,
+   `SHA256SUMS-windows` and notes generated from the merged pull requests: published, a pre-release when the tag has a
+   suffix (`v0.2.0-rc1`), a draft with `RELEASE_DRAFT`.
+4. Or by hand, for a tag that does not exist yet: Actions > Release > Run workflow with `tag` (`gh workflow run
+   release.yml --ref main -f tag=v0.1.0`; `-f draft=true` for a draft): the tag is created on the run's commit.
 
-A failed run creates no release. To retry after a fix, delete the tag (`git push --delete origin v0.1.0; git tag -d
-v0.1.0`), tag the fixed commit and push again.
+A failed run publishes nothing. To retry after a fix, rerun the workflow (a rerun for a tag whose release exists
+replaces its files and keeps any other, such as the handheld's `dw3.zip`), or delete the tag (`git push --delete
+origin v0.1.0; git tag -d v0.1.0`), tag the fixed commit and push again.
 
 ## The port stack in a release
 
 The port and the launcher are built from the `psxstack` submodule at its pin (`.gitmodules`; DECISIONS "The port stack
-lives in psxstack"). release.yml checks it out with a plain `git submodule update --init` (psxstack is public);
+lives in psxstack"). release.yml's checkouts fetch it (`submodules: recursive`, with `PSXSTACK_TOKEN` when it is set);
 `release_local.sh` fetches it on the host. The release's tag is the input in one place, `DW3_VERSION` (release.yml, `release_local.sh`);
 `package_appimage.sh` and `package_windows.sh` export it as `PSXSTACK_VERSION`, which psxstack's `cmake/version.cmake`
 stamps into both programs (over `git describe` of this repository: `-DPSXSTACK_VERSION_ROOT`). A new runtime or
@@ -64,7 +78,7 @@ unchanged.
 ## Trying a branch's packages
 
 ```sh
-gh workflow run release.yml --ref <branch>     # tests + the AppImage + the Windows zip; no release
+gh workflow run release.yml --ref <branch>     # the AppImage + the Windows zip; no release (no tag given)
 gh run download <run-id> -n dw2003-appimage     # the AppImage, the .debug file and SHA256SUMS (kept 30 days)
 gh run download <run-id> -n dw2003-windows      # the Windows zip, its symbols zip and SHA256SUMS-windows
 ```
@@ -159,4 +173,4 @@ scripts/symbolize.py report.txt --binary dw2003-0.2.2-windows-x86_64/dw2003.exe 
 audio) with `--self-test` and `DW3_SELFTEST_GAME=beside`: the launcher's whole self-test, then the game **the launcher
 finds by its own lookup beside its executable** (it must be `usr/bin/dw2003` inside the AppImage) with at least one
 mod manifest beside it; with `DW3_SELFTEST_DISC` (the disc) the bundled game runs 300 frames from the launcher's command
-and must end normally with the disc checked. release.yml always has the disc.
+and must end normally with the disc checked. release.yml has the disc only with `GAMEDATA_DEPLOY_KEY`.

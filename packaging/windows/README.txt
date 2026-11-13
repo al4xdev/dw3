@@ -1,8 +1,9 @@
 dw2003recomp @VERSION@ for Windows (x86_64)
 ===========================================
 
-Digimon World 2003 (PlayStation, Europe) rebuilt from its decompiled code as a native program.
-https://github.com/gascarcella/dw2003recomp
+Digimon World 3: Definitive Edition, from Digimon World 2003 (PlayStation, Europe) rebuilt from its decompiled
+code as a native program.
+https://github.com/al4xdev/dw3 (built on https://github.com/gascarcella/dw2003recomp)
 
 What you need
 -------------
@@ -35,7 +36,7 @@ Reporting a problem
 -------------------
 This build was tested on Linux through Wine and Proton, not yet on real Windows. If the game crashes, the launcher's
 Play screen shows the exit status and the last lines: press "Copy" and paste the text into a new issue at
-https://github.com/gascarcella/dw2003recomp/issues (the bug report form), and attach the matching crash-<date>.dmp
+https://github.com/al4xdev/dw3/issues (the bug report form), and attach the matching crash-<date>.dmp
 from the crashes folder if there is one. Your disc image and your saves are never part of a report.
 
 LICENSES\README.txt lists the licences of what this package contains.

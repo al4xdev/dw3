@@ -32,7 +32,7 @@ area_of() {
         # Documentation (ci.yml's paths-ignore too): no step reads it.
         docs/*|*.md|LICENSE|.gitignore|.github/ISSUE_TEMPLATE/*) echo none ;;
         # The release's own files: release.yml tests them (a manual run); here only `bash -n`, which always runs.
-        .github/workflows/release.yml|scripts/package_appimage.sh|packaging/*) echo none ;;
+        .github/workflows/release.yml|scripts/package_appimage.sh|scripts/check_release_contents.py|packaging/*) echo none ;;
         # The port: its game side (port/: the adapter, game.json, the mods' manifests; the launcher is built from the
         # stack with port/game/game.json, so port => launcher), the stack's pin (.gitmodules, the psxstack gitlink: a
         # new runtime, shim or launcher), the tools that feed the stack (tools/port_inputs.py, the inventory wrapper,
