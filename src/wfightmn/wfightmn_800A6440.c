@@ -786,7 +786,7 @@ void wfightmn_battle_end(WfightmnMain *obj, WfightmnMainData *data) {
             for (k = 0; k < 3; k++) {
                 id = gamestate_data.funcs.get_party_member(k);
 #ifdef PC_PORT
-                if (port_mod_party_xp != 0) {
+                if (def_on()) { /* a knocked-out member gets none of the shared experience */
                     port_party_xp_knocked_out(k, id >= 0 && party[k].hp <= 0);
                 }
 #endif

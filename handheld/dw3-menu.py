@@ -162,11 +162,11 @@ GLYPH = {
 def defaults():
     """The tuned setup, and what RESET SETTINGS puts back: the owner's own settings on the handheld, so a player who never
     opens this menu gets the configuration that was found to play well - 8x fast-forward with the audio muted, the whole
-    party sharing all the experience, XP 2x and form experience 14x, every digivolution learning from a battle, the
-    evolution buff, and no logs."""
+    evolution buff, and no logs. The experience rules (the party's share, form experience) are the game's own now
+    (the definitive edition), with nothing to set here."""
     return dict(hz=50, ff=1, ff_speed="8x", skip=0, battles=0, hit=0, btext=2, saveany=0, evo=1, bmenu=1, bmem=1, bbuf=1,
                 bm_fight="east", bm_tech="l1", bm_digivolve="north", bm_tag="south", bm_item="r1", bm_run="west",
-                party=1, share=100, xp=1, xp_mul=2, form_xp=1, form_mul=14, all_forms=1, card_boost=1, logs=0, lang=0, lang_on=0)
+                logs=0, lang=0, lang_on=0)
 
 
 def load_state():
@@ -228,13 +228,6 @@ def write_settings(s, disc):
         renderer = renderer_default()
     if renderer not in ("gles", "software", "gpu"):
         renderer = renderer_default()
-    xb_on = bool(s["xp"] or s.get("form_xp", 1))
-    xb_exp = s["xp_mul"] if s["xp"] else 1
-    xb_bits = s["xp_mul"] if s["xp"] else 1
-    xb_form = s["form_mul"] if s.get("form_xp", 1) else 1
-    xb_manual = bool((s["xp"] and s["xp_mul"] > 5) or (s.get("form_xp", 1) and s["form_mul"] > 5))
-    xb_all_forms = bool(s["all_forms"]) if s.get("form_xp", 1) else False
-    xb_card_boost = bool(s.get("card_boost", 1))
     text = """{
   "schema": 1,
   "disc": { "path": "game/%s" },
@@ -250,8 +243,6 @@ def write_settings(s, disc):
     "battle_animations": { "enabled": %s, "hit_reaction": %s },
     "battle_text": { "enabled": %s, "mode": "%s" },
     "global_save": { "enabled": %s, "restore_map_state": true },
-    "party_xp": { "enabled": %s, "share": %d, "knocked_out": false, "catch_up": false },
-    "xp_boost": { "enabled": %s, "exp": %d, "form_exp": %d, "bits": %d, "manual": %s, "all_forms": %s, "card_boost": %s },
     "preset_language": { "enabled": true, "language": "english" },
     "widescreen": { "enabled": false },
     "evo_buff": { "enabled": %s },
@@ -261,8 +252,8 @@ def write_settings(s, disc):
   "input": { "gamepad": %s }
 }
 """ % (os.path.basename(disc), s["hz"], renderer, LOG_LEVELS[s["logs"] % len(LOG_LEVELS)], b(s["ff"]), s["ff_speed"], b(s["skip"]),
-       b(s["battles"]), b(s["hit"]), b(s.get("btext", 2) != 0), BTEXT_MODES[s.get("btext", 2)] if s.get("btext", 2) else "async", b(s["saveany"]), b(s["party"]), s["share"],
-       b(xb_on), xb_exp, xb_form, xb_bits, b(xb_manual), b(xb_all_forms), b(xb_card_boost), b(s["evo"]),
+       b(s["battles"]), b(s["hit"]), b(s.get("btext", 2) != 0), BTEXT_MODES[s.get("btext", 2)] if s.get("btext", 2) else "async", b(s["saveany"]),
+       b(s["evo"]),
        "true",  # the battle HUD is always on now (definitive combat); "enabled" only makes its options apply
        s.get("bm_fight", "east"), s.get("bm_tech", "l1"), s.get("bm_digivolve", "north"),
        s.get("bm_tag", "south"), s.get("bm_item", "r1"), s.get("bm_run", "west"),
@@ -397,13 +388,6 @@ GROUPS = [
         ("bmem", "  REMEMBER CURSOR"),
         ("bbuf", "  BUFFER INPUT"),
     ]),
-    ("xp", "XP", [
-        ("party", "PARTY XP"),
-        ("xp", "XP / BITS BOOST"),
-        ("form_xp", "  FORM XP"),
-        ("all_forms", "  ALL FORMS' XP"),
-        ("card_boost", "  CARD DROP BOOST"),
-    ]),
     ("video", "VIDEO", [
         ("hz", "HZ"),
         ("renderer", "RENDERER"),
@@ -424,7 +408,6 @@ def group_rows(s):
     """The main screen: the groups, then what acts on the console or runs once, then PLAY."""
     return [
         "GAME                SETTINGS",
-        "XP                  SETTINGS",
         "VIDEO               SETTINGS",
         "DEBUG               SETTINGS",
         "LED BAR             %s" % led_state(),
@@ -446,13 +429,6 @@ def field_text(s, key):
         return PLACE_DISPLAY.get(place, place).upper()
     if key == "ff":
         return "%s  %s" % (on(s["ff"]), s["ff_speed"].upper()) if s["ff"] else "off"
-    if key == "party":
-        return "%s  %s%%" % (on(s["party"]), s["share"]) if s["party"] else "off"
-    if key == "xp":
-        return "%s  %sX" % (on(s["xp"]), s["xp_mul"]) if s["xp"] else "off"
-    if key == "form_xp":
-        # Independent from the Digimon XP row: forms can be boosted while general Digimon XP remains vanilla (1x).
-        return "%s  %sX" % (on(s.get("form_xp", 1)), s["form_mul"]) if s.get("form_xp", 1) else "off"
     if key == "hz":
         return "%s" % s["hz"]
     if key == "renderer":
@@ -463,10 +439,6 @@ def field_text(s, key):
         return "ZIP"
     if key == "clean_logs":
         return "ASK"
-    if key == "all_forms":
-        return on(s["all_forms"]) if s.get("form_xp", 1) else "off"
-    if key == "card_boost":
-        return on(s.get("card_boost", 1))
     if key == "btext":
         return BTEXT_MODES[s.get("btext", 2) % 3].upper()
     if key == "bmem":
@@ -505,39 +477,6 @@ def field_toggle(s, key, direction=1):
                 s["ff_speed"] = "4x"
             else:
                 s["ff_speed"] = order[order.index(s["ff_speed"]) + 1]
-    elif key == "party":
-        if not s["party"]:
-            s["party"] = 1
-        else:
-            s["share"] += 25
-            if s["share"] > 100:
-                s["party"] = 0
-                s["share"] = 50
-    elif key == "xp":
-        # off, then 2x up to 20x one step at a time, and back to off. 2x is the tuned default (the owner's calibration):
-        # the Digimon's own pace, with the forms on their own row. Above 5x the settings' `manual` flag is written on, or
-        # the game's own restriction would cap the figure at 5x.
-        if not s["xp"]:
-            s["xp"] = 1
-            s["xp_mul"] = 2
-        else:
-            s["xp_mul"] += 1
-            if s["xp_mul"] > 20:
-                s["xp"] = 0
-                s["xp_mul"] = 2
-    elif key == "form_xp":
-        # 1x (the battle's own form experience) up to 20x, one step at a time, then off. Separate from the row above
-        # on purpose: the Digimon's experience and the forms' experience are different rewards, and this is the knob
-        # for the forms (the game unlocks a form's later skills at form levels 25, 45...). Above 5x `manual` goes on
-        # in write_settings.
-        if not s.get("form_xp", 1):
-            s["form_xp"] = 1
-            s["form_mul"] = 1
-        else:
-            s["form_mul"] += 1
-            if s["form_mul"] > 20:
-                s["form_xp"] = 0
-                s["form_mul"] = 1
     elif key == "renderer":
         renderer_toggle()
     elif key == "logs":
@@ -554,14 +493,6 @@ def field_toggle(s, key, direction=1):
             s["hit"] = 1
         else:
             s["hit"] ^= 1
-    elif key == "all_forms":
-        if not s.get("form_xp", 1):
-            s["form_xp"] = 1
-            s["all_forms"] = 1
-        else:
-            s["all_forms"] ^= 1
-    elif key == "card_boost":
-        s["card_boost"] = 0 if s.get("card_boost", 1) else 1
     elif key in ("skip", "battles", "saveany", "evo"):
         s[key] ^= 1
 

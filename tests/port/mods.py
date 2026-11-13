@@ -42,14 +42,11 @@ preset_language (no script of its own):
   - French through new_game.json's route from the opening (its CNTY_SEL steps replaced by a wait for map 0xE02) to
     the first field map: the opening well before the emulator's (which goes through the screen), and the new game's
     deck names (gamestate_init_records, at the title's New Game) are the French text file's.
-party_xp: first_battle_save's route to back_on_field (the first battle: party member 0 fights alone, 4 experience),
-the mod on with its defaults (share 50) and with share 100, and off: the checkpoints up to battle_won have the
-emulator's stable hashes (the mod acts in the report only); from battle_won to battle_end member 0 gains 4 in every
-run and members 1 and 2 gain 2, 4 and 0, and the money 50. Catch-up and knocked-out members are not reached by this battle.
-xp_boost: the same route with the mod on: exp 3 and bits 2.5 (12 experience for member 0, 125 bits instead of 50);
-exp and bits 10 with `manual` and party_xp's default share (40, 20, 20 and 500 bits); and 10 without `manual`
-(capped at the sliders' 5x: 20 and 250 bits). Each run logs two boosts (the experience and the bits); the first battle
-gives no form experience (member 0 fights as its own form), so `form_exp` is not reached by a scripted run.
+definitive_xp (the party_xp and xp_boost mods, now the game's own: PRD 3): first_battle_save's route to
+back_on_field (party member 0 fights alone, 4 experience). With DW3_DEFINITIVE=1 the members who sat out gain the
+fighter's whole share (4, 4, 4) and the money stays 50 (no bits boost); without it, the original's (4, 0, 0) with the
+emulator's stable hashes up to battle_won. The 14x form experience is not reached by a scripted run (member 0 fights
+as its own form).
 widescreen (no script of its own): first_battle_save to back_on_field with the mod on, in the headless build
 (no GPU renderer): the frame log equals the run without the mod (the mod changes nothing the game does; the renderer
 draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the picture stays 4:3.
@@ -428,7 +425,6 @@ def preset_language(binary, out):
     check(got == want, f"French: the new game's deck names are the French text file's (0x35, entries 0x16-0x18): {got}")
 
 
-PX_GAINS = {"px_on": (4, 2, 2), "px_full": (4, 4, 4), "px_off": (4, 0, 0)}
 FIRST_BATTLE_MONEY = 50  # stfgtrep_rewards[records_battle_results.battle].money of the first battle
 
 
@@ -443,10 +439,11 @@ def gs_money(dump):
     return int.from_bytes(dump[0x6C:0x70], "little", signed=True)
 
 
-def first_battle_runs(binary, out, runs):
+def first_battle_runs(binary, out, runs, env=None, same_battle=True):
     """first_battle_save's route to back_on_field once per (label, mods) of `runs` (mods None: off). Yields (label,
     mods, the party's exp gains and the money gain from battle_won to battle_end, stderr) for the runs that reach
-    back_on_field with battle_start and battle_won at the emulator's stable hashes (the mods act in the report only)."""
+    back_on_field; with `same_battle`, battle_start and battle_won must be at the emulator's stable hashes (the mods act
+    in the report only). `env` is added to each run's environment."""
     fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
     j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")
     script = derived(out, "first_battle", fbs[:j + 1])
@@ -456,7 +453,7 @@ def first_battle_runs(binary, out, runs):
         dumps.mkdir()
         cfg = settings(out, label, mods) if mods else None
         rc, _, rec, err = run_port(binary, out, label, script, cfg, mods is not None,
-                                   {"DW3_PORT_CHECKPOINT_DIR": str(dumps)})
+                                   dict(env or {}, DW3_PORT_CHECKPOINT_DIR=str(dumps)))
         d = {f.name.split("_", 1)[1][:-4]: f.read_bytes() for f in dumps.glob("cp*.bin")}
         if rc != 0 or "battle_end" not in d:
             check(False, f"{label}: the run reaches back_on_field (exit {rc})")
@@ -464,44 +461,27 @@ def first_battle_runs(binary, out, runs):
             continue
         cps = {c["name"]: c for c in rec["checkpoints"]}
         before = ("battle_start", "battle_won")
-        check(all(cps[n]["gamestate_sha1_stable"] == emu[n]["gamestate_sha1_stable"] for n in before),
-              f"{label}: battle_start and battle_won have the emulator's stable hashes")
+        if same_battle:
+            check(all(cps[n]["gamestate_sha1_stable"] == emu[n]["gamestate_sha1_stable"] for n in before),
+                  f"{label}: battle_start and battle_won have the emulator's stable hashes")
         won, end = px_party_exp(d["battle_won"]), px_party_exp(d["battle_end"])
         gains = tuple(e[1] - w[1] for w, e in zip(won, end))
         yield label, mods, won, gains, gs_money(d["battle_end"]) - gs_money(d["battle_won"]), err
 
 
-def party_xp(binary, out):
-    """party_xp: the first battle's report with the mod on (share 50, share 100) and off (the docstring)."""
-    print("mods: party_xp (first_battle_save to back_on_field: the first battle, one member of three fights)")
-    runs = (("px_on", {"party_xp": {"enabled": True}}),
-            ("px_full", {"party_xp": {"enabled": True, "share": 100, "catch_up": True}}),
-            ("px_off", None))
-    for label, mods, won, gains, money, err in first_battle_runs(binary, out, runs):
-        shares = err.count("party xp: frame")
-        check(gains == PX_GAINS[label] and shares == (3 if mods else 0),
-              f"{label}: the party (Digimon {', '.join(str(w[0]) for w in won)}) gains {gains}, "
-              f"want {PX_GAINS[label]}; {shares} share(s) logged")
-        check(money == FIRST_BATTLE_MONEY, f"{label}: the money gain {money}, want {FIRST_BATTLE_MONEY}")
-
-
-# label -> (the party's exp gains, the money gain)
-XB_WANT = {"xb_on": ((12, 0, 0), 125), "xb_party": ((40, 20, 20), 500), "xb_capped": ((20, 0, 0), 250)}
-
-
-def xp_boost(binary, out):
-    """xp_boost: the first battle's report with the mod on (the docstring)."""
-    print("mods: xp_boost (first_battle_save to back_on_field: the first battle, 4 experience and 50 bits)")
-    runs = (("xb_on", {"xp_boost": {"enabled": True, "exp": 3, "bits": 2.5}}),
-            ("xb_party", {"xp_boost": {"enabled": True, "exp": 10, "bits": 10, "manual": True},
-                          "party_xp": {"enabled": True}}),
-            ("xb_capped", {"xp_boost": {"enabled": True, "exp": 10, "bits": 10}}))
-    for label, mods, won, gains, money, err in first_battle_runs(binary, out, runs):
-        want = XB_WANT[label]
-        boosts = [line.split(": ", 2)[2] for line in err.splitlines() if "xp boost: frame" in line]
-        check((gains, money) == want and len(boosts) == 2,
-              f"{label}: the party gains {gains} and {money} bits, want {want[0]} and {want[1]} "
-              f"({'; '.join(boosts)})")
+def definitive_xp(binary, out):
+    """The definitive edition's experience (PRD 3, A: the party_xp and xp_boost mods made the game's own): with
+    DW3_DEFINITIVE=1 and no mod, the first battle's report gives the two members who sat out the fighter's whole share
+    (DEF_XP_PARTY_SHARE 100) and the money is the battle's own (no bits boost); without it, the original's report."""
+    print("mods: definitive_xp (first_battle_save to back_on_field: one member of three fights, 4 experience)")
+    want = {"xp_definitive": (4, 4, 4), "xp_original": (4, 0, 0)}
+    for label, env in (("xp_definitive", {"DW3_DEFINITIVE": "1"}), ("xp_original", None)):
+        for _, _, won, gains, money, err in first_battle_runs(binary, out, ((label, None),), env, env is None):
+            shares = err.count("party xp: frame")
+            check(gains == want[label] and shares == (3 if env else 0),
+                  f"{label}: the party (Digimon {', '.join(str(w[0]) for w in won)}) gains {gains}, want {want[label]}; "
+                  f"{shares} share(s) logged")
+            check(money == FIRST_BATTLE_MONEY, f"{label}: the money gain {money}, want {FIRST_BATTLE_MONEY}")
 
 
 def evo_buff(binary, out):
@@ -665,8 +645,7 @@ def battle_menu_flow(binary, out, state):
 MODS_TESTS = {
     "preset_language": lambda binary, out, record: preset_language(binary, out),
     "skip_dialogues": skip_dialogues,
-    "party_xp": lambda binary, out, record: party_xp(binary, out),
-    "xp_boost": lambda binary, out, record: xp_boost(binary, out),
+    "definitive_xp": lambda binary, out, record: definitive_xp(binary, out),
     "evo_buff": lambda binary, out, record: evo_buff(binary, out),
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),

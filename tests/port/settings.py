@@ -6,8 +6,8 @@ Usage: tests/port/settings.py [--out DIR] [-j N] [--no-sdl]
 Builds the headless port if needed (tests/port/run.py's build), then checks, with `--print-settings`:
   - the round trip: a file's effective settings, printed and loaded again from another directory, print the same;
   - the mods: every port/mods/<id>/mod.json equal to the game's registry (--print-mods) and copied beside the binary,
-    the manifests' presets valid for the game's options, the values read and resolved (defaults filled in; a value
-    above an option's slider_max capped while its input_toggle is off), unknown mods and options logged, mods off
+    the manifests' presets valid for the game's options, the values read and resolved (defaults filled in),
+    unknown mods and options logged, mods off
     under --script unless --script-mods;
   - the defaults (every key absent), relative paths resolved against the file's directory, null memory cards;
   - the command line overriding the file (--disc, --scale, --memcard1 none, --watchdog);
@@ -296,13 +296,8 @@ def main():
     check("mods.fast_forward.turbo: unknown option, ignored" in err, "an unknown option: logged and ignored")
     _, s, _ = printed(binary, a / "settings.json")
     check(s["mods"]["fast_forward"]["enabled"] is False, "a mod absent from the settings is off")
-    for manual, want in ((False, 5), (True, 8.5)):
-        _, s, err = printed(binary, write(out / f"capped_{manual}.json", {"schema": 1, "mods": {
-            "xp_boost": {"enabled": True, "exp": 8.5, "bits": 3, "manual": manual}}}))
-        xb = s["mods"]["xp_boost"]
-        check(xb["exp"] == want and xb["bits"] == 3 and ("mods.xp_boost.exp: 8.5 is above 5 without manual" in err)
-              != manual, f"input_toggle {'on: a value up to max' if manual else 'off: capped at slider_max'} "
-              f"(exp {xb['exp']})")
+    # The slider cap (an option above slider_max kept only with its input_toggle) was checked on xp_boost, the one mod
+    # that had such options; it left the build with the definitive edition (PRD 3), and no builtin mod has one now.
 
     print("settings: errors (exit 64, the key named)")
     bad = {

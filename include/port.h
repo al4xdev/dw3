@@ -168,26 +168,11 @@ void port_global_save_restore(const void *slot);
  * the opening as the menu would, without drawing the screen. */
 extern int port_mod_preset_language;
 extern s32 port_preset_language;
-/* port_mod_party_xp: party_xp is on ("Party experience"): at the end of every battle WFIGHTMN tells
- * port_party_xp_knocked_out which party slots are at 0 HP (before it clears their took_part), and STFGTREP's report,
- * once it has created the members' panels, sets each panel's experience to port_party_xp_share(slot, took_part, exp)
- * (`exp`: one fighter's split share; the result is before item 0x141's fifth, which get_exp then adds). */
-extern int port_mod_party_xp;
+/* The party's shared experience (definitive edition, PRD 3; game_mods.c): at the end of every battle WFIGHTMN tells
+ * port_party_xp_knocked_out which party slots are at 0 HP, and STFGTREP's report sets each member's experience to
+ * port_party_xp_share(slot, took_part, exp). Both only when def_on. */
 void port_party_xp_knocked_out(s32 slot, s32 knocked_out);
 s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp);
-/* port_mod_xp_boost: xp_boost is on ("XP boost"): STFGTREP's report passes each of a won battle's rewards through
- * port_xp_boost: the experience once it is split among the fighters (before party_xp's shares and item 0x141's
- * fifth), a form's experience once stfgtrep_get_technique_exp has capped it, and the money with item 0x142's fifth. */
-extern int port_mod_xp_boost;
-enum { PORT_XP_BOOST_EXP, PORT_XP_BOOST_FORM_EXP, PORT_XP_BOOST_BITS };
-s32 port_xp_boost(s32 kind, s32 amount);
-/* port_mod_xp_boost_all_forms: the same mod's "form experience for every form" option. The game gives a won battle's
- * form experience only to the forms that fought (records_battle_results' forms[] marks them, and only the member that
- * acted gets a panel that credits them); with this on, every form the party owns (up to 44 a Digimon) earns the game's
- * own number for its Digimon, whether it fought or not, once per battle - the panel still credits the marked forms. */
-extern int port_mod_xp_boost_all_forms;
-/* port_mod_xp_boost_card_boost: when on, winning a battle that drops any Booster Pack (Cardmon) grants 15 packs. */
-extern int port_mod_xp_boost_card_boost;
 /* port_mod_evo_buff: evo_buff is on ("Evolution buff"): the first Digimon in each battle to evolve gains +100 to every
  * stat for the rest of the fight (the rules, get_stats) and, on the enemy turn that follows, takes no damage (Guard at
  * the ceiling, get_stats, only where it is the target: first == 0). One per battle: dw3_evo_buff_member (set on the
@@ -235,12 +220,11 @@ void port_bm_remember(s32 kind, s32 member, s32 value);
 void port_bm_log(s32 kind, s32 id, s32 position);
 void port_bm_log_last(s32 last);
 
-/* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE / _XP, default on).
+/* Handheld features. Each is a runtime if (DW3_FEAT_ICONS / _TRAVEL / _OBJECTIVE, default on).
  * A failure is logged once, never per frame. */
 extern int dw3_feat_icons;
 extern int dw3_feat_travel;
 extern int dw3_feat_objective;
-extern int dw3_feat_xp;
 void dw3_feats_arm(void);
 /* The player's pad map (pad.map's middle column), applied by pad_read_buttons on the raw pad bits: the port keeps the
  * original PS1 positions and does not apply records_language's face-button rotation first. Identity unless

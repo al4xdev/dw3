@@ -1,5 +1,5 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost, evo_buff, widescreen, led_bar, battle_menu and battle_text
+ * battle_animations, global_save, preset_language, evo_buff, widescreen, led_bar, battle_menu and battle_text
  * (and, after them, the handheld's features and the player's pad.map), as PortMod records the
  * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "battle_scan.h"
+#include "definitive.h"
 #include "fieldstg.h"
 #include "gamestate.h"
 #include "led.h"
@@ -265,29 +266,11 @@ static void pl_start(struct PortMod *mod) {
              (int)port_preset_language);
 }
 
-/* ---- party_xp (docs/LAUNCHER.md "Party experience"; docs/MECHANICS.md section 6, "Who gets a battle's experience"):
- * while enabled, port_mod_party_xp makes STFGTREP's report ask port_party_xp_share for every party member's
- * experience. A member that took part keeps one fighter's split share; one that did not gets `share` percent of it
- * (at least 1 when both are above 0), a knocked-out one (port_party_xp_knocked_out, from WFIGHTMN) only with
- * `knocked_out`. With `catch_up` a member below the party's highest level gets 10% more per level below it, at most
- * twice as much. The report then shows, counts and adds it as it does a fighter's (item 0x141's fifth included); form
- * experience is xp_boost's own business (its all_forms option), not this mod's. */
-enum { PX_SHARE, PX_KNOCKED_OUT, PX_CATCH_UP };
-static const PortModOption px_options[] = {
-    { .id = "share", .type = PORT_MOD_INT, .def = "50", .min = 0, .max = 100, .step = 5, .applies = "live" },
-    { .id = "knocked_out", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
-    { .id = "catch_up", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
-};
-int port_mod_party_xp;
-static int px_share, px_knocked_out, px_catch_up;
+/* ---- The party's shared experience (definitive edition, PRD 3, A; was the party_xp mod; docs/MECHANICS.md section 6):
+ * STFGTREP's report asks port_party_xp_share for every party member's experience. A member that took part keeps one
+ * fighter's split share; one that sat out gets DEF_XP_PARTY_SHARE percent of it (at least 1 when both are above 0); a
+ * knocked-out one (port_party_xp_knocked_out, from WFIGHTMN) gets none. */
 static int px_ko[3]; /* the last battle's party slots at 0 HP */
-
-static void px_start(struct PortMod *mod) {
-    port_mod_party_xp = 1;
-    px_share = (int)mod->values[PX_SHARE].number;
-    px_knocked_out = mod->values[PX_KNOCKED_OUT].number != 0;
-    px_catch_up = mod->values[PX_CATCH_UP].number != 0;
-}
 
 void port_party_xp_knocked_out(s32 slot, s32 knocked_out) {
     if (slot >= 0 && slot < 3) {
@@ -295,85 +278,22 @@ void port_party_xp_knocked_out(s32 slot, s32 knocked_out) {
     }
 }
 
-static s32 px_level(s32 slot) {
-    s32 id = gamestate_data.funcs.get_party_member(slot);
-    return id >= 0 ? gamestate_data.digimon[id].record.stats.values[0] : -1;
-}
-
 s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
-    const char *how = took_part ? "took part" : px_ko[slot] ? "knocked out" : "sat out";
-    s32 gain = exp, lv = px_level(slot), top = lv, bonus = 0, k;
+    s32 gain = exp;
+
     if (!took_part) {
-        if (px_ko[slot] && !px_knocked_out) {
+        if (px_ko[slot]) {
             gain = 0;
         } else {
-            gain = exp * px_share / 100;
-            if (gain == 0 && exp > 0 && px_share > 0) {
+            gain = exp * DEF_XP_PARTY_SHARE / 100;
+            if (gain == 0 && exp > 0 && DEF_XP_PARTY_SHARE > 0) {
                 gain = 1;
             }
         }
     }
-    if (px_catch_up && gain > 0) {
-        for (k = 0; k < 3; k++) {
-            top = px_level(k) > top ? px_level(k) : top;
-        }
-        bonus = (top - lv) * 10 > 100 ? 100 : (top - lv) * 10;
-        gain += gain * bonus / 100;
-    }
-    port_log("party xp: frame %ld: slot %d (level %d) %s: %d of the fighters' %d%s", port_frames, slot, lv, how, gain,
-             exp, bonus > 0 ? " (catch-up)" : "");
+    port_log("party xp: frame %ld: slot %d %s: %d of the fighters' %d", port_frames, slot,
+             took_part ? "took part" : px_ko[slot] ? "knocked out" : "sat out", gain, exp);
     return gain;
-}
-
-/* ---- xp_boost (docs/LAUNCHER.md "XP boost"): while enabled, port_mod_xp_boost makes STFGTREP's report pass a won
- * battle's experience (one fighter's split share), each form's experience (after the game's 10 or 50 cap) and the money
- * (item 0x142's fifth included) through port_xp_boost, which multiplies them by `exp`, `form_exp` and `bits` (in tenths,
- * rounded down, at most 9,999,999). Above 5x (the sliders' top) a value needs `manual` (mod_resolve caps it without).
- * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. `all_forms` is
- * not a multiplier: STFGTREP's report credits every owned form of every party member once, whether it fought or not. */
-enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL, XB_ALL_FORMS, XB_CARD_BOOST };
-static const PortModOption xb_options[] = {
-    /* 20, not 10: an old game asks for it (the owner's word), and the handheld menu counts to 20 in steps of 1. */
-    { .id = "exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
-      .input_toggle = "manual", .applies = "live" },
-    { .id = "form_exp", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
-      .input_toggle = "manual", .applies = "live" },
-    { .id = "bits", .type = PORT_MOD_FLOAT, .def = "2", .min = 1, .max = 20, .step = 0.1, .slider_max = 5,
-      .input_toggle = "manual", .applies = "live" },
-    { .id = "manual", .type = PORT_MOD_BOOL, .def = "false", .applies = "live" },
-    { .id = "all_forms", .type = PORT_MOD_BOOL, .def = "true", .applies = "live" },
-    { .id = "card_boost", .type = PORT_MOD_BOOL, .def = "true", .applies = "live" },
-};
-static const char *const xb_names[] = { "experience", "form experience", "bits" };
-int port_mod_xp_boost;
-int port_mod_xp_boost_all_forms;
-int port_mod_xp_boost_card_boost = 1;
-static s32 xb_tenths[3];
-
-static void xb_start(struct PortMod *mod) {
-    int k;
-    port_mod_xp_boost = 1;
-    port_mod_xp_boost_all_forms = mod->values[XB_ALL_FORMS].number != 0.0;
-    port_mod_xp_boost_card_boost = mod->values[XB_CARD_BOOST].number != 0.0;
-    for (k = 0; k < 3; k++) {
-        xb_tenths[k] = (s32)(mod->values[XB_EXP + k].number * 10 + 0.5);
-    }
-    port_log("xp boost: experience %d.%dx, form experience %d.%dx, bits %d.%dx (card boost: %d)",
-             (int)xb_tenths[0] / 10, (int)xb_tenths[0] % 10,
-             (int)xb_tenths[1] / 10, (int)xb_tenths[1] % 10,
-             (int)xb_tenths[2] / 10, (int)xb_tenths[2] % 10,
-             port_mod_xp_boost_card_boost);
-}
-
-s32 port_xp_boost(s32 kind, s32 amount) {
-    long long r;
-    if (kind < 0 || kind > 2 || amount <= 0) {
-        return amount;
-    }
-    r = (long long)amount * xb_tenths[kind] / 10;
-    r = r > 9999999 ? 9999999 : r;
-    port_log("xp boost: frame %ld: %s %d -> %lld", port_frames, xb_names[kind], (int)amount, r);
-    return (s32)r;
 }
 
 /* ---- evo_buff (docs/LAUNCHER.md "Evolution buff"): while enabled, the first Digimon in each battle to evolve gains
@@ -692,10 +612,6 @@ static PortMod game_mod_table[] = {
       .option_count = (int)(sizeof(gs_options) / sizeof(gs_options[0])), .start = gs_start },
     { .id = "preset_language", .version = "0.1", .options = pl_options,
       .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start },
-    { .id = "party_xp", .version = "0.1", .options = px_options,
-      .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
-    { .id = "xp_boost", .version = "0.1", .options = xb_options,
-      .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
     { .id = "evo_buff", .version = "0.1", .start = eb_start, .status = eb_status },
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
     { .id = "led_bar", .version = "0.1", .start = led_bar_start, .frame = led_bar_frame,
@@ -719,7 +635,6 @@ PortMod *game_mods(void) {
 void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, gs_opened_from);
     PORT_STATE_VAR(s, px_ko);
-    PORT_STATE_VAR(s, xb_tenths);
     PORT_STATE_VAR(s, port_battle_text_windows);
     PORT_STATE_VAR(s, port_battle_text_frames);
     PORT_STATE_VAR(s, bmb);
@@ -733,10 +648,6 @@ void game_savestate(struct PortState *s) {
 int dw3_feat_icons = 1;
 int dw3_feat_travel = 1;
 int dw3_feat_objective = 1;
-/* Off by default: the owner dropped the experience boost as too dangerous to the game's balance, and it stayed on by
- * default for a while after that decision - the kind of thing a player only notices hours later. The settings file's
- * "mods.xp_boost.enabled" (or DW3_FEAT_XP=1) turns it on for a run. */
-int dw3_feat_xp = 0;
 
 extern u8 ststatus_map_areas[];
 
@@ -757,13 +668,7 @@ void dw3_feats_arm(void) {
     dw3_feat_icons = feat_on("DW3_FEAT_ICONS", dw3_feat_icons);
     dw3_feat_travel = feat_on("DW3_FEAT_TRAVEL", dw3_feat_travel);
     dw3_feat_objective = feat_on("DW3_FEAT_OBJECTIVE", dw3_feat_objective);
-    dw3_feat_xp = feat_on("DW3_FEAT_XP", dw3_feat_xp);
-    if (dw3_feat_xp && !port_mod_xp_boost) {
-        port_mod_xp_boost = 1;
-        xb_tenths[0] = xb_tenths[1] = xb_tenths[2] = 50;
-    }
-    port_log("dw3 feats: icons %d travel %d objective %d xp %d (%dx)", dw3_feat_icons, dw3_feat_travel,
-             dw3_feat_objective, dw3_feat_xp, (int)(xb_tenths[1] / 10));
+    port_log("dw3 feats: icons %d travel %d objective %d", dw3_feat_icons, dw3_feat_travel, dw3_feat_objective);
 }
 
 /* ---- pad.map (handheld/dw3-menu.py writes it): one line per PS1 button, "<button> <gamepad input> <letter>".

@@ -1,4 +1,7 @@
 #include "common.h"
+#ifdef PC_PORT
+#include "port/game/definitive.h" /* the definitive edition's constants */
+#endif
 #include "object.h"
 #include "cdload.h"
 #include "sound.h"
@@ -897,11 +900,6 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         if (rec->equipment[4] == 0x142 || rec->equipment[5] == 0x142) {
             money += stfgtrep_rewards[records_battle_results.battle].money / 5;
         }
-#ifdef PC_PORT
-        if (port_mod_xp_boost != 0) {
-            money = port_xp_boost(PORT_XP_BOOST_BITS, money);
-        }
-#endif
         data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 10);
         data->messages->set_line_number(data->messages, 1, money);
         data->messages->set_speed(data->messages, 6);
@@ -916,10 +914,10 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         if (records_battle_results.item != 0) {
             s32 item_gain = 1;
 #ifdef PC_PORT
-            if (port_mod_xp_boost != 0 && port_mod_xp_boost_card_boost != 0 &&
-                (records_battle_results.item == 91 ||
-                 (records_battle_results.item >= 361 && records_battle_results.item <= 394))) {
-                item_gain = 15;
+            /* definitive edition (PRD 3, A): a Booster Pack drop gives DEF_CARD_BOOST_PACKS of them */
+            if (def_on() && (records_battle_results.item == 91 ||
+                             (records_battle_results.item >= 361 && records_battle_results.item <= 394))) {
+                item_gain = DEF_CARD_BOOST_PACKS;
             }
 #endif
             data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 11);
@@ -1079,11 +1077,6 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
                 exp = stfgtrep_rewards[records_battle_results.battle].exp / 3;
                 break;
             }
-#ifdef PC_PORT
-            if (port_mod_xp_boost != 0) {
-                exp = port_xp_boost(PORT_XP_BOOST_EXP, exp);
-            }
-#endif
             for (i = 0; i < obj->member_count; i++) {
                 if (records_battle_results.members[i].took_part != 0) {
                     m = stfgtrep_member_create(obj, i, exp);
@@ -1094,7 +1087,7 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
                 }
             }
 #ifdef PC_PORT
-            if (port_mod_party_xp != 0) {
+            if (def_on()) { /* definitive edition (PRD 3, A): the members who sat out share the experience */
                 for (i = 0; i < obj->member_count; i++) {
                     m = data->members[i];
                     m->exp_gained = port_party_xp_share(i, records_battle_results.members[i].took_part, exp);
@@ -1105,7 +1098,7 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
             /* all_forms is granted here, before the panels open, so a member without a panel (it did not fight) still
              * earns; the panel of the member that did fight credits its marked forms itself (stfgtrep_member_run's
              * step 20), and the helper skips exactly those. */
-            if (port_mod_xp_boost_all_forms != 0) {
+            if (def_on() && DEF_XP_ALL_FORMS) {
                 for (i = 0; i < obj->member_count; i++) {
                     stfgtrep_grant_party_forms(i, stfgtrep_rewards[records_battle_results.battle].tech_exp,
                                                obj->techniques_used, data->members[i]);
@@ -1518,8 +1511,8 @@ s32 stfgtrep_mark_skill(s32 digimon, s32 tech) {
  * name says technique; it is not the technique points, and not the Digimon's own experience) earns from a won battle.
  * `a` is the battle's share, `n` the forms that took part. The clamps are the game's own ceiling per battle: 10 points
  * before the fifth level threshold and 50 after it - the reason a form creeps one level a battle in the original.
- * port_mod_xp_boost's `form_exp` multiplies this number; with the mod on the clamp is skipped so that the ceiling,
- * which exists to pace a 99-battle evolution, does not eat the multiplier. */
+ * The definitive edition multiplies this number by DEF_XP_FORM_MULT and skips the clamp, so that the ceiling, which
+ * exists to pace a 99-battle evolution, does not eat the multiplier. */
 s32 stfgtrep_get_technique_exp(s32 digimon, s32 tech, s32 exp, s32 n) {
     GamestateForm rec;
     RecordsDigimon *t;
@@ -1552,12 +1545,10 @@ s32 stfgtrep_get_technique_exp(s32 digimon, s32 tech, s32 exp, s32 n) {
     if (e <= 0) {
         e = 1;
 #ifdef PC_PORT
-    } else if (port_mod_xp_boost != 0) {
+    } else if (def_on()) {
         /* The cap below is the game's own: a battle can hand out 10 points before the fifth level threshold and 50 after
-         * it, whatever it fought. It is applied *before* the boost, so a 6x setting multiplied 10 into 60 - enough to
-         * creep one level a battle and nothing more, which is what the owner saw. With the mod on, the share goes in as
-         * it was computed: stfgtrep_add_technique_exp raises as many levels as the experience pays for (the do/while
-         * around level_thresholds, up to 99), so the boost means what its name says. */
+         * it, whatever it fought. Applied before the multiplier, 14x would turn 10 into 140 - a creep of a level a
+         * battle. The share goes in as computed: stfgtrep_add_technique_exp raises as many levels as it pays for. */
 #endif
     } else if (rec.level < t->level_thresholds[5]) {
         if (e > 10) {
@@ -1567,8 +1558,8 @@ s32 stfgtrep_get_technique_exp(s32 digimon, s32 tech, s32 exp, s32 n) {
         e = 50;
     }
 #ifdef PC_PORT
-    if (port_mod_xp_boost != 0) {
-        e = port_xp_boost(PORT_XP_BOOST_FORM_EXP, e);
+    if (def_on()) {
+        e = e * DEF_XP_FORM_MULT > 9999999 ? 9999999 : e * DEF_XP_FORM_MULT; /* PRD 3, A: the form experience */
     }
 #endif
     return e;
