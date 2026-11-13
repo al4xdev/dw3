@@ -92,15 +92,25 @@ static void chain_cases(void) {
     check("relay: it leaves the window's own free swap for later", c.swap_used == 0 && def_chain_swap_free(&c, 0) == 1);
 
     def_chain_reset(&c);
-    for (i = 0; i < 3; i++) { /* all but the weakness elements: each in its own window gives one */
+    for (i = 0; i < 3; i++) { /* Fire, Water, Wind: three families in one window give three */
+        static const int elems[3] = { 0, 1, 3 };
+
         def_chain_party_turn(&c);
-        def_chain_player_hit(&c, 0, 1, i, 1);
+        def_chain_player_hit(&c, 0, 1, elems[i], 1);
         c.staggered[0] = 1;
         if (def_chain_take_extra(&c) != 1) {
             break;
         }
     }
-    check("chain: three weakness elements in one window, three extras (no cap)", i == 3 && c.window_used == 7);
+    check("chain: three weakness families in one window, three extras (no cap)", i == 3 && c.window_used == 0x0F);
+
+    def_chain_reset(&c);
+    turn(&c, 1, 1, 1); /* Water: its extra */
+    def_chain_party_turn(&c);
+    def_chain_player_hit(&c, 0, 1, 2, 1);
+    check("chain: Ice after Water in the window gives no second extra (one affinity), the target stays open",
+          def_chain_take_extra(&c) == 0 && c.staggered[0] == 1);
+
 }
 
 static void mult_case(const char *name, int got, int want) {
@@ -137,35 +147,38 @@ static void multiplier_cases(void) {
 int main(void) {
     const short equal[7] = { 100, 100, 100, 100, 100, 100, 100 };
     const short one[7] = { 60, 100, 100, 100, 100, 100, 100 };
-    const short two[7] = { 60, 60, 100, 100, 100, 100, 100 };
-    const short three[7] = { 60, 70, 50, 100, 100, 100, 100 };
-    const short ties[7] = { 60, 60, 60, 100, 100, 100, 100 };
-    const short edge_in[7] = { 80, 100, 100, 100, 100, 100, 100 };
+    const short two[7] = { 60, 60, 60, 100, 100, 100, 100 };      /* Fire and Water+Ice: two families */
+    const short water[7] = { 100, 60, 100, 100, 100, 100, 100 };  /* Water low, Ice not (a modifier): the pair is one */
+    const short machine[7] = { 100, 100, 100, 100, 100, 60, 100 };
+    const short three[7] = { 60, 60, 60, 60, 100, 100, 100 };     /* three families: no cap any more */
+    const short all_low[7] = { 60, 60, 60, 60, 60, 60, 100 };     /* every family: no median to hide them */
+    const short edge_in[7] = { 80, 100, 100, 100, 100, 100, 100 }; /* DEF_WEAK_MAX itself */
     const short edge_out[7] = { 81, 100, 100, 100, 100, 100, 100 };
-    const short buffed[7] = { 120, 60, 100, 100, 100, 100, 100 }; /* `one` with Fire raised and Water lowered */
-    const short crowd[7] = { 60, 60, 60, 60, 200, 200, 100 };      /* half the six low: the median is low, no gap */
+    const short broken[7] = { 60, 60, 60, 100, 20, 20, 100 };     /* a plain enemy's two and a Mega Break on a third */
     const short darkvalue[7] = { 100, 100, 100, 100, 100, 100, 10 };
-    const short half_in[7] = { 80, 100, 100, 101, 101, 101, 100 };   /* median 100.5: 80 <= 80.5 */
-    const short half_out[7] = { 81, 100, 100, 101, 101, 101, 100 };  /* 81 > 80.5 */
-    const short strong[7] = { 300, 100, 100, 100, 100, 100, 100 };   /* a high resist is not a weakness, nor moves it */
+    const short strong[7] = { 300, 100, 100, 100, 100, 100, 100 };
+    const short strong_down[7] = { 220, 100, 100, 100, 100, 100, 100 }; /* a resisted 300 after Resist Down: neutral */
 
     mask_case("all equal: none", equal, 0, 0);
     mask_case("one low value: that element", one, 0, 1 << 0);
-    mask_case("two low values: both", two, 0, (1 << 0) | (1 << 1));
-    mask_case("three candidates: the two lowest values", three, 0, (1 << 2) | (1 << 0));
-    mask_case("a tie for the last place: the element order", ties, 0, (1 << 0) | (1 << 1));
-    mask_case("exactly the gap below the median: weak", edge_in, 0, 1 << 0);
-    mask_case("one point short of the gap: not weak", edge_out, 0, 0);
-    mask_case("a buff and a debuff move the weakness", buffed, 0, 1 << 1);
-    mask_case("half the six low: no median gap, none", crowd, 0, 0);
-    mask_case("Dark's own value is ignored by the median", darkvalue, 0, 0);
-    mask_case("the median keeps its half (weak)", half_in, 0, 1 << 0);
-    mask_case("the median keeps its half (not weak)", half_out, 0, 0);
-    mask_case("a strong resist changes nothing else", strong, 0, 0);
+    mask_case("Fire and Water+Ice: both families, three bits", two, 0, 0x07);
+    mask_case("Water alone low: Water and Ice", water, 0, 0x06);
+    mask_case("Machine alone low: Thunder and Machine", machine, 0, 0x30);
+    mask_case("three weak families: all three", three, 0, 0x0F);
+    mask_case("every family low: all six", all_low, 0, 0x3F);
+    mask_case("at DEF_WEAK_MAX: weak", edge_in, 0, 1 << 0);
+    mask_case("one above DEF_WEAK_MAX: not weak", edge_out, 0, 0);
+    mask_case("a Break on a third family adds it, hides none", broken, 0, 0x37);
+    mask_case("Dark's own value is ignored", darkvalue, 0, 0);
+    mask_case("a strong resist is no weakness", strong, 0, 0);
+    mask_case("a lowered strong resist stays above the line", strong_down, 0, 0);
     mask_case("Dark marked, all equal", equal, 1, 1 << 6);
     mask_case("Dark marked, one weakness: on top", one, 1, (1 << 0) | (1 << 6));
-    mask_case("Dark marked, two weaknesses: three in all", two, 1, (1 << 0) | (1 << 1) | (1 << 6));
-    mask_case("Dark not marked", one, 0, 1 << 0);
+    mask_case("Dark marked, two families", two, 1, 0x47);
+    check("family bits: a pair both ways, a single alone, Dark, outside 0..6 none",
+          def_family_bits(1) == 0x06 && def_family_bits(2) == 0x06 && def_family_bits(4) == 0x30 &&
+              def_family_bits(5) == 0x30 && def_family_bits(0) == 0x01 && def_family_bits(3) == 0x08 &&
+              def_family_bits(6) == 0x40 && def_family_bits(7) == 0 && def_family_bits(-1) == 0);
     if (def_resisted(249) != 0 || def_resisted(250) != 1 || def_resisted(999) != 1 || def_resisted(-5) != 0) {
         failures++;
         printf("FAIL def_resisted\n");

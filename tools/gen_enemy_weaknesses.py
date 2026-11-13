@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """The enemy table of the definitive combat (PRD layer 3): every species gets its archetype's weaknesses and strong
-resistances (plain 2+1, wall 1+2, late 2+2, boss 2+3, final boss 2+4), the rest neutral; a few species carry the Dark mark.
+resistances, counted by element family (Fire, Water+Ice, Wind, Thunder+Machine, Dark: the owner's rule of 2026-11-13,
+a pair is one affinity, so its two elements always share one value): plain 2+1, wall 1+2, late 2+2, boss 2+2, final
+boss 1+3 (and its Dark mark), the rest neutral; a few species carry the Dark mark.
 
   tools/venv/bin/python tools/gen_enemy_weaknesses.py            # proposal: .dumps/tasks/persona/{fraquezas.md,
                                                                  #   definitive_enemies.proposed.c}; the game is not touched
   tools/venv/bin/python tools/gen_enemy_weaknesses.py --apply    # also write port/game/definitive_enemies.c (the owner approved)
 
 Deterministic (fixed seed). Reads SDIGIEDT.PRO and the names from the user's disc, the techniques from src/main/records.c
-and the battles from src/fieldstg/fieldstg_80083784.c; the disc is never written. Rules (PRD layer 3):
-  - the house element of a species (its techniques' commonest element, else its one high resist, else its type) is never
-    a weakness and is the natural strong resistance;
-  - a species that already has exactly two weaknesses keeps them; too many: the two most coherent with the theme; too
-    few: filled by opposition, then by balance, so the count per element evens out and two species of one battle do
-    not share a pair;
-  - weak = 60, strong = 300, neutral 100..115 (the current value when it is already there);
+and the battles from src/fieldstg/fieldstg_80083784.c; the disc is never written. Rules (PRD layer 3, by family):
+  - the house family of a species (the family of its techniques' commonest element, else of its one high resist, else
+    of its type) is never a weakness and is the natural strong resistance;
+  - a plain species that already has exactly two weak families keeps them; otherwise they are filled by opposition to
+    the house element, then by balance, so the count per family evens out and two species of one battle do not share
+    a pair;
+  - weak = 60, strong = 300 (or the disc's own value from 250), neutral 100..115 (the current value when it is already
+    there), the same for both elements of a pair;
+  - four families outside Dark, so a boss no longer fits 2+3: bosses are 2+2 like the late mobs, the final boss 1+3;
   - Dark: a few holy species have it as their only weakness, a few more (and the final boss) as an extra one; resisting
     it is just as rare (DARK_RESIST: eight species), so that Dark stays a useful element.
 """
@@ -34,6 +38,11 @@ SEED = 20261112
 EL = ["Fire", "Water", "Ice", "Wind", "Thunder", "Machine", "Dark"]
 WEAK, STRONG, WEAK_MAX, STRONG_MIN = 60, 300, 75, 250
 NEUTRAL = (100, 115)
+GAME_WEAK_MAX = 80   # DEF_WEAK_MAX (port/game/definitive.h): the game's line for a weak family
+FAM = [(0,), (1, 2), (3,), (4, 5), (6,)]   # the families (DEF_FAMILIES): Water+Ice and Thunder+Machine are one affinity
+FAM_OF = [0, 1, 1, 2, 3, 3, 4]
+FAMILY_BITS = [0x01, 0x06, 0x06, 0x08, 0x30, 0x30, 0x40]   # def_family_bits
+FAM_NAME = ["Fire", "Water+Ice", "Wind", "Thunder+Machine", "Dark"]
 # What a species of each type is, by the techniques the type uses (a count over the disc): None = no clear theme.
 TYPE_HOUSE = {2: 0, 3: 6, 4: 6, 5: 5, 6: 2, 7: 3, 8: 4, 10: 1, 11: 3}
 # The elements that answer a house element, best first (the theme of what hurts it).
@@ -118,26 +127,23 @@ def house_element(sp, ds):
 
 
 def weakness_mask(r, dark_weak):
-    """tools' twin of port/game/definitive_mask.c (kept in step by the check below): the elements r[0..6] are weak to."""
-    order = sorted(range(6), key=lambda e: (r[e], e))
-    median2 = r[order[2]] + r[order[3]]
+    """tools' twin of port/game/definitive_mask.c (kept in step by the check below): the elements r[0..6] are weak to, a
+    family at a time (either of a pair at or under the line: both)."""
     mask = 0
-    taken = 0
-    for e in order:
-        if taken < 2 and 2 * r[e] <= median2 - 40:
-            mask |= 1 << e
-            taken += 1
+    for e in range(6):
+        if r[e] <= GAME_WEAK_MAX:
+            mask |= FAMILY_BITS[e]
     return mask | (1 << 6 if dark_weak else 0)
 
 
 def archetype(sid, level, boss, rng):
-    """(weaknesses, strong resistances, name). Persona-like variety:
-    boss battles resist a lot (the final boss most), late mobs two, a few weak early mobs are "walls" (one weakness, two
-    resistances: the weakness is everything), the rest are the plain two and one."""
+    """(weak families, strong families, name). Persona-like variety, by family (four outside Dark): boss battles and late
+    mobs resist two, the final boss three (one weak family and its Dark mark), a few weak early mobs are "walls" (one
+    weakness, two resistances: the weakness is everything), the rest are the plain two and one."""
     if sid in FINAL_BOSS:
-        return 2, 4, "final"
+        return 1, 3, "final"
     if boss:
-        return 2, 3, "boss"
+        return 2, 2, "boss"
     if level >= LATE_LEVEL:
         return 2, 2, "late"
     if level <= WALL_MAX_LEVEL and rng.random() < WALL_SHARE:
@@ -155,41 +161,50 @@ def propose(sp_list, battle_info, ds):
     info = {}
     for sp in sp_list:
         r = sp["resists"]
-        allowed = 7 if sp["id"] in DARK_RESIST else 6
-        info[sp["id"]] = dict(sp=sp, house=house_element(sp, ds), allowed=allowed,
-                              strong=[e for e in range(allowed) if r[e] >= STRONG_MIN],
-                              weak=[e for e in range(6) if r[e] <= WEAK_MAX])
+        allowed = 5 if sp["id"] in DARK_RESIST else 4  # Dark (family 4) only for the eight
+        house_el = house_element(sp, ds)
+        info[sp["id"]] = dict(sp=sp, house_el=house_el, house=None if house_el is None else FAM_OF[house_el],
+                              allowed=allowed,
+                              strong=[f for f in range(allowed) if max(r[e] for e in FAM[f]) >= STRONG_MIN],
+                              weak=[f for f in range(4) if min(r[e] for e in FAM[f]) <= WEAK_MAX])
     weak_count, strong_count = Counter(), Counter()
-    used_pairs = defaultdict(set)  # battle -> {frozenset of weaknesses}
+    used_pairs = defaultdict(set)  # battle -> {frozenset of weak families}
     order = list(sp_list)
     rng.shuffle(order)
     for sp in order:
         x = info[sp["id"]]
         x["nw"], x["ns"], x["kind"] = archetype(sp["id"], level.get(sp["id"], 0), sp["id"] in boss, rng)
         if sp["id"] in DARK_ONLY:
-            # no elemental weakness: with three or more strong values among the six, the median rises and the neutral
-            # ones would count as weak, so at most two (the rule's median stays neutral)
-            x["nw"], x["ns"] = 0, min(x["ns"], 2)
+            x["nw"] = 0  # no elemental weakness: Dark is the only one
 
-    # strong resistances: the ones it has (the house first), then the house, then whatever evens the table out
+    def best_value(sp, f):
+        return max(sp["resists"][e] for e in FAM[f])
+
+    # strong resistances: the families it has (the house first), then the house, then whatever evens the table out
     for sp in order:
         x = info[sp["id"]]
         picks = []
-        for e in sorted(x["strong"], key=lambda e: (e != x["house"], -sp["resists"][e])):
+        for f in sorted(x["strong"], key=lambda f: (f != x["house"], -best_value(sp, f))):
             if len(picks) < x["ns"]:
-                picks.append(e)
+                picks.append(f)
         if len(picks) < x["ns"] and x["house"] is not None and x["house"] not in picks and x["house"] < x["allowed"]:
             picks.append(x["house"])
         while len(picks) < x["ns"]:
-            picks.append(min((e for e in range(x["allowed"]) if e not in picks), key=lambda e: (strong_count[e], rng.random())))
+            picks.append(min((f for f in range(x["allowed"]) if f not in picks), key=lambda f: (strong_count[f], rng.random())))
         x["pick_strong"] = picks
-        x["house"] = picks[0] if x["house"] is None else x["house"]
-        for e in picks:
-            strong_count[e] += 1
+        if x["house"] is None:
+            x["house"] = picks[0] if picks else None
+            x["house_el"] = None if x["house"] is None else FAM[x["house"]][0]
+        for f in picks:
+            strong_count[f] += 1
 
-    def rank(x, e):
-        p = OPPOSE[x["house"]]
-        return p.index(e) if e in p else len(p)
+    def rank(x, f):
+        # what answers the house element, best first, as families (the house's own family never answers it)
+        p = []
+        for e in OPPOSE.get(x["house_el"], []):
+            if FAM_OF[e] != x["house"] and FAM_OF[e] not in p:
+                p.append(FAM_OF[e])
+        return p.index(f) if f in p else len(p)
 
     def conflicts(sid, pair):
         return any(pair in used_pairs[b] for b in batt_of[sid])
@@ -200,35 +215,35 @@ def propose(sp_list, battle_info, ds):
         if x["nw"] == 0:
             x["pick_weak"] = []
             continue
-        cand = [e for e in x["weak"] if e not in x["pick_strong"] and e != x["house"]]
+        cand = [f for f in x["weak"] if f not in x["pick_strong"] and f != x["house"]]
         if x["kind"] == "plain" and len(cand) == 2:
             x["pick_weak"] = sorted(cand)
-            for e in cand:
-                weak_count[e] += 1
+            for f in cand:
+                weak_count[f] += 1
             for b in batt_of[sid]:
                 used_pairs[b].add(frozenset(cand))
     for sp in order:
         sid, x = sp["id"], info[sp["id"]]
         if "pick_weak" in x:
             continue
-        pool = [e for e in range(6) if e not in x["pick_strong"] and e != x["house"]]
-        if len(pool) < x["nw"]:  # every element taken by resistances: the house may give way
-            pool = [e for e in range(6) if e not in x["pick_strong"]]
-        keep = [e for e in x["weak"] if e in pool]
+        pool = [f for f in range(4) if f not in x["pick_strong"] and f != x["house"]]
+        if len(pool) < x["nw"]:  # every family taken by resistances: the house may give way
+            pool = [f for f in range(4) if f not in x["pick_strong"]]
+        keep = [f for f in x["weak"] if f in pool]
         chosen = []
         for _ in range(x["nw"]):
-            options = [e for e in pool if e not in chosen]
+            options = [f for f in pool if f not in chosen]
 
-            def cost(e):
-                c = rank(x, e) * 3 + weak_count[e] * 1.5 + (0 if e in keep else 1)
-                if chosen and conflicts(sid, frozenset(chosen + [e])):
+            def cost(f):
+                c = rank(x, f) * 3 + weak_count[f] * 1.5 + (0 if f in keep else 1)
+                if chosen and conflicts(sid, frozenset(chosen + [f])):
                     c += 100
                 return (c, rng.random())
 
             chosen.append(min(options, key=cost))
         x["pick_weak"] = sorted(chosen)
-        for e in chosen:
-            weak_count[e] += 1
+        for f in chosen:
+            weak_count[f] += 1
         for b in batt_of[sid]:
             used_pairs[b].add(frozenset(chosen))
 
@@ -236,17 +251,18 @@ def propose(sp_list, battle_info, ds):
     for sp in sp_list:
         sid, x = sp["id"], info[sp["id"]]
         dark = sid in DARK_ONLY or sid in DARK_EXTRA
-        new = []
-        for e in range(7):
-            v = sp["resists"][e]
-            if e in x["pick_strong"]:
-                new.append(v if v >= STRONG_MIN else STRONG)
-            elif e in x["pick_weak"]:
-                new.append(WEAK)
-            elif e == 6 and dark:
-                new.append(WEAK)
+        new = [0] * 7
+        for f, els in enumerate(FAM):
+            vals = [sp["resists"][e] for e in els]
+            if f in x["pick_strong"]:
+                v = max(vals) if max(vals) >= STRONG_MIN else STRONG
+            elif f in x["pick_weak"] or (f == 4 and dark):
+                v = WEAK
             else:
-                new.append(v if NEUTRAL[0] <= v <= NEUTRAL[1] else rng.randint(*NEUTRAL))
+                inside = [w for w in vals if NEUTRAL[0] <= w <= NEUTRAL[1]]
+                v = inside[0] if inside else rng.randint(*NEUTRAL)
+            for e in els:
+                new[e] = v
         rows.append(dict(id=sid, name=sp["name"], type=sp["type"], house=x["house"], before=sp["resists"], after=new,
                          dark=int(dark), dark_only=int(sid in DARK_ONLY), kind=x["kind"], nw=x["nw"], ns=x["ns"],
                          level=level.get(sid, 0), boss=int(sid in boss)))
@@ -254,12 +270,14 @@ def propose(sp_list, battle_info, ds):
 
 
 def check(rows):
-    """Every species, through the game's own rule (weakness_mask): exactly its intended weaknesses, exactly its strong ones."""
+    """Every species, through the game's own rule (weakness_mask): exactly its intended weak families, exactly its strong
+    ones, and a pair's two elements always one value."""
     for r in rows:
         a = r["after"]
         mask = weakness_mask(a, r["dark"])
-        weak = [e for e in range(6) if mask >> e & 1]
-        strong = [e for e in range(7) if a[e] >= STRONG_MIN]
+        weak = [f for f in range(4) if mask >> FAM[f][0] & 1]
+        strong = [f for f in range(5) if all(a[e] >= STRONG_MIN for e in FAM[f])]
+        assert all(a[x] == a[y] for x, y in (FAM[1], FAM[3])), (r["id"], r["name"], a)
         assert len(weak) == r["nw"], (r["id"], r["name"], r["kind"], weak, a)
         assert len(strong) == r["ns"], (r["id"], r["name"], r["kind"], strong, a)
         assert not set(weak) & set(strong), (r["id"], r["name"])
@@ -274,24 +292,25 @@ def write(rows, apply):
     OUT.mkdir(parents=True, exist_ok=True)
     wc, sc = Counter(), Counter()
     for r in rows:
-        for e in range(6):
-            wc[e] += r["after"][e] <= WEAK_MAX
-        for e in range(7):
-            sc[e] += r["after"][e] >= STRONG_MIN
+        for f in range(4):
+            wc[f] += r["after"][FAM[f][0]] <= WEAK_MAX
+        for f in range(5):
+            sc[f] += r["after"][FAM[f][0]] >= STRONG_MIN
     kinds = Counter(r["kind"] for r in rows)
     lines = ["# Fraquezas dos inimigos (camada 3): proposta, aguardando aprovação", "",
-             "Arquétipos (estilo Persona): **plain** 2 fracos + 1 forte; **wall** (mob fraco) 1 fraco + 2 fortes; **late** (nível ≥ "
-             f"{LATE_LEVEL}) 2 fracos + 2 fortes; **boss** (luta de chefe) 2 fracos + 3 fortes; **final** (Galacticmon) 2 fracos + 4 fortes. "
+             "Por família (Fogo, Água+Gelo, Vento, Trovão+Máquina, Trevas; um par é uma afinidade só, os dois elementos com o mesmo valor). "
+             "Arquétipos (estilo Persona): **plain** 2 famílias fracas + 1 forte; **wall** (mob fraco) 1 fraca + 2 fortes; **late** (nível ≥ "
+             f"{LATE_LEVEL}) 2 fracas + 2 fortes; **boss** (luta de chefe) 2 fracas + 2 fortes; **final** (Galacticmon) 1 fraca + 3 fortes, mais a marca de Trevas. "
              "Contagem: " + ", ".join(f"{k} {kinds[k]}" for k in ("plain", "wall", "late", "boss", "final")) + ".", "",
              f"{len(rows)} espécies. Semente {SEED}. Fraco = 60, forte = 300, neutro 100–115. Marca de Trevas (fraco a Trevas): **D** (só Trevas: **D!**). Resistir a Trevas é raro de propósito (regra do dono).",
              "Colunas `antes`/`depois`: um caractere por elemento (Fogo Água Gelo Vento Trovão Máquina Trevas): `W` fraco, `S` forte, `.` neutro.", "",
-             "| Elemento | Fraquezas | Resistências fortes |", "|---|---|---|"]
+             "| Família | Fraquezas | Resistências fortes |", "|---|---|---|"]
     dark_weak = sum(r["dark"] for r in rows)
-    lines += [f"| {EL[e]} | {wc[e] if e < 6 else dark_weak} | {sc[e]} |" for e in range(7)]
+    lines += [f"| {FAM_NAME[f]} | {wc[f] if f < 4 else dark_weak} | {sc[f]} |" for f in range(5)]
     lines += ["", "| ID | Espécie | Nível | Tipo | Arquétipo | Casa | Antes | Depois | Valores depois | Trevas |", "|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         mark = "D!" if r["dark_only"] else "D" if r["dark"] else ""
-        lines.append(f"| {r['id']} | {r['name']} | {r['level']} | {r['type']} | {r['kind']} | {EL[r['house']]} | {''.join(fmt(v) for v in r['before'])} | "
+        lines.append(f"| {r['id']} | {r['name']} | {r['level']} | {r['type']} | {r['kind']} | {FAM_NAME[r['house']] if r['house'] is not None else '-'} | {''.join(fmt(v) for v in r['before'])} | "
                      f"{''.join(fmt(v) for v in r['after'])} | {' '.join(str(v) for v in r['after'])} | {mark} |")
     (OUT / "fraquezas.md").write_text("\n".join(lines) + "\n")
     c = ["/* Generated by tools/gen_enemy_weaknesses.py (definitive combat PRD, layer 3): do not edit. */",
@@ -302,7 +321,8 @@ def write(rows, apply):
     (OUT / "definitive_enemies.proposed.c").write_text("\n".join(c))
     if apply:
         (ROOT / "port/game/definitive_enemies.c").write_text("\n".join(c))
-    print(f"{len(rows)} species; weak per element {[wc[e] for e in range(6)]}; strong {[sc[e] for e in range(7)]}")
+    print(f"{len(rows)} species; weak per family {[wc[f] for f in range(4)]}; strong {[sc[f] for f in range(5)]}; "
+          f"kinds {dict(kinds)}")
 
 
 def main():

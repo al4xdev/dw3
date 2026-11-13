@@ -9,8 +9,9 @@
 #define DEF_OVERFINISH_BITS_PCT 10 /* Bits earned per 100 damage dealt to an enemy already knocked out (OVERFINISH) */
 #define DEF_OVERLEVEL_GAP 15       /* levels the party's best must be above the enemies' best for a random battle to offer the Overlevel Rush */
 #define DEF_RUSH_TICKS 70          /* ticks (1/60 s) of the rush on the field before the battle's report opens */
-#define DEF_WEAK_COUNT 2        /* most weaknesses a target has (Dark, when marked, comes on top) */
-#define DEF_WEAK_GAP 20         /* how far below the median of the six a value must be to count as a weakness */
+#define DEF_WEAK_MAX 80         /* a family is a weakness while one of its values is at most this (modifiers included): the
+                                 * table's weak 60, or a neutral 100..115 lowered by Resist Down (80) or Mega Break (100);
+                                 * a resisted one lowered stays above it. No cap on the count (owner, 2026-11-13) */
 #define DEF_BATON_PASS_MP 0     /* MP Baton Pass costs (offered only while the enemy is open; Persona's is free) */
 #define DEF_MULT_ONE 1000       /* the fixed-point unit of every multiplier and affinity below (thousandths) */
 #define DEF_MULT_WEAK 500       /* bonus for hitting a weakness */
@@ -31,10 +32,12 @@
 #define DEF_SND_RESISTED 0x4001B     /* of a resisted hit (the menus' cancel blip) */
 
 /* Layer 3 (definitive_mask.c, pure): the elements `resists[0..6]` (Fire, Water, Ice, Wind, Thunder, Machine, Dark) are weak
- * to, as a bit mask (bit = element index). The six non-Dark values give a median (the mean of the 3rd and 4th); the
- * weaknesses are the DEF_WEAK_COUNT lowest values at least DEF_WEAK_GAP below it (ties by the element order; all equal:
- * none). Dark is a weakness only when `dark_weak` (the species' mark), on top of the count. */
+ * to, as a bit mask (bit = element index), a family at a time: Water+Ice and Thunder+Machine are one affinity each
+ * (owner, 2026-11-13), so a family is weak while either of its values is at most DEF_WEAK_MAX, and then all its bits
+ * are set. Dark is a weakness only when `dark_weak` (the species' mark). */
 int def_weakness_mask(const short resists[7], int dark_weak);
+/* The elements of `e`'s family as a bit mask (Water or Ice: both; Fire: itself); 0 outside 0..6. */
+int def_family_bits(int e);
 int def_resisted(int resist); /* 1 from DEF_RESIST_MIN up */
 /* Layer 5, the damage multiplier of an elemental technique of the player (thousandths, DEF_MULT_ONE = 1.0):
  * 1 + (weak ? 0.5) + (open ? 0.2) + (weak ? affinity) + (open ? affinity); resisted: DEF_MULT_RESISTED alone.
@@ -46,7 +49,7 @@ int def_multiplier(int weak, int open, int resisted, int affinity);
  * game's events; tests/port/definitive_driver.c plays the PRD's acceptance sequences on it. */
 typedef struct DefChain {
     unsigned char staggered[3];  /* per enemy slot: open */
-    unsigned char window_used;   /* weakness elements (bits) that already gave their extra action in this window */
+    unsigned char window_used;   /* weakness families (their elements' bits) that already gave their extra action */
     unsigned char swap_used;     /* the free swap of this window is spent */
     unsigned char extra_pending; /* an extra action is owed: the next turn event is made immediate */
     unsigned char next_extra;    /* the next party turn is that extra action */

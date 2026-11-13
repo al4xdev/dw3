@@ -429,7 +429,7 @@ const unsigned char *def_bestiary_state(FightstgEnemyRecord *rec, int index, int
 
 /* A family's line, from what is learnt of its elements (`known`: the bestiary's bits): Weak as soon as one of them is
  * known to be weak (the line to find); with both known, Resist only when both resist, else neutral; and ??? while a
- * part is not learnt and no weakness is, so a pair half tried still asks for the other half. */
+ * part is not learnt and no weakness is. A hit now teaches a pair whole; only a save from before knows half of one. */
 static const unsigned char *family_state(int known, const short *resists, int species, int f, int *palette) {
     int k, e, cls, all_known = 1, all_resist = 1;
 
@@ -555,7 +555,8 @@ void def_action_resolved(u8 side, s32 id, s32 value) {
     was = chain.staggered[target];
     def_chain_player_hit(&chain, target, value > 0, weak ? hit_elem : -1, weak);
     if (value > 0 && hit_id == id && (hit_class == 1 || hit_class == 3)) { /* a weakness or a resistance found out */
-        def_bestiary_discover(def_bestiary_index(fightstg_battle.state.members[1][target].digimon), 1 << hit_elem);
+        def_bestiary_discover(def_bestiary_index(fightstg_battle.state.members[1][target].digimon),
+                              def_family_bits(hit_elem)); /* a pair is one affinity: both of it are learnt */
     }
     if (log_on() && value > 0) {
         LOG("hit target %d weak %d stagger %d -> %d extra_pending %d", target, weak, was, chain.staggered[target],
@@ -698,7 +699,7 @@ int def_tech_effect(u8 side, int tech, int *msg) {
     int enemy = side != 0;
     int victim = enemy ? 0 : 1;                                 /* the side whose resists go down */
     int slot = fightstg_battle.state.current[victim] % 3;
-    int e, n, best, k;
+    int e, n, best, k, delta;
     short taken[7] = { 0, 0, 0, 0, 0, 0, 0 };
     FightstgStats *me;
 
@@ -719,24 +720,31 @@ int def_tech_effect(u8 side, int tech, int *msg) {
         return 1;
     }
     /* Resist Down / Mega Break, and in an enemy's hands all four (owner's choice: Libra and Relay mean nothing to an
-     * enemy): the target's resists of the user's best elements go down. On the player they are its affinities. */
+     * enemy): the target's resists of the user's best families go down, both elements of a pair (owner, 2026-11-13: a
+     * pair is one affinity). The best is the user's highest affinity as the multiplier counts it (def_affinity: a pair's
+     * sum), ties by the family order. On the player they are its affinities. */
     me = fightstg_rules.get_stats(side, 1, fightstg_battle.state.current[enemy]);
+    delta = enemy ? (tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA)
+                  : def_debuff_scale(10, tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA);
     for (n = tech == 208 ? 2 : 1, k = 0; k < n; k++) {
         best = -1;
         for (e = 0; e < 7; e++) {
-            if (!taken[e] && me->resists[e] > 0 && (best < 0 || me->resists[e] > me->resists[best])) {
+            if (!taken[e] && def_affinity(e, me->resists) > 0 &&
+                (best < 0 || def_affinity(e, me->resists) > def_affinity(best, me->resists))) {
                 best = e;
             }
         }
         if (best < 0) {
             break;
         }
-        taken[best] = 1;
-        resist_mod[victim][slot][best] -=
-            enemy ? (tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA)
-                  : def_debuff_scale(10, tech == 208 ? DEF_BREAK_MEGA_DELTA : DEF_BREAK_SLOW_DELTA);
-        if (log_on()) {
-            LOG("resist down side %d slot %d element %d now %d", victim, slot, best, resist_mod[victim][slot][best]);
+        for (e = 0; e < 7; e++) {
+            if ((def_family_bits(best) >> e) & 1) {
+                taken[e] = 1;
+                resist_mod[victim][slot][e] -= delta;
+                if (log_on()) {
+                    LOG("resist down side %d slot %d element %d now %d", victim, slot, e, resist_mod[victim][slot][e]);
+                }
+            }
         }
     }
     resist_turns[victim][slot] = DEF_BREAK_TURNS;

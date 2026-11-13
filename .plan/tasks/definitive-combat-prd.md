@@ -44,8 +44,7 @@ substituída por este arquivo). Dados extraídos: `.dumps/tasks/persona/data.jso
 
 | Nome | Valor | Controla |
 |---|---|---|
-| `DEF_WEAK_COUNT` | 2 | máximo de fraquezas por alvo |
-| `DEF_WEAK_GAP` | 20 | quanto abaixo da mediana dos 6 um valor precisa estar para contar |
+| `DEF_WEAK_MAX` | 80 | uma família é fraqueza enquanto um valor dela estiver até aqui (emenda de 2026-11-13; substitui `DEF_WEAK_COUNT` e `DEF_WEAK_GAP`) |
 | `DEF_RESIST_MIN` | 250 | valor a partir do qual o elemento é "resistido" |
 | `DEF_MULT_WEAK` | 0,5 | bônus por acertar fraqueza |
 | `DEF_MULT_STAGGER` | 0,2 | bônus por alvo em stagger |
@@ -114,6 +113,20 @@ as mais longas na tela); idiomas que não o inglês seguem como estão.
 vezes; contra inimigo mais lento não mostra.
 
 ## Camada 3 — Fraqueza dinâmica e dados dos inimigos
+
+> **Emenda do dono (2026-11-13): afinidade por família.** Água+Gelo e Trovão+Máquina são uma afinidade só (por isso a
+> UI já os junta). Tudo abaixo que fala de "elemento" passa a valer por família (Fogo, Água+Gelo, Vento, Trovão+Máquina,
+> Trevas):
+> - a tabela dos inimigos é gerada por família: os dois elementos de um par têm sempre o mesmo valor; arquétipos
+>   contados por família: plain 2+1, wall 1+2, late 2+2, **boss 2+2**, **final 1+3** (mais a marca de Trevas), porque
+>   fora Trevas só há 4 famílias;
+> - `def_weakness_mask` marca a família inteira quando um valor dela está em `DEF_WEAK_MAX` (80) ou abaixo; **sem
+>   mediana e sem limite** de quantidade: uma Break que cria uma terceira fraqueza não esconde nenhuma natural;
+> - a ação extra (camada 4) é uma por família na janela: Gelo depois de Água não dá outra;
+> - Resist Down e Mega Break (camada 6) baixam a família inteira; a escolhida é a de maior afinidade do usuário
+>   (`def_affinity`, a soma do par);
+> - um acerto ensina ao Bestiário a família inteira.
+> Os passos 1–3 abaixo (mediana, `DEF_WEAK_GAP`, `DEF_WEAK_COUNT`) ficam como histórico.
 
 **Função única** `def_weakness_mask(const s16 resists[7], int dark_weak)`, chamada na hora do golpe com os resists
 já modificados por buffs/debuffs:

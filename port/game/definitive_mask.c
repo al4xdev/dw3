@@ -2,41 +2,26 @@
  * right now. Pure (no game headers): tests/port/definitive.py compiles it alone and checks it case by case. */
 #include "definitive.h"
 
-/* The six non-Dark elements (resists[0..5]) sorted by value, ties by the fixed element order; `order` gets the indexes. */
-static void sort_six(const short resists[7], int order[6]) {
-    int i, j;
+int def_family_bits(int e) {
+    /* the families of definitive.c's family_elems: Fire, Water+Ice, Wind, Thunder+Machine, Dark */
+    static const unsigned char bits[7] = { 0x01, 0x06, 0x06, 0x08, 0x30, 0x30, 0x40 };
 
-    for (i = 0; i < 6; i++) {
-        order[i] = i;
-    }
-    for (i = 1; i < 6; i++) { /* insertion sort, stable: equal values keep the element order */
-        int cur = order[i];
-
-        for (j = i - 1; j >= 0 && resists[order[j]] > resists[cur]; j--) {
-            order[j + 1] = order[j];
-        }
-        order[j + 1] = cur;
-    }
+    return e >= 0 && e < 7 ? bits[e] : 0;
 }
 
 int def_weakness_mask(const short resists[7], int dark_weak) {
-    int order[6];
     int mask = 0;
-    int taken = 0;
-    int i;
-    int median2; /* the median doubled: the mean of the 3rd and 4th values, kept in halves */
+    int e;
 
-    sort_six(resists, order);
-    median2 = resists[order[2]] + resists[order[3]];
-    for (i = 0; i < 6 && taken < DEF_WEAK_COUNT; i++) {
-        /* value <= median - gap, in halves: 2 * value <= median2 - 2 * gap */
-        if (2 * resists[order[i]] <= median2 - 2 * DEF_WEAK_GAP) {
-            mask |= 1 << order[i];
-            taken++;
+    /* No median and no cap any more: the enemy table gives a family its weak value, and a Resist Down that brings a
+     * neutral family under DEF_WEAK_MAX adds a weakness without hiding one the target already has. */
+    for (e = 0; e < 6; e++) {
+        if (resists[e] <= DEF_WEAK_MAX) {
+            mask |= def_family_bits(e); /* either of a pair: both */
         }
     }
     if (dark_weak) {
-        mask |= 1 << 6; /* an extra weakness, outside the count */
+        mask |= 1 << 6;
     }
     return mask;
 }
@@ -47,7 +32,7 @@ int def_resisted(int resist) {
 
 /* ---- Layer 4: stagger, the chain of extra actions and the free swap, as a state machine on its own (the game feeds it
  * events: definitive.c). A weakness hit with an elemental technique opens the target; the next blow it takes, or its own
- * action, closes it. Each weakness element hit gives one extra action per window; the window starts again with every
+ * action, closes it. Each weakness family hit gives one extra action per window (Ice after Water gives none); the window starts again with every
  * normal action of the player (an extra one does not start it). While a target is open one swap is free per window. */
 void def_chain_reset(DefChain *c) {
     int i;
@@ -65,8 +50,8 @@ void def_chain_player_hit(DefChain *c, int target, int hit, int elem, int weak) 
     c->staggered[target] = 0; /* it takes this blow (the bonus is the caller's); the weakness below opens it again */
     if (weak && elem >= 0 && elem < 7) {
         c->staggered[target] = 1;
-        if (!(c->window_used & (1 << elem))) {
-            c->window_used |= 1 << elem;
+        if (!(c->window_used & def_family_bits(elem))) {
+            c->window_used |= def_family_bits(elem);
             c->extra_pending = 1;
         }
     }
