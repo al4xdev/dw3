@@ -157,10 +157,14 @@ int main(void) {
     win_rare(0x07);
     check("a level-70 target drops R-Booster 05 and its own material",
           def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST + 4 && def_record_material(9) == 1);
+    check("the screen gives that Booster as one pack (DEF_HUNT_PACKS), and only that item counts as it",
+          def_hunt_pack_count(DEF_HUNT_PACK_FIRST + 4) == 0 && def_hunt_take_pack() == DEF_HUNT_PACK_FIRST + 4 &&
+              def_hunt_pack_count(DEF_HUNT_PACK_FIRST + 4) == DEF_HUNT_PACKS && def_hunt_pack_count(DEF_HUNT_PACK_FIRST) == 0);
     def_hunt_reward_done();
     win_rare(0x08);
     check("a level-15 target drops R-Booster 01 and its own material",
-          def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST && def_record_material(0) == 1);
+          def_hunt_reward_pack() == DEF_HUNT_PACK_FIRST && def_record_material(0) == 1 &&
+              def_hunt_pack_count(DEF_HUNT_PACK_FIRST + 4) == 0);
     def_hunt_reward_done();
 
     /* Layer C: what the bestiary lists under a species. */

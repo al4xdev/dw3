@@ -3,7 +3,8 @@
 Dono: Alex. Data: 2026-11-13. Estado: desenho completo; as decisões do dono estão
 marcadas `[dono]`, cada uma com uma proposta padrão (fim do arquivo);
 implementação por camadas, cada camada só depois do ok da anterior. **Camadas A,
-B e C implementadas em 2026-11-13**, a A com a tabela de alvos provisória (abaixo).
+B e C implementadas em 2026-11-13**; a tabela de alvos e os nomes dos materiais
+aprovados pelo dono no mesmo dia.
 
 Continuação de `definitive-combat-prd.md`, `definitive-progression-prd.md` e
 `definitive-rebalance-prd.md`. Mesmas regras de trabalho: camadas pequenas,
@@ -268,8 +269,8 @@ com nível próprio entre T e T + 15, de preferência um que a própria região
 inicia, sem repetir chefe entre regiões enquanto houver outro; luta em T + 3,
 nunca abaixo do próprio nível. As batalhas do chefe final (Galacticmon, que em
 qualquer mapa rodam as fases finais: `state.type` 4) nunca entram. Resultado:
-66 das 67 regiões com alvo. **A tabela aplicada é provisória até o ok do
-dono**; regenerar com outra regra é rodar a ferramenta de novo.
+66 das 67 regiões com alvo. **Aprovada pelo dono em 2026-11-13**; regenerar com outra regra é rodar a
+ferramenta de novo.
 
 Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
 (`stfgtrep_rewards[battle]`).
@@ -330,13 +331,15 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
 - **Carta rara → R-Booster.** A tela de resultados mostra um item só, e as
   cartas chegam em pacotes. Quando a batalha não deixou item, o Alvo Raro deixa
   um R-Booster (itens `0x186..0x18A`): 01 abaixo do nível 25, um a mais a cada
-  `DEF_HUNT_PACK_LEVELS` (15) níveis, 05 a partir do 70. O PRD 3 já faz um drop
-  de Booster valer `DEF_CARD_BOOST_PACKS` (15). Não usei a tabela dos Cardmons.
-  `[dono: proposta aplicada; trocar por carta avulsa é só mudar def_hunt_reward_pack]`
+  `DEF_HUNT_PACK_LEVELS` (15) níveis, 05 a partir do 70. É **um** pacote
+  (`DEF_HUNT_PACKS`, decisão do dono em 2026-11-13): o x15 do PRD 3
+  (`DEF_CARD_BOOST_PACKS`) fica para os Boosters comuns e deixaria o raro farto
+  demais. A tela marca o Booster que deu (`def_hunt_take_pack`) e só ele conta
+  como um (`def_hunt_pack_count`). Não usei a tabela dos Cardmons.
 - **Materiais:** um por batalha de alvo, no campo `material` da tabela
   (gerado por `tools/gen_hunt_targets.py`), na ordem do menor nível em que a
   batalha luta: o alvo mais fraco dá o primeiro. A primeira versão usava faixas
-  de 6 níveis do alvo, mas os alvos da tabela provisória lutam em poucos níveis
+  de 6 níveis do alvo, mas os alvos da tabela lutam em poucos níveis
   (15, 34, 38 a 65) e 9 dos 16 materiais ficavam sem fonte. Com as 15 batalhas
   distintas da tabela, 15 materiais têm fonte; o 16º (Obsidian Digizoid) fica
   livre para um alvo novo. Se houver mais batalhas que materiais, elas dividem
@@ -344,7 +347,7 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   Byte Shard, Data Chip, Code Chip, Core Fragment, Core Crystal, Mega Crystal,
   Giga Crystal, Tera Prism, Peta Prism, Chrome Digizoid, Blue Digizoid, Red
   Digizoid, Gold Digizoid, Black Digizoid, Obsidian Digizoid (`$HuntMat0..15` em
-  `en.txt`). `[dono: confirmar nomes]` Contador em `REC_EXTRA + 10..25`, teto 99;
+  `en.txt`; aprovados pelo dono em 2026-11-13). Contador em `REC_EXTRA + 10..25`, teto 99;
   a leitura corta um valor acima do teto, porque nenhum checksum cobre o
   registro. O material entra na vitória (`def_hunt_battle_end`), não na tela, e
   por isso não se perde se o jogo fechar nela.
@@ -388,7 +391,7 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
 - Espécie → materiais: `def_hunt_species_materials(espécie)` percorre as
   batalhas da tabela (`fieldstg_battles[...].enemies`, já compiladas no port) e
   marca o material de cada batalha em que a espécie luta. Nenhum dado novo é
-  gerado. Com a tabela provisória, 22 espécies do Bestiário derrubam algo, no
+  gerado. Com a tabela de alvos, 22 espécies do Bestiário derrubam algo, no
   máximo 2 materiais (Bulbmon: batalhas 323 e 315). Uma espécie com mais de 2
   mostraria só os 2 primeiros.
 - Janelas: `bs_info[6..7]` (nomes) e `bs_states[5..6]` (quantidades), que
@@ -727,15 +730,19 @@ D (preços) ──────────────────────�
 Cada item traz a proposta que o implementador leva ao dono. Nada é aplicado
 sem o ok.
 
-1. **Alvos Raros por região e escala de nível (camada A).** Aplicada como
-   provisória: a regra por nível da camada A (66 regiões), em
+1. **Alvos Raros por região e escala de nível (camada A).** **Aprovada pelo
+   dono em 2026-11-13.** Foi aplicada como provisória: a regra por nível da camada A (66 regiões), em
    `.dumps/tasks/hunt/alvos.md` para o dono riscar e trocar. Em aberto: repetir
    o mesmo chefe em várias regiões (há poucas batalhas de chefe: o Datamon
    cobre 13), e se a escala deve seguir o Cardmon da região em vez de T + 3.
-2. **Materiais de Caça (camada B).** Proposta: no máximo 16, por tier de
+2. **Materiais de Caça (camada B).** **Revisto pelo dono em 2026-11-13:** os
+   16 nomes aprovados são materiais comuns, de qualquer Digimon; os raros são um
+   por região com Alvo Raro (emenda da camada B, em implementação); a
+   recompensa do Alvo inclui um R-Booster só. Proposta original: no máximo 16, por tier de
    região (começo, meio, fim, pós-game) e tipo; a quantidade exata e os nomes
    são do dono. Com 16 ou menos regiões com Alvo Raro, pode ser um por alvo.
-3. **Tabela de preços (camada D).** Proposta: um teto de revenda em % do preço
+3. **Tabela de preços (camada D).** **Dono, 2026-11-13: aplicar a proposta
+   direto e revisar depois.** Proposta: um teto de revenda em % do preço
    de compra para os itens comuns e valores absolutos de venda para as
    exceções de leilão, como no exemplo dos 2.000 → 7.000–10.000.
 4. **Receitas de forja (camada E).** Proposta: o que as primeiras lojas vendem

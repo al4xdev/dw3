@@ -42,6 +42,7 @@ static struct {
     short base;           /* the battle whose XP it pays DEF_HUNT_XP_MULT times */
     short level;          /* the target's level: the Booster's */
     signed char material; /* the material it gave */
+    short pack;           /* the rare Booster the screen gave (def_hunt_take_pack), 0 before */
 } reward;
 
 static const DefHuntTarget *target_of(int region) {
@@ -161,6 +162,7 @@ void def_hunt_battle_end(int result) {
                 reward.base = hunt.base;
                 reward.level = hunt.level;
                 reward.material = hunt.material;
+                reward.pack = 0;
                 def_record_material_add(reward.material, 1); /* in the record now: a save right after keeps it */
                 port_log("hunt: material %d (now %d)", reward.material, def_record_material(reward.material));
             }
@@ -217,6 +219,15 @@ int def_hunt_reward_pack(void) {
     return DEF_HUNT_PACK_FIRST + (tier > 4 ? 4 : tier);
 }
 
+int def_hunt_take_pack(void) {
+    reward.pack = (short)def_hunt_reward_pack();
+    return reward.pack;
+}
+
+int def_hunt_pack_count(int item) {
+    return reward.pending && reward.pack != 0 && item == reward.pack ? DEF_HUNT_PACKS : 0;
+}
+
 int def_hunt_material_pending(void) {
     return reward.pending && !reward.shown;
 }
@@ -244,6 +255,7 @@ const unsigned char *def_hunt_material_text(void) {
 void def_hunt_reward_done(void) {
     reward.pending = 0;
     reward.shown = 0;
+    reward.pack = 0;
 }
 
 /* Between the swap and the battle's end a save state may be taken (the MCP tests do): it carries whether this is a Rare

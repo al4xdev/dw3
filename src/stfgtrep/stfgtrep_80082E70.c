@@ -916,7 +916,7 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
     case 21:
 #ifdef PC_PORT
         if (records_battle_results.item == 0) {
-            records_battle_results.item = def_hunt_reward_pack(); /* PRD 4 layer B: a Rare Target's rare Booster */
+            records_battle_results.item = def_hunt_take_pack(); /* PRD 4 layer B: a Rare Target's rare Booster */
         }
 #endif
         if (records_battle_results.item != 0) {
@@ -926,6 +926,9 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
             if (def_on() && (records_battle_results.item == 91 ||
                              (records_battle_results.item >= 361 && records_battle_results.item <= 394))) {
                 item_gain = DEF_CARD_BOOST_PACKS;
+            }
+            if (def_hunt_pack_count(records_battle_results.item) != 0) { /* PRD 4 layer B: the Rare Target's, one */
+                item_gain = def_hunt_pack_count(records_battle_results.item);
             }
 #endif
             data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 11);

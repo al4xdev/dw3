@@ -175,6 +175,7 @@ void def_callout_frame(void);
 #define DEF_HUNT_MATERIAL_CAP 99      /* the most of one material the player can hold */
 #define DEF_HUNT_PACK_FIRST 0x186     /* the rare Booster (R-Booster 01..05, items 0x186..0x18A) a Rare Target drops... */
 #define DEF_HUNT_PACK_LEVELS 15       /* ...one more per this many levels from level 25 (01 below 25, 05 from 70) */
+#define DEF_HUNT_PACKS 1              /* how many of it (owner, 2026-11-13; a plain Booster drop gives DEF_CARD_BOOST_PACKS) */
 typedef struct DefHuntTarget {
     unsigned char region; /* ststatus_map_areas's byte: the world map area, bit 7 the server */
     short battle;         /* an existing boss battle: an index into fieldstg_battles */
@@ -195,6 +196,10 @@ unsigned int def_hunt_species_materials(int species);
  * not been shown, that line (glyph bytes, marks it shown), and the end of the screen. */
 int def_hunt_reward_battle(void);
 int def_hunt_reward_pack(void);
+/* The screen gives that Booster (returns it, as def_hunt_reward_pack), and how many packs an item the screen shows is:
+ * DEF_HUNT_PACKS for the Booster it gave, 0 for any other item (the PRD 3 count stays theirs). */
+int def_hunt_take_pack(void);
+int def_hunt_pack_count(int item);
 int def_hunt_material_pending(void);
 const unsigned char *def_hunt_material_text(void);
 void def_hunt_reward_done(void);
