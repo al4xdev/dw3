@@ -245,6 +245,13 @@ int def_on(void);
 /* PRD 2, layer A: records_state.blocked[k] as the definitive edition reads it (stat debuffs 8..10 never blocked), and a
  * debuff's amount scaled by DEF_BOSS_DEBUFF_PCT where the original would have blocked it. */
 int def_stat_blocked(int k);
+/* PRD 2, layer J (definitive_evohint.c): the Digi-Lab's Next Forms panel, opened with Square from the Digimon screen. */
+int def_evohint_enabled(void);
+void def_evohint_label(s32 layer, s32 show);
+void def_evohint_open(s32 layer, s32 slot);
+int def_evohint_frame(void);
+void def_evohint_tick(void);
+s32 def_evohint_slot(void);
 /* PRD 2, layer D: a level's TP for a partner (the band's gain, capped; the loss is noted), whether the last level-up
  * lost TP (read once, by the report's message), and that message ("Level N! TP full: train!"). */
 s16 def_level_tp(s32 digimon, s16 tp, s16 level);
@@ -284,6 +291,7 @@ struct FightstgStats;
 int def_tech_effect(u8 side, int tech, int *msg);
 void def_apply_resist_mod(int side, int member, struct FightstgStats *out);
 int def_resist_down_mask(int side, int slot);
+int def_resist_down_families(int side, int slot); /* the same, a pair of elements as its family's one bit */
 const unsigned char *def_message(int i);
 int def_swap_free(void);       /* a swap would be free now: the HUD's Tag button shows it */
 int def_target_staggered(void); /* the current target is open */
@@ -305,12 +313,17 @@ const unsigned char *def_inspect_state(const short *resists, int e, int *palette
  * 14-pixel font; a technique's element index (-1: it has none); and def_inspect_state for the bestiary's species
  * `index`, from its SDIGIEDT record `rec` (the base resists, with the port's table) instead of the battle's. */
 const unsigned char *def_element_icon(int e);
+/* The element's family (Ice counts as Water, Machine as Thunder: the pairs of the multiplier's affinity) and its picture. */
+int def_element_family(int e);
+const unsigned char *def_element_family_icon(int e);
 int def_tech_element(int tech);
 struct FightstgEnemyRecord;
 const unsigned char *def_bestiary_state(struct FightstgEnemyRecord *rec, int index, int e, int *palette);
 /* Layer 2: the sound that tells a hit on a weakness, a neutral one or a resisted one (the player's elemental
  * techniques), played where the hit's own sound plays (fightstg_script_run_sound). */
 void def_hit_feedback(void);
+/* The hit callouts (port/game/definitive_callout.c): one frame of the word over the target, from the battle's tick. */
+void def_callout_frame(void);
 /* Layer 3: overrides the resists of an enemy record (FightstgEnemyRecord) by the port's table, if the species has a row. */
 struct FightstgEnemyRecord;
 void def_enemy_override(struct FightstgEnemyRecord *rec);

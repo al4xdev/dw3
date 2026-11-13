@@ -146,6 +146,14 @@ int def_train_no_stat_loss_on(void);
 #define DEF_XP_ALL_FORMS 1       /* every owned form of every party member earns form experience, fought or not */
 #define DEF_CARD_BOOST_PACKS 15  /* Booster Packs a battle's Booster Pack drop gives */
 
+#define DEF_EVO_HINT_DEPTH 1     /* Digi-Lab Next Forms: forms shown one step ahead; 0 turns it off, 99 shows every form */
+
+/* The hit callouts (definitive_callout.c): the slanted word that pops over the side hit. def_callout_show starts one
+ * (0 clears it) over `side`'s acting member (0 party, 1 enemy); def_callout_frame runs once per battle frame. */
+enum { DEF_CALLOUT_NONE, DEF_CALLOUT_WEAK, DEF_CALLOUT_RESIST, DEF_CALLOUT_OVERFINISH, DEF_CALLOUT_COUNT };
+void def_callout_show(int kind, int side);
+void def_callout_frame(void);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

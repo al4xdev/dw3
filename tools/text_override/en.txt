@@ -226,3 +226,21 @@ $TrainPityPrefix: Pity:
 $TrainPityMarks: +- /
 $TrainPityDigits: 0123456789
 $TrainPityReady: Next 100%!
+
+# PRD 2, layer J: the Digi-Lab's "Next Forms" panel (port/game/definitive_evohint.c)
+$EvoOpen: □ Next Forms
+$EvoTitle: Next Forms
+$EvoKeys: ↑↓ Form   L1/R1 Partner   △ Back
+$EvoLv: Lv
+$EvoLevel: Level
+$EvoReady: Ready
+$EvoReadyLine: Learns at the next level-up
+$EvoMissing: missing
+$EvoNone: Nothing in reach yet.
+$EvoNoneHint: Raise your forms and stats.
+$EvoStr: Strength
+$EvoDef: Defense
+$EvoSpi: Spirit
+$EvoWis: Wisdom
+$EvoSpd: Speed
+$EvoCha: Charisma

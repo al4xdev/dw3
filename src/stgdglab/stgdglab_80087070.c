@@ -125,7 +125,13 @@ void stgdglab_digimon_show(StgdglabDigimonScreen *obj, StgdglabDigimonData *data
             data->stats[i]->measure(data->stats[i], 1);
         }
         data->cursor->show(data->cursor, 1);
+#ifdef PC_PORT
+        def_evohint_label(obj->layer_id, 1); /* definitive edition: "□ Next Forms" */
+#endif
     } else {
+#ifdef PC_PORT
+        def_evohint_label(obj->layer_id, 0);
+#endif
         windows = (MessageWindow **)obj->base.children;
         for (i = 0; i < obj->base.child_count - 4; i++, windows++) {
             if (*windows != NULL) {
@@ -135,6 +141,20 @@ void stgdglab_digimon_show(StgdglabDigimonScreen *obj, StgdglabDigimonData *data
         data->cursor->show(data->cursor, 0);
     }
 }
+
+#ifdef PC_PORT
+/* The lab menu's partner panel (stgdglab_800886DC.c) refilled for main->member: its windows are reused. The data block's
+ * type is that file's own, hence the plain pointer. */
+void stgdglab_menu_create_windows();
+
+static void stgdglab_digimon_refresh_partner(StgdglabDigimonScreen *obj) {
+    StgdglabMainData *main = (StgdglabMainData *)obj->main->base.children;
+
+    if (main->menu != NULL) {
+        stgdglab_menu_create_windows(main->menu, main->menu->base.children);
+    }
+}
+#endif
 
 /* The screen's steps (base.step): open (0-1), choose an entry (2), close (3-4), the forms list (40-42), the form
  * change (10-12), the other screen (20-22) and the two messages (30-32, 50-52). */
@@ -198,7 +218,28 @@ void stgdglab_digimon_run(StgdglabDigimonScreen *obj, StgdglabDigimonData *data)
             obj->base.substep = 1;
             obj->base.step++;
         }
+#ifdef PC_PORT
+        else if (def_evohint_enabled() && PAD_PRESSED(0xF)) { /* definitive edition: the Next Forms panel (Square) */
+            sound_module.play(0x8004503C);
+            stgdglab_digimon_show(obj, data, 0);
+            def_evohint_open(obj->layer_id, obj->main->member);
+            obj->base.set_step(obj, 60);
+        }
+#endif
         break;
+#ifdef PC_PORT
+    case 60:
+        if (def_evohint_slot() != obj->main->member) { /* L1/R1 in the panel: the lab's partner panel follows */
+            obj->main->member = def_evohint_slot();
+            stgdglab_digimon_refresh_partner(obj);
+        }
+        if (def_evohint_frame()) {
+            /* back on the partner the panel ended on (L1/R1 switch it): the screen starts over to read its forms */
+            stgdglab_funcs.window_anim_start(&obj->anims[0], 0);
+            obj->base.set_step(obj, 0);
+        }
+        break;
+#endif
     case 3:
         stgdglab_funcs.window_anim_start(&obj->anims[0], 0);
         stgdglab_funcs.window_anim_start(&obj->anims[1], 0);
@@ -440,6 +481,9 @@ void stgdglab_digimon_update(StgdglabDigimonScreen *obj, StgdglabDigimonData *da
     case OBJECT_STATE_RUN:
         stgdglab_digimon_run(obj, data);
         stgdglab_digimon_draw(obj, data);
+#ifdef PC_PORT
+        def_evohint_tick(); /* the Next Forms label (definitive edition) */
+#endif
         break;
     case OBJECT_STATE_DONE:
     case OBJECT_STATE_END:
