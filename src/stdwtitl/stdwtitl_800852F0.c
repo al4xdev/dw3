@@ -49,6 +49,94 @@ void stdwtitl_menu_draw(StdwtitlMenu *obj) {
     }
 }
 
+#ifdef PC_PORT
+/* New Game's difficulty question (Hard Mode: a party of two; port/game/definitive.c). Asked between the title's choice
+ * and the new game, on a panel where the title's two choices were: two lines to choose from and, under them, a remark
+ * on the one the cursor is on (the easy one gets teased). The title has no message font (its windows draw nothing
+ * here), so the words are the callouts' polygon letters (def_poly_text). Up/down move, circle confirms, cross goes
+ * back to the title's choices. Not asked in a replay script. */
+#define DIFF_X 40
+#define DIFF_Y 135 /* under the logo, above the copyright lines */
+#define DIFF_W 240
+#define DIFF_H 60
+#define DIFF_ROW_Y (DIFF_Y + 19) /* the first choice's line; the second is DIFF_ROW_DY under it */
+#define DIFF_ROW_DY 13
+static s32 diff_cursor; /* 0 easy, 1 hard */
+static s32 diff_ticks;
+
+static void stdwtitl_diff_quad(StdwtitlMenu *obj, s32 x, s32 y, s32 w, s32 h, s32 abr, u8 r, u8 g, u8 b) {
+    GfxLayer *layer = gfx_module.funcs.get_layer(obj->layer_id);
+    POLY_F4 *poly = gfx_module.funcs.get_packet();
+    DR_TPAGE *tpage = (DR_TPAGE *)(poly + 1);
+    u32 *ot = layer->get_ot_entry(layer, 0);
+
+    setPolyF4(poly);
+    setSemiTrans(poly, 1);
+    setRGB0(poly, r, g, b);
+    setXY4(poly, x, y, x + w, y, x, y + h, x + w, y + h);
+    addPrim(ot, poly);
+    SetDrawTPage(tpage, 0, 1, getTPage(1, abr, 0, 0));
+    addPrim(ot, tpage);
+    gfx_module.funcs.set_packet(tpage + 1);
+}
+
+/* A line of text with its dark edge (queued after it: under it). */
+static void stdwtitl_diff_text(StdwtitlMenu *obj, s32 x, s32 y, s32 size, const char *text, const u8 *rgb) {
+    static const u8 edge[3] = { 8, 12, 40 };
+    GfxLayer *layer = gfx_module.funcs.get_layer(obj->layer_id);
+
+    def_poly_text(layer, 0, x, y, size, text, rgb);
+    def_poly_text(layer, 0, x + 1, y + 1, size, text, edge);
+}
+
+/* One frame of the question: 0 while it is open, 1 confirmed (diff_cursor), -1 cancelled. Everything is queued front
+ * to back: the words, the frame's lines, the cursor's bar, then the dark panel. */
+static s32 stdwtitl_diff_update(StdwtitlMenu *obj) {
+    static const u8 white[3] = { 255, 255, 255 }, grey[3] = { 120, 128, 150 }, title[3] = { 255, 208, 64 };
+    static const u8 easy[3] = { 96, 200, 255 }, hard[3] = { 255, 72, 56 };
+    static const char *const names[2] = { "EASY", "HARD" };
+    static const char *const lines[2] = { "3 DIGIMON", "2 DIGIMON  NO THIRD WHEEL" };
+    static const char *const tease[2] = { "AWW! WANT A BLANKET TOO?", "NOW WE ARE TALKING!" };
+    s32 i;
+
+    diff_ticks++;
+    stdwtitl_diff_text(obj, DIFF_X + 12, DIFF_Y + 5, 128, "CHOOSE YOUR FATE!", title);
+    for (i = 0; i < 2; i++) {
+        s32 y = DIFF_ROW_Y + i * DIFF_ROW_DY;
+        s32 on = diff_cursor == i;
+
+        stdwtitl_diff_text(obj, DIFF_X + 26, y, 160, names[i], on ? (i ? hard : easy) : grey);
+        stdwtitl_diff_text(obj, DIFF_X + 78, y + 1, 128, lines[i], on ? white : grey);
+        if (on) { /* the cursor: a wedge that nudges, and the line's bar */
+            s32 nudge = (diff_ticks >> 3) & 1;
+
+            stdwtitl_diff_text(obj, DIFF_X + 11 + nudge, y, 160, "!", i ? hard : easy);
+            stdwtitl_diff_quad(obj, DIFF_X + 6, y - 2, DIFF_W - 12, 13, 1, i ? 72 : 16, 24, i ? 16 : 72);
+        }
+    }
+    stdwtitl_diff_text(obj, DIFF_X + 12, DIFF_Y + 47, 128, tease[diff_cursor], diff_cursor ? hard : easy);
+    stdwtitl_diff_quad(obj, DIFF_X, DIFF_Y, DIFF_W, 1, 1, 60, 130, 230);
+    stdwtitl_diff_quad(obj, DIFF_X, DIFF_Y + DIFF_H - 1, DIFF_W, 1, 1, 60, 130, 230);
+    stdwtitl_diff_quad(obj, DIFF_X, DIFF_Y + 1, 1, DIFF_H - 2, 1, 60, 130, 230);
+    stdwtitl_diff_quad(obj, DIFF_X + DIFF_W - 1, DIFF_Y + 1, 1, DIFF_H - 2, 1, 60, 130, 230);
+    stdwtitl_diff_quad(obj, DIFF_X + 6, DIFF_Y + 15, DIFF_W - 12, 1, 1, 40, 80, 160);
+    stdwtitl_diff_quad(obj, DIFF_X, DIFF_Y, DIFF_W, DIFF_H, 2, 225, 215, 160);
+    if (PAD_PRESSED(4) || PAD_REPEAT(4) || PAD_PRESSED(6) || PAD_REPEAT(6)) {
+        diff_cursor = !diff_cursor;
+        sound_module.play(0x8004513E);
+    }
+    if (PAD_PRESSED(13)) {
+        sound_module.play(0x8004503C);
+        return 1;
+    }
+    if (PAD_PRESSED(14)) {
+        sound_module.play(0x800450BD);
+        return -1;
+    }
+    return 0;
+}
+#endif
+
 void stdwtitl_menu_update(StdwtitlMenu *obj) {
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
@@ -153,6 +241,14 @@ void stdwtitl_menu_update(StdwtitlMenu *obj) {
             if ((++obj->ticks & 3) == 0) {
                 obj->ticks = 0;
                 if (++obj->blink >= 3) {
+#ifdef PC_PORT
+                    if (obj->cursor == 0 && def_bestiary_active()) { /* New Game: the difficulty is asked first */
+                        obj->blink = 0;
+                        diff_cursor = 0;
+                        obj->base.set_step(obj, 10);
+                        break;
+                    }
+#endif
                     if (obj->cursor != 0) {
                         obj->result = 2;
                     } else {
@@ -165,6 +261,20 @@ void stdwtitl_menu_update(StdwtitlMenu *obj) {
             break;
         case 3:
             break;
+#ifdef PC_PORT
+        case 10:
+            switch (stdwtitl_diff_update(obj)) {
+            case 1:
+                def_new_game_difficulty(diff_cursor);
+                obj->result = 1;
+                obj->base.set_step(obj, 3);
+                break;
+            case -1:
+                obj->base.set_step(obj, 1);
+                break;
+            }
+            return; /* the question stands where the title's choices are: they are not drawn under it */
+#endif
         }
         stdwtitl_menu_draw(obj);
         break;

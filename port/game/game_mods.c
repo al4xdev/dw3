@@ -926,81 +926,99 @@ void port_battle_menu_chosen(int action, int bit, int refused) {
     port_log("battle menu: frame %ld: %s %d (bit %d)", port_frames, refused ? "refused" : "action", action, bit);
 }
 
+/* ---- The Guardromon network (the fast travel). The inns' Guardromon are the game's save terminals; here they are
+ * also the teleport's: talking to one (the walk up to its save screen) registers it on the save, and from an inn whose
+ * Guardromon is registered the MAP screen sends the player to any other registered one (circle on its area), landing on
+ * the spot the game itself walks the player to before that Guardromon. Nothing else travels: no inn, no travel, and a
+ * landing is always a spot of the map's own script (the old travel remembered each map's entry point only for the
+ * session, and after a load put the player at the last map's coordinates, off the new map). The table is gs_inns'
+ * order: the node's bit in def_network_mask. */
+typedef struct Dw3NetNode {
+    s16 map;     /* the inn's field map */
+    s16 x, y;    /* pixels: where the save event walks the player to (its FIELDSTG_EVENT_WALK) */
+    s16 dir;
+} Dw3NetNode;
+static const Dw3NetNode dw3_net_nodes[] = {
+    { 0x20A, 207, 208, 3 },  { 0x223, 153, 181, 3 }, { 0x230, 376, 428, 5 },  { 0x238, 160, 328, 3 },
+    { 0x23F, 720, 416, 5 },  { 0x247, 400, 224, 3 }, { 0x249, 279, 307, 3 },  { 0x25B, 215, 297, 3 },
+    { 0x25D, 1086, 516, 5 }, { 0x263, 315, 267, 3 }, { 0x269, 429, 206, 5 },  { 0x26D, 256, 456, 3 },
+    { 0x26F, 1200, 897, 5 }, { 0x279, 207, 208, 3 }, { 0x292, 153, 181, 3 },  { 0x29E, 376, 428, 5 },
+    { 0x2A5, 160, 328, 3 },  { 0x2AC, 720, 416, 5 }, { 0x2B1, 400, 224, 3 },  { 0x2B3, 279, 307, 3 },
+    { 0x2C4, 215, 297, 3 },  { 0x2C6, 1086, 516, 5 }, { 0x2CB, 315, 267, 3 }, { 0x2D1, 429, 206, 5 },
+    { 0x2D6, 1200, 897, 5 },
+};
+#define DW3_NET_NODES ((int)(sizeof(dw3_net_nodes) / sizeof(dw3_net_nodes[0])))
+
 static s32 dw3_travel_map;
-static int dw3_travel_miss;
+static const Dw3NetNode *dw3_travel_node;
 
-/* Each map's entry point (fieldstg_stage.start_pos), remembered the first time the map is loaded: that is the
- * "beginning" a fast travel lands on. Indexed by the map's low byte. */
-typedef struct Dw3TravelStart {
-    s32 x, y, dir;
-    int known;
-} Dw3TravelStart;
-static Dw3TravelStart dw3_travel_start[0x100];
-static Dw3TravelStart dw3_travel_landing;
+static int dw3_net_node_of(s32 map) {
+    int i;
+    for (i = 0; i < DW3_NET_NODES; i++) {
+        if (dw3_net_nodes[i].map == map) {
+            return i;
+        }
+    }
+    return -1;
+}
 
-void dw3_fast_travel_remember(s32 map, s32 x, s32 y, s32 dir) {
-    if (map < 0x200 || map > 0x2D6) {
+/* FIELDSTG is leaving for `next`: an inn's save screen (a 0xC.. map) from the inn's own map is its Guardromon being
+ * talked to. */
+void dw3_network_leaving(s32 map, s32 next) {
+    int node = dw3_net_node_of(map);
+
+    if (!dw3_feat_travel || node < 0 || (next & 0xFF00) != 0xC00) {
         return;
     }
-    dw3_travel_start[map & 0xFF].x = x;
-    dw3_travel_start[map & 0xFF].y = y;
-    dw3_travel_start[map & 0xFF].dir = dir;
-    dw3_travel_start[map & 0xFF].known = 1;
+    if (!((def_network_mask() >> node) & 1)) {
+        def_network_unlock(node);
+        port_log("network: Guardromon of map 0x%X registered (mask 0x%X)", (unsigned)map, def_network_mask());
+    }
+}
+
+/* 1 when the field the menu was opened on is a registered Guardromon's inn: the MAP screen may travel. */
+int dw3_network_here(void) {
+    int node = dw3_net_node_of(gamestate_data.field_map);
+
+    return dw3_feat_travel && node >= 0 && ((def_network_mask() >> node) & 1);
 }
 
 int dw3_fast_travel_landing(s32 *x, s32 *y, s32 *dir) {
-    if (!dw3_travel_landing.known) {
+    if (dw3_travel_node == NULL) {
         return 0;
     }
-    *x = dw3_travel_landing.x;
-    *y = dw3_travel_landing.y;
-    *dir = dw3_travel_landing.dir;
+    *x = dw3_travel_node->x << 8;
+    *y = dw3_travel_node->y << 8;
+    *dir = dw3_travel_node->dir;
     return 1;
 }
 
+/* Circle on the MAP screen's area `area` of the server `region`: its registered Guardromon, if the player stands in a
+ * registered inn and it is another one. */
 int dw3_fast_travel_ask(s32 area, s32 region) {
-    s32 first;
-    s32 last;
-    s32 i;
-    if (!dw3_feat_travel) {
+    int i;
+
+    if (!dw3_network_here()) {
         return 0;
     }
-    if (area < 0 || area > 0x2E) {
-        if (!dw3_travel_miss) {
-            dw3_travel_miss = 1;
-            port_log("fast travel: bad area %d", (int)area);
-        }
-        return 0;
-    }
-    if (region) {
-        first = 0x270;
-        last = 0x2D6;
-    } else {
-        first = 0x200;
-        last = 0x26F;
-    }
-    for (i = first; i <= last; i++) {
-        if ((ststatus_map_areas[i & 0xFF] & 0x7F) != area) {
+    for (i = 0; i < DW3_NET_NODES; i++) {
+        s32 map = dw3_net_nodes[i].map;
+
+        if ((ststatus_map_areas[map & 0xFF] & 0x7F) != area || (map >= 0x270) != (region != 0) ||
+            !((def_network_mask() >> i) & 1) || map == gamestate_data.field_map) {
             continue;
         }
-        if (gamestate_flags.get_flag((u16)((i & 0xFF) | 0x2000), 1) != 1) {
-            continue;
-        }
-        dw3_travel_map = i;
-        dw3_travel_landing = dw3_travel_start[i & 0xFF];
-        port_log("fast travel: area %d -> map 0x%X%s", (int)area, (unsigned)i,
-                 dw3_travel_landing.known ? "" : " (no entry point remembered)");
+        dw3_travel_map = map;
+        dw3_travel_node = &dw3_net_nodes[i];
+        port_log("network: travel to map 0x%X (area %d)", (unsigned)map, (int)area);
         return 1;
-    }
-    if (!dw3_travel_miss) {
-        dw3_travel_miss = 1;
-        port_log("fast travel: no visited door for area %d", (int)area);
     }
     return 0;
 }
 
 void dw3_fast_travel_clear(void) {
     dw3_travel_map = 0;
+    dw3_travel_node = NULL;
 }
 
 int dw3_fast_travel_take(s32 *map) {

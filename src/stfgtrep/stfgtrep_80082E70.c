@@ -900,6 +900,9 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         if (rec->equipment[4] == 0x142 || rec->equipment[5] == 0x142) {
             money += stfgtrep_rewards[records_battle_results.battle].money / 5;
         }
+#ifdef PC_PORT
+        money += def_overfinish_take_bits(); /* definitive combat: the OVERFINISH blows' Bits, in the same line */
+#endif
         data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 10);
         data->messages->set_line_number(data->messages, 1, money);
         data->messages->set_speed(data->messages, 6);

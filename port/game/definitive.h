@@ -5,6 +5,10 @@
 #define PORT_DEFINITIVE_H
 
 /* Layer 0 has no tunable numbers; layers 3+ add theirs here (the PRD's table). */
+#define DEF_FAMILIES 5          /* element families on the grouped screens (Water+Ice, Thunder+Machine as one each) */
+#define DEF_OVERFINISH_BITS_PCT 10 /* Bits earned per 100 damage dealt to an enemy already knocked out (OVERFINISH) */
+#define DEF_OVERLEVEL_GAP 15       /* levels the party's best must be above the enemies' best for a random battle to offer the Overlevel Rush */
+#define DEF_RUSH_TICKS 70          /* ticks (1/60 s) of the rush on the field before the battle's report opens */
 #define DEF_WEAK_COUNT 2        /* most weaknesses a target has (Dark, when marked, comes on top) */
 #define DEF_WEAK_GAP 20         /* how far below the median of the six a value must be to count as a weakness */
 #define DEF_BATON_PASS_MP 0     /* MP Baton Pass costs (offered only while the enemy is open; Persona's is free) */
@@ -167,6 +171,13 @@ void def_callout_frame(void);
 #define DEF_BESTIARY_ROWS 6           /* species listed per page on the bestiary screen */
 
 void def_bestiary_reset(void);
+/* The slot's other port state, kept in the same card record: the Guardromon network's unlocked nodes (a bit each,
+ * game_mods.c's table) and the save's flags. Reset with the table (a new game), read and written with it. */
+#define DEF_SAVE_HARD 1 /* the save is a Hard Mode one: the party is two Digimon */
+unsigned int def_network_mask(void);
+void def_network_unlock(int node);
+int def_save_flag(int flag);
+void def_save_flag_set(int flag, int on);
 void def_bestiary_discover(int index, int element_mask);
 int def_bestiary_known(int index);
 int def_bestiary_index(int species_id);

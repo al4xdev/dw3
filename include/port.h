@@ -223,15 +223,15 @@ void dw3_feats_arm(void);
 u16 dw3_pad_permute(u16 buttons, int rotated);
 /* Face-button text code (1, then 0x1B/0x2F/0x32/0x34) as a main-font letter, or 0. */
 s16 dw3_button_glyph(u8 code);
-/* X on a visited map area: remember a field of that area. 1 if a door was found. */
+/* The Guardromon network (game_mods.c): circle on a MAP screen area asks for its registered Guardromon (1 when the
+ * player stands in a registered inn and there is one); the field menu then takes the map and its landing spot.
+ * dw3_network_leaving: FIELDSTG leaves `map` for `next` (an inn's save screen registers its Guardromon). */
 int dw3_fast_travel_ask(s32 area, s32 region);
 void dw3_fast_travel_clear(void);
-/* The remembered field, once, or 0. */
 int dw3_fast_travel_take(s32 *map);
-/* The destination's entry point, remembered when its map first loaded: 1, with x/y/dir, or 0. */
 int dw3_fast_travel_landing(s32 *x, s32 *y, s32 *dir);
-/* FIELDSTG, once the map's script has set start_pos: where a fast travel to this map lands. */
-void dw3_fast_travel_remember(s32 map, s32 x, s32 y, s32 dir);
+void dw3_network_leaving(s32 map, s32 next);
+int dw3_network_here(void);
 /* Layout index of the story step's area on this map half, or 0. */
 s32 dw3_objective_spot(s32 region);
 
@@ -315,15 +315,38 @@ const unsigned char *def_inspect_state(const short *resists, int e, int *palette
 const unsigned char *def_element_icon(int e);
 /* The element's family (Ice counts as Water, Machine as Thunder: the pairs of the multiplier's affinity) and its picture. */
 int def_element_family(int e);
-const unsigned char *def_element_family_icon(int e);
+/* The grouped screens (the bestiary, Inspect): family `f` (0..4: Fire, Water+Ice, Wind, Thunder+Machine, Dark), its
+ * first picture or with `second` its other one (empty for a family of one), its name (the first element's), and its
+ * line's state as def_inspect_state / def_bestiary_state give an element's. */
+const unsigned char *def_family_icon(int f, int second);
+const unsigned char *def_family_name(int f);
+const unsigned char *def_inspect_family_state(const short *resists, int f, int *palette);
 int def_tech_element(int tech);
 struct FightstgEnemyRecord;
 const unsigned char *def_bestiary_state(struct FightstgEnemyRecord *rec, int index, int e, int *palette);
+const unsigned char *def_bestiary_family_state(struct FightstgEnemyRecord *rec, int index, int f, int *palette);
 /* Layer 2: the sound that tells a hit on a weakness, a neutral one or a resisted one (the player's elemental
  * techniques), played where the hit's own sound plays (fightstg_script_run_sound). */
 void def_hit_feedback(void);
+/* OVERFINISH: the Bits earned by the blows that hit an enemy already knocked out in the battle just won; given once. */
+s32 def_overfinish_take_bits(void);
+/* Hard Mode (two Digimon in the party): New Game's choice and its use by the new game's reset; the third slot emptied
+ * where a party was set; 1 when the lab must refuse party slot `slot`; 1 when New Game asks (not in a replay script). */
+/* Overlevel Rush: 1 when the battle just set up in records_state is far under the party (the field asks to skip it);
+ * the results a win would have left, for the battle's report; 1 when a test takes the rush without the question. */
+int def_rush_offer(void);
+void def_rush_results(void);
+int def_rush_auto(void);
+void def_new_game_difficulty(int hard);
+void def_new_game_apply(void);
+void def_hard_party_fix(void);
+int def_hard_slot_closed(int slot);
+int def_bestiary_active(void);
 /* The hit callouts (port/game/definitive_callout.c): one frame of the word over the target, from the battle's tick. */
 void def_callout_frame(void);
+/* Text in the callouts' polygon letters (capitals, 2, 3, ! and ?), for screens without the game's font: the width. */
+struct GfxLayer;
+int def_poly_text(struct GfxLayer *layer, s32 depth, int x, int y, int size, const char *text, const u8 *rgb);
 /* Layer 3: overrides the resists of an enemy record (FightstgEnemyRecord) by the port's table, if the species has a row. */
 struct FightstgEnemyRecord;
 void def_enemy_override(struct FightstgEnemyRecord *rec);

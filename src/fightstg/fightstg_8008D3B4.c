@@ -3120,7 +3120,7 @@ typedef struct FightstgHud {
     /* 0x84 */ s32 update_frames; /* frames between HP updates */
 #ifdef PC_PORT
     s8 mod_sign[2][3]; /* last shown sign (-1, 0, 1) of modifiers[0..2] */
-    u8 mod_elem[2];    /* last shown def_resist_down_mask per side */
+    u8 mod_elem[2];    /* last shown def_resist_down_families per side */
 #endif
 } FightstgHud; /* size 0x88 */
 
@@ -3133,7 +3133,8 @@ typedef struct FightstgHudData {
     /* 0x10 */ MessageWindow *hp;
 #ifdef PC_PORT
     MessageWindow *stat_mod[2][3]; /* Attack, Defense, Speed buff/debuff icons */
-    MessageWindow *elem_mod[2][7]; /* elemental Resist Down icons */
+    MessageWindow *elem_mod[2][DEF_FAMILIES];   /* Resist Down: the lowered family's picture, */
+    MessageWindow *elem_arrow[2][DEF_FAMILIES]; /* and the red arrow over it */
 #endif
 } FightstgHudData; /* size 0x14 */
 
@@ -3565,84 +3566,74 @@ static void fightstg_battle_menu_quad(s32 x, s32 y, s32 w, s32 h, s32 abr, u8 r,
 }
 
 #ifdef PC_PORT
-/* PRD 2, layer C: active member buff/debuff icons under the HP bar (A/D/S + ↑/↓ in green/red; elemental Resist Down
- * as ↓ in the element's 14-pixel palette). Kept clear of the HP digits (y 26) and the member squares tab. */
-#define FIGHTSTG_HUD_MOD_Y 48
+/* PRD 2, layer C: the acting member's buffs and debuffs, on a strip just under its HUD frame (clear of the frame's
+ * edge and of the member squares' tab), from the frame's outer end inwards. A stat is its letter and an arrow, green
+ * up or red down (A Attack, D Defense, S Speed); a lowered resist is the element family's own picture (the one the
+ * bestiary and Inspect show) with the red arrow over its corner, so it reads as "this element, down" and never as a
+ * stat. One picture a family: Water and Ice lowered together are one mark. */
+#define FIGHTSTG_HUD_MOD_Y 59
 #define FIGHTSTG_HUD_MOD_STAT_STEP 17
-#define FIGHTSTG_HUD_MOD_ELEM_STEP 9
+#define FIGHTSTG_HUD_MOD_ELEM_STEP 19 /* the 15-pixel picture, the arrow's overhang and a gap */
+#define FIGHTSTG_HUD_MOD_ARROW_DX 9   /* the arrow over the picture's right side */
+#define FIGHTSTG_HUD_MOD_ENEMY_X 18   /* the enemy's strip starts under its name box */
+#define FIGHTSTG_HUD_MOD_PARTY_X 256  /* the party's ends left of the Blast gauge (x 262..305 on this line) */
+
+static void fightstg_hud_hide_mods(FightstgHud *obj, FightstgHudData *data, s32 side) {
+    s32 k;
+
+    for (k = 0; k < 3; k++) {
+        if (data->stat_mod[side][k] != NULL) {
+            data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 0);
+        }
+        obj->mod_sign[side][k] = 0;
+    }
+    for (k = 0; k < DEF_FAMILIES; k++) {
+        if (data->elem_mod[side][k] != NULL) {
+            data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
+            data->elem_arrow[side][k]->set_visible(data->elem_arrow[side][k], 0);
+        }
+    }
+    obj->mod_elem[side] = 0;
+}
 
 static void fightstg_hud_draw_mods(FightstgHud *obj, FightstgHudData *data) {
     static const u8 stat_glyph[3] = { 0x0E, 0x11, 0x20 }; /* A (Attack), D (Defense), S (Speed) */
-    static const u8 elem_pal[7] = { 5, 2, 1, 4, 3, 7, 6 }; /* Fire, Water, Ice, Wind, Thunder, Machine, Dark */
-    static const u8 elem_text[3] = { 1, 0x3A, 0 };         /* ↓ */
+    static const u8 down[3] = { 1, 0x3A, 0 };
     s32 side;
 
     if (!def_on()) {
-        for (side = 0; side < 2; side++) {
-            s32 k;
-            for (k = 0; k < 3; k++) {
-                if (data->stat_mod[side][k] != NULL) {
-                    data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 0);
-                }
-                obj->mod_sign[side][k] = 0;
-            }
-            for (k = 0; k < 7; k++) {
-                if (data->elem_mod[side][k] != NULL) {
-                    data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
-                }
-            }
-            obj->mod_elem[side] = 0;
-        }
+        fightstg_hud_hide_mods(obj, data, 0);
+        fightstg_hud_hide_mods(obj, data, 1);
         return;
     }
-
     for (side = 0; side < 2; side++) {
         s32 slot = fightstg_battle.state.current[side];
         FightstgMember *m = &fightstg_battle.state.members[side][slot];
         s8 signs[3];
-        u8 mask = (u8)def_resist_down_mask(side, slot);
+        u8 mask = (u8)def_resist_down_families(side, slot);
         s32 changed = (mask != obj->mod_elem[side]);
         s32 total_w = 0;
-        s32 n_stat = 0;
-        s32 n_elem = 0;
         s32 k;
         s32 x0;
         s32 cur_x;
 
         for (k = 0; k < 3; k++) {
             signs[k] = m->modifiers[k] > 0 ? 1 : (m->modifiers[k] < 0 ? -1 : 0);
-            if (signs[k] != obj->mod_sign[side][k]) {
-                changed = 1;
-            }
-            if (signs[k] != 0) {
-                n_stat++;
-            }
+            changed |= signs[k] != obj->mod_sign[side][k];
+            total_w += signs[k] != 0 ? FIGHTSTG_HUD_MOD_STAT_STEP : 0;
         }
-        for (k = 0; k < 7; k++) {
-            if ((mask >> k) & 1) {
-                n_elem++;
-            }
+        for (k = 0; k < DEF_FAMILIES; k++) {
+            total_w += (mask >> k) & 1 ? FIGHTSTG_HUD_MOD_ELEM_STEP : 0;
         }
-        if (n_stat + n_elem == 0) {
+        if (total_w == 0) {
             if (changed) {
-                for (k = 0; k < 3; k++) {
-                    if (data->stat_mod[side][k] != NULL) {
-                        data->stat_mod[side][k]->set_visible(data->stat_mod[side][k], 0);
-                    }
-                    obj->mod_sign[side][k] = 0;
-                }
-                for (k = 0; k < 7; k++) {
-                    if (data->elem_mod[side][k] != NULL) {
-                        data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
-                    }
-                }
-                obj->mod_elem[side] = 0;
+                fightstg_hud_hide_mods(obj, data, side);
             }
             continue;
         }
-        total_w = n_stat * FIGHTSTG_HUD_MOD_STAT_STEP + n_elem * FIGHTSTG_HUD_MOD_ELEM_STEP - 1;
-        x0 = (side == 1) ? 53 : (259 - total_w);
-        fightstg_battle_menu_quad(x0 - 2, FIGHTSTG_HUD_MOD_Y, total_w + 3, 12, 2, 150, 140, 100);
+        total_w -= 2; /* the last mark's gap */
+        x0 = side == 1 ? FIGHTSTG_HUD_MOD_ENEMY_X : FIGHTSTG_HUD_MOD_PARTY_X - total_w;
+        fightstg_battle_menu_quad(x0 - 3, FIGHTSTG_HUD_MOD_Y - 1, total_w + 6, 15, 2, 150, 140, 100);
         if (!changed) {
             continue;
         }
@@ -3667,18 +3658,24 @@ static void fightstg_hud_draw_mods(FightstgHud *obj, FightstgHudData *data) {
             }
             obj->mod_sign[side][k] = signs[k];
         }
-        for (k = 0; k < 7; k++) {
+        for (k = 0; k < DEF_FAMILIES; k++) {
             if ((mask >> k) & 1) {
                 if (data->elem_mod[side][k] == NULL) {
+                    /* the picture first: the arrow, created after it, is drawn over it */
                     data->elem_mod[side][k] = message_create_window(0x1005, 1, cur_x, FIGHTSTG_HUD_MOD_Y);
-                    data->elem_mod[side][k]->set_text(data->elem_mod[side][k], (u8 *)elem_text, -1);
-                    data->elem_mod[side][k]->set_palette(data->elem_mod[side][k], elem_pal[k]);
+                    data->elem_mod[side][k]->set_text(data->elem_mod[side][k], (u8 *)def_family_icon(k, 0), -1);
+                    data->elem_arrow[side][k] = message_create_window(0x1005, 1, cur_x, FIGHTSTG_HUD_MOD_Y);
+                    data->elem_arrow[side][k]->set_text(data->elem_arrow[side][k], (u8 *)down, -1);
+                    data->elem_arrow[side][k]->set_palette(data->elem_arrow[side][k], 5);
                 }
                 data->elem_mod[side][k]->set_pos(data->elem_mod[side][k], cur_x, FIGHTSTG_HUD_MOD_Y);
                 data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 1);
+                data->elem_arrow[side][k]->set_pos(data->elem_arrow[side][k], cur_x + FIGHTSTG_HUD_MOD_ARROW_DX, FIGHTSTG_HUD_MOD_Y + 2);
+                data->elem_arrow[side][k]->set_visible(data->elem_arrow[side][k], 1);
                 cur_x += FIGHTSTG_HUD_MOD_ELEM_STEP;
             } else if (data->elem_mod[side][k] != NULL) {
                 data->elem_mod[side][k]->set_visible(data->elem_mod[side][k], 0);
+                data->elem_arrow[side][k]->set_visible(data->elem_arrow[side][k], 0);
             }
         }
         obj->mod_elem[side] = mask;
@@ -3751,14 +3748,16 @@ static void fightstg_battle_menu_paint(FightstgBattleMenuData *data, s32 i, u8 p
  * are emptied. The panel is a title (the enemy's name) over two columns of picture + state in the 14-pixel font (the
  * 9-pixel one has two usable colours and reads badly at 320x240): Fire, Water, Ice, Wind | Thunder, Machine, Dark.
  * It sits right of the buttons and under the gauges (x 104-232, y 160-235), left of the player's Digimon. */
-#define FIGHTSTG_INSPECT_X 108
+#define FIGHTSTG_INSPECT_X 104
 #define FIGHTSTG_INSPECT_Y 163       /* the title's line */
 #define FIGHTSTG_INSPECT_ROW_Y 178   /* the first element's */
 #define FIGHTSTG_INSPECT_LINE 14
-#define FIGHTSTG_INSPECT_ROWS 4      /* elements per column */
-#define FIGHTSTG_INSPECT_COL_DX 62
-#define FIGHTSTG_INSPECT_STATE_DX 18 /* the state's text, after the 15-pixel picture */
-#define FIGHTSTG_INSPECT_W 128
+#define FIGHTSTG_INSPECT_FAMILIES 5  /* the cells: the elements by family (DEF_FAMILIES), a pair as one cell */
+#define FIGHTSTG_INSPECT_ROWS 3      /* families per column */
+#define FIGHTSTG_INSPECT_COL_DX 68
+#define FIGHTSTG_INSPECT_PAIR_DX 11  /* a pair's second picture, behind the first's right side */
+#define FIGHTSTG_INSPECT_STATE_DX 29 /* the state's text, after a pair's two pictures (every cell's, so they line up) */
+#define FIGHTSTG_INSPECT_W 138
 #define FIGHTSTG_TWICE_X 108 /* the "Enemy x2" label: over the arena floor, under the gauges */
 #define FIGHTSTG_TWICE_Y 152
 static const u8 fightstg_inspect_empty[1] = { 0 };
@@ -3782,11 +3781,13 @@ static void fightstg_battle_menu_inspect_set(FightstgBattleMenuData *data, s32 o
     if (rec != NULL) {
         data->inspect_title->set_text(data->inspect_title, cdload_module.files.get_file(records_language + 0x4E), rec->name);
     }
-    for (e = 0; e < 7; e++) {
-        data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)def_element_icon(e), -1);
-        data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)def_inspect_state(enemy->resists, e, &n), -1);
+    for (e = 0; e < FIGHTSTG_INSPECT_FAMILIES; e++) {
+        data->inspect_names[e]->set_text(data->inspect_names[e], (u8 *)def_family_icon(e, 0), -1);
+        data->inspect_states[e]->set_text(data->inspect_states[e], (u8 *)def_inspect_family_state(enemy->resists, e, &n), -1);
         data->inspect_states[e]->set_palette(data->inspect_states[e], n);
     }
+    data->inspect_names[5]->set_text(data->inspect_names[5], (u8 *)def_family_icon(1, 1), -1); /* the pairs' second */
+    data->inspect_names[6]->set_text(data->inspect_names[6], (u8 *)def_family_icon(3, 1), -1); /* pictures */
 }
 
 /* The open panel's backdrop: the dark quad, a line under the title and a frame in the windows' blue. */
@@ -3841,8 +3842,14 @@ void fightstg_battle_menu_update(FightstgBattleMenu *obj, FightstgBattleMenuData
         }
         data->inspect_title = message_create_window(0x1005, 1, FIGHTSTG_INSPECT_X, FIGHTSTG_INSPECT_Y);
         for (i = 0; i < 7; i++) {
-            x = FIGHTSTG_INSPECT_X + FIGHTSTG_INSPECT_COL_DX * (i / FIGHTSTG_INSPECT_ROWS);
-            y = FIGHTSTG_INSPECT_ROW_Y + FIGHTSTG_INSPECT_LINE * (i % FIGHTSTG_INSPECT_ROWS);
+            /* five cells by family; windows 5 and 6 are the second pictures of the pairs (families 1 and 3) */
+            s32 f = i < FIGHTSTG_INSPECT_FAMILIES ? i : i == 5 ? 1 : 3;
+
+            x = FIGHTSTG_INSPECT_X + FIGHTSTG_INSPECT_COL_DX * (f / FIGHTSTG_INSPECT_ROWS);
+            y = FIGHTSTG_INSPECT_ROW_Y + FIGHTSTG_INSPECT_LINE * (f % FIGHTSTG_INSPECT_ROWS);
+            if (i >= FIGHTSTG_INSPECT_FAMILIES) {
+                x += FIGHTSTG_INSPECT_PAIR_DX;
+            }
             data->inspect_names[i] = message_create_window(0x1005, 1, x, y);
             data->inspect_states[i] = message_create_window(0x1005, 1, x + FIGHTSTG_INSPECT_STATE_DX, y);
         }

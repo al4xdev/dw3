@@ -1701,9 +1701,7 @@ static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerD
     gamestate_flags.update_map_flags();
     gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
 #ifdef PC_PORT
-    /* The map's script set start_pos: that is the "beginning" a fast travel to this map lands on. */
-    dw3_fast_travel_remember(gamestate_data.funcs.get_map(), fieldstg_stage.start_pos.x,
-                             fieldstg_stage.start_pos.y, fieldstg_stage.start_dir);
+    def_hard_party_fix(); /* Hard Mode: a party of two, whatever set it */
 #endif
     map = gamestate_data.funcs.get_prev_map();
     if ((map & 0xFF00) != 0x200 && (map & 0xFF00) != 0x300 && (map & 0xFF00) != 0xE00 && map != 0x1500
@@ -1856,6 +1854,9 @@ void fieldstg_goto_map_delayed(s32 map, s32 entry, s32 x, s32 y, s32 dir, s32 de
     FieldstgManager *obj = (FieldstgManager *)heap_objects.find(7, -1, -1);
 
     if (obj != NULL) {
+#ifdef PC_PORT
+        dw3_network_leaving(gamestate_data.funcs.get_map(), map); /* an inn's save screen: its Guardromon registers */
+#endif
         obj->next_map = map;
         obj->map_entry = entry;
         obj->delay = delay;
@@ -2895,9 +2896,17 @@ void fieldstg_camera_apply(FieldstgCamera *obj) {
     layer->set_scroll(layer, (fieldstg_camera_shake_offsets[shake].x + x) << 8, (fieldstg_camera_shake_offsets[shake].y + y) << 8);
 }
 
+#ifdef PC_PORT
+void fieldstg_rush_frame(void);
+#endif
+
 void fieldstg_camera_update(FieldstgCamera *obj) {
     FieldstgPos dist;
     FieldstgPos sign;
+
+#ifdef PC_PORT
+    fieldstg_rush_frame(); /* the Overlevel Rush's question, while it is up */
+#endif
 
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
@@ -4957,6 +4966,111 @@ void fieldstg_encounter_reset(void) {
     }
 }
 
+#ifdef PC_PORT
+/* The Overlevel Rush's question and its run (port/game/definitive.c, def_rush_offer): the random battle is set up as
+ * ever, but the field's leave for it waits on this object. It asks ("EASY FIGHT! RUSH IT?", left/right, circle; cross
+ * is no) in the callouts' polygon letters; no goes on to the battle; yes shows the rush for DEF_RUSH_TICKS and leaves
+ * for the battle's report instead, with the results def_rush_results fills. */
+#include "port/game/definitive.h" /* DEF_RUSH_TICKS */
+typedef struct FieldstgRush {
+    s32 active; /* 0: none; 1: asking; 2: rushing */
+    s32 battle;
+    s32 yes;   /* the cursor */
+    s32 ticks;
+} FieldstgRush;
+/* Not an object: nothing of the field would run one made here, so the camera's update (once a frame, whatever the
+ * player may do) runs it: fieldstg_rush_frame. */
+static FieldstgRush fieldstg_rush;
+
+static void fieldstg_rush_quad(GfxLayer *layer, s32 x, s32 y, s32 w, s32 h, s32 abr, u8 r, u8 g, u8 b) {
+    POLY_F4 *poly = gfx_module.funcs.get_packet();
+    DR_TPAGE *tpage = (DR_TPAGE *)(poly + 1);
+    u32 *ot = layer->get_ot_entry(layer, 0);
+
+    setPolyF4(poly);
+    setSemiTrans(poly, 1);
+    setRGB0(poly, r, g, b);
+    setXY4(poly, x, y, x + w, y, x, y + h, x + w, y + h);
+    addPrim(ot, poly);
+    SetDrawTPage(tpage, 0, 1, getTPage(1, abr, 0, 0));
+    addPrim(ot, tpage);
+    gfx_module.funcs.set_packet(tpage + 1);
+}
+
+static void fieldstg_rush_text(GfxLayer *layer, s32 x, s32 y, s32 size, const char *text, const u8 *rgb) {
+    static const u8 edge[3] = { 8, 12, 40 };
+
+    def_poly_text(layer, 0, x, y, size, text, rgb);
+    def_poly_text(layer, 0, x + 1, y + 1, size, text, edge);
+}
+
+static void fieldstg_rush_leave(FieldstgRush *obj, s32 rushed) {
+    FieldstgManager *mgr;
+
+    fieldstg_stage.event_running = 0;
+    fieldstg_stage.battle_starting = 0;
+    fieldstg_start_battle(obj->battle);
+    if (rushed && (mgr = (FieldstgManager *)heap_objects.find(7, -1, -1)) != NULL) {
+        def_rush_results();
+        mgr->next_map = 0x1400; /* STFGTREP, where a won battle goes */
+    }
+    obj->active = 0;
+}
+
+static void fieldstg_rush_update(FieldstgRush *obj) {
+    static const u8 white[3] = { 255, 255, 255 }, grey[3] = { 120, 128, 150 }, gold[3] = { 255, 208, 64 };
+    static const u8 red[3] = { 255, 72, 56 };
+    GfxLayer *layer = gfx_module.funcs.get_layer(0x1004);
+
+    {
+        if (layer == NULL) {
+            fieldstg_rush_leave(obj, 0);
+            return;
+        }
+        if (obj->active == 1) {
+            fieldstg_rush_text(layer, 82, 96, 128, "EASY FIGHT! RUSH IT?", gold);
+            fieldstg_rush_text(layer, 112, 114, 160, "YES", obj->yes ? white : grey);
+            fieldstg_rush_text(layer, 182, 114, 160, "NO", obj->yes ? grey : white);
+            fieldstg_rush_quad(layer, obj->yes ? 106 : 176, 112, obj->yes ? 44 : 34, 14, 1, 24, 40, 96);
+            fieldstg_rush_quad(layer, 70, 90, 180, 1, 1, 60, 130, 230);
+            fieldstg_rush_quad(layer, 70, 133, 180, 1, 1, 60, 130, 230);
+            fieldstg_rush_quad(layer, 70, 90, 180, 44, 2, 225, 215, 160);
+            if (PAD_PRESSED(5) || PAD_PRESSED(7)) {
+                obj->yes = !obj->yes;
+                sound_module.play(0x8004513E);
+            }
+            if (PAD_PRESSED(14) || (PAD_PRESSED(13) && !obj->yes)) {
+                sound_module.play(0x800450BD);
+                fieldstg_rush_leave(obj, 0);
+            } else if (PAD_PRESSED(13)) {
+                /* no sound yet: the hit lands when the word does */
+                obj->active = 2;
+            }
+        } else {
+            /* the rush: the word slams in, shakes and holds, then the report */
+            s32 t = obj->ticks;
+            s32 size = t < 8 ? 640 - t * 40 : 320;
+            s32 shake = t >= 8 && t < 20 ? ((t & 2) ? 2 : -2) : 0;
+
+            if (t == 8) {
+                sound_module.play(0x800450BD);
+            }
+            fieldstg_rush_text(layer, 160 - 45 * size / 256 + shake, 120 - 8 * size / 256, size, "RUSH!", red);
+            obj->ticks += gfx_module.funcs.get_frame_ticks();
+            if (obj->ticks >= DEF_RUSH_TICKS) {
+                fieldstg_rush_leave(obj, 1);
+            }
+        }
+    }
+}
+
+void fieldstg_rush_frame(void) {
+    if (fieldstg_rush.active != 0) {
+        fieldstg_rush_update(&fieldstg_rush);
+    }
+}
+#endif
+
 void fieldstg_encounter_start(void) {
     FieldstgActor *obj = (FieldstgActor *)heap_objects.find(5, -1, 0);
     FieldstgPos pos = obj->pixel_pos;
@@ -4966,6 +5080,24 @@ void fieldstg_encounter_start(void) {
 
     records_state.stage = event->stage;
     records_state.music = event->music;
+#ifdef PC_PORT
+    {
+        s32 i;
+
+        for (i = 0; i < 3; i++) { /* the enemies, as fieldstg_start_battle will set them: def_rush_offer reads them */
+            records_state.enemies[i] = *fieldstg_battles[event->battle].enemies[i];
+        }
+        if (def_rush_offer()) {
+            fieldstg_rush.active = def_rush_auto() ? 2 : 1;
+            fieldstg_rush.battle = event->battle;
+            fieldstg_rush.yes = 1;
+            fieldstg_rush.ticks = 0;
+            fieldstg_stage.event_running = 1; /* the player stands still and no other battle starts meanwhile */
+            fieldstg_stage.battle_starting = 1;
+            return;
+        }
+    }
+#endif
     fieldstg_start_battle(event->battle);
 }
 

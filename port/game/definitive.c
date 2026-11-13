@@ -10,6 +10,7 @@
 #include "sound.h"
 #include "gamestate.h"
 #include "records.h"
+#include "pad.h"
 
 #include "port_runtime.h"
 #include "savestate.h"
@@ -25,6 +26,12 @@ s32 fightstg_rules_get_special_damage(u8 side, s32 id);
 static struct {
     int weak, open, resisted, affinity, mult;
 } terms;
+/* OVERFINISH: a blow that knocks the enemy out and earns an extra action leaves it lying there for that action (its
+ * knock-out event waits behind the party's turn), and it can be hit again. Kept as a reward for chaining a weakness
+ * into the kill: such a blow shows the OVERFINISH! callout and its damage pays Bits with the battle's
+ * (DEF_OVERFINISH_BITS_PCT). `overfinish_hit`: the blow being shown is one; `overfinish_damage`: the battle's total. */
+static int overfinish_hit;
+static s32 overfinish_damage;
 static DefChain chain; /* layer 4: stagger, window, free swap (definitive_mask.c) */
 static short resist_mod[2][3][7]; /* layer 6: per side (0 party, 1 enemy) and slot, what Resist Down took off each element */
 static unsigned char resist_turns[2][3]; /* and the turns of that side it still lasts */
@@ -60,6 +67,9 @@ void def_log_begin(void) {
     port_hud_arm();
     def_mp_hook();
     def_chain_reset(&chain);
+    def_callout_show(DEF_CALLOUT_NONE, 0);
+    overfinish_hit = 0;
+    overfinish_damage = 0;
     memset(resist_mod, 0, sizeof(resist_mod));
     memset(resist_turns, 0, sizeof(resist_turns));
     if (!log_on()) {
@@ -148,6 +158,7 @@ static void classify(u8 side, s32 id) {
     RecordsTechnique *rec = &records_techniques[id - 1];
 
     hit_class = 0;
+    overfinish_hit = 0;
     if (side != 0 || rec->defense_stat < 2 || rec->defense_stat > 8) {
         return;
     }
@@ -157,13 +168,56 @@ static void classify(u8 side, s32 id) {
     hit_id = id;
 }
 
+/* Hard Mode (the save's DEF_SAVE_HARD flag, chosen on New Game): the party is two Digimon. The third of the starting
+ * pack is owned but stays out (the lab keeps it), and the third slot takes nobody: this empties it wherever a party
+ * was just set (the starting pack, a loaded field), and the lab refuses the slot (def_hard_slot_closed). */
+void def_hard_party_fix(void) {
+    if (def_save_flag(DEF_SAVE_HARD) && gamestate_data.party[2] >= 0) {
+        gamestate_data.party[2] = -1;
+    }
+}
+
+int def_hard_slot_closed(int slot) {
+    return slot >= 2 && def_save_flag(DEF_SAVE_HARD);
+}
+
+/* New Game's choice, kept past the new game's own reset of the save's port state (gamestate_init_records). */
+static int new_game_hard;
+
+void def_new_game_difficulty(int hard) {
+    new_game_hard = hard;
+    def_save_flag_set(DEF_SAVE_HARD, hard);
+}
+
+void def_new_game_apply(void) {
+    def_save_flag_set(DEF_SAVE_HARD, new_game_hard);
+    new_game_hard = 0;
+}
+
+/* The Bits the battle's OVERFINISH blows earned, given once (the results screen adds them to the battle's money). */
+s32 def_overfinish_take_bits(void) {
+    s32 bits = def_on() ? overfinish_damage * DEF_OVERFINISH_BITS_PCT / 100 : 0;
+
+    overfinish_damage = 0;
+    return bits;
+}
+
 void def_hit_feedback(void) {
     static const s32 sound[4] = { 0, DEF_SND_EFFECTIVE, DEF_SND_NEUTRAL, DEF_SND_RESISTED };
 
-    if (fightstg_action.side != 0 || hit_class == 0) {
+    if (fightstg_action.side != 0) {
+        return;
+    }
+    if (overfinish_hit) { /* whatever the blow's element, and over WEAK!: the word of the moment is this one */
+        sound_module.play(DEF_SND_EFFECTIVE);
+        def_callout_show(DEF_CALLOUT_OVERFINISH, 1);
+        return;
+    }
+    if (hit_class == 0) {
         return;
     }
     sound_module.play(sound[hit_class]);
+    def_callout_show(hit_class == 1 ? DEF_CALLOUT_WEAK : hit_class == 3 ? DEF_CALLOUT_RESIST : DEF_CALLOUT_NONE, 1);
     if (log_on()) {
         LOG("hitsound class %d tech %d", hit_class, (int)hit_id);
     }
@@ -286,6 +340,44 @@ const unsigned char *def_element_icon(int e) {
     return icons[e];
 }
 
+/* The five families the bestiary, Inspect and the HUD's Resist Down arrows show the seven elements as: Water with Ice
+ * and Thunder with Machine, the pairs the multiplier's affinity already sums, each named by its first. Only the
+ * screens group them: the rules still read seven resists, and the technique list and the status screens keep the
+ * seven pictures (which of a pair a species is weak to is the player's to find). */
+static const signed char family_elems[DEF_FAMILIES][2] = { { 0, -1 }, { 1, 2 }, { 3, -1 }, { 4, 5 }, { 6, -1 } };
+
+int def_element_family(int e) {
+    static const unsigned char family[7] = { 0, 1, 1, 2, 3, 3, 4 };
+
+    return family[e];
+}
+
+/* The family's pictures: its first element's, and with `second` its other's (empty text for a family of one). */
+const unsigned char *def_family_icon(int f, int second) {
+    static const unsigned char none[1] = { 0 };
+    int e = family_elems[f][second != 0];
+
+    return e >= 0 ? def_element_icon(e) : none;
+}
+
+const unsigned char *def_family_name(int f) {
+    return def_inspect_element(family_elems[f][0]);
+}
+
+/* def_resist_down_mask by family: a lowered element sets its family's bit (Ice the Water's, Machine the Thunder's). */
+int def_resist_down_families(int side, int slot) {
+    int mask = def_resist_down_mask(side, slot);
+    int out = 0;
+    int e;
+
+    for (e = 0; e < 7; e++) {
+        if ((mask >> e) & 1) {
+            out |= 1 << def_element_family(e);
+        }
+    }
+    return out;
+}
+
 int def_tech_element(int tech) {
     int stat = tech >= 1 ? records_techniques[tech - 1].defense_stat : 0;
 
@@ -328,6 +420,37 @@ const unsigned char *def_bestiary_state(FightstgEnemyRecord *rec, int index, int
     }
     def_enemy_override(rec); /* the field reads SDIGIEDT itself: the record may not have gone through the battle's get */
     return state_label(target_class(e, rec->resists, rec->id), palette);
+}
+
+/* A family's line, from what is learnt of its elements (`known`: the bestiary's bits): Weak as soon as one of them is
+ * known to be weak (the line to find); with both known, Resist only when both resist, else neutral; and ??? while a
+ * part is not learnt and no weakness is, so a pair half tried still asks for the other half. */
+static const unsigned char *family_state(int known, const short *resists, int species, int f, int *palette) {
+    int k, e, cls, all_known = 1, all_resist = 1;
+
+    for (k = 0; k < 2 && (e = family_elems[f][k]) >= 0; k++) {
+        if (!((known >> e) & 1)) {
+            all_known = 0;
+            continue;
+        }
+        cls = target_class(e, resists, species);
+        if (cls == 1) {
+            return state_label(1, palette);
+        }
+        all_resist &= cls == 3;
+    }
+    return state_label(!all_known ? 0 : all_resist ? 3 : 2, palette);
+}
+
+const unsigned char *def_inspect_family_state(const short *resists, int f, int *palette) {
+    int species = fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon;
+
+    return family_state(def_bestiary_known(def_bestiary_index(species)), resists, species, f, palette);
+}
+
+const unsigned char *def_bestiary_family_state(FightstgEnemyRecord *rec, int index, int f, int *palette) {
+    def_enemy_override(rec); /* as def_bestiary_state */
+    return family_state(def_bestiary_known(index), rec->resists, rec->id, f, palette);
 }
 
 /* ---- Layer 3: the enemy table. Applied each time the game asks for the record (idempotent), so it holds after a reload
@@ -375,6 +498,8 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, hit_class);
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
+    PORT_STATE_VAR(s, overfinish_hit);
+    PORT_STATE_VAR(s, overfinish_damage);
     PORT_STATE_VAR(s, records_state.gauges);
     PORT_STATE_VAR(s, def_evo_seen_bits);
 }
@@ -413,6 +538,13 @@ void def_action_resolved(u8 side, s32 id, s32 value) {
 
     if (!def_on() || side != 0) {
         return;
+    }
+    if (value > 0 && fightstg_battle.state.members[1][target].hp <= 0) { /* it was already down: an OVERFINISH */
+        overfinish_hit = 1;
+        overfinish_damage += value;
+        if (log_on()) {
+            LOG("overfinish damage %d total %d", (int)value, (int)overfinish_damage);
+        }
     }
     was = chain.staggered[target];
     def_chain_player_hit(&chain, target, value > 0, weak ? hit_elem : -1, weak);
@@ -833,4 +965,80 @@ void def_evo_form_mark(int form_id) {
 /* ---- PRD 2, layer I: resistance training without secondary stat loss. */
 int def_train_no_stat_loss(void) {
     return def_on() && def_train_no_stat_loss_on();
+}
+
+/* ---- Overlevel Rush: a random battle against enemies DEF_OVERLEVEL_GAP levels or more under the party's best is
+ * offered as a skip (the field asks; fieldstg_rush_update). Taken, the battle is not loaded: the field leaves for the
+ * battle's report (STFGTREP, map 0x1400) with the results a win by the first member would have left, so experience,
+ * Bits and the drop come from the game's own routine. DW3_RUSH_TEST (a test's): 1 offers it whatever the levels,
+ * 2 also takes it without asking. */
+int def_rush_test_mode = -1; /* -1: DW3_RUSH_TEST not read yet (a debug session may set it directly) */
+
+static int rush_test(void) {
+    if (def_rush_test_mode < 0) {
+        const char *v = getenv("DW3_RUSH_TEST");
+
+        def_rush_test_mode = v != NULL ? atoi(v) : 0;
+    }
+    return def_rush_test_mode;
+}
+
+int def_rush_auto(void) {
+    return rush_test() == 2;
+}
+
+int def_rush_offer(void) {
+    int best = 0, worst = 0, i, id;
+
+    if (!def_on()) {
+        return 0;
+    }
+    for (i = 0; i < 3; i++) {
+        id = gamestate_data.funcs.get_party_member(i);
+        if (id >= 0 && gamestate_data.digimon[id].record.stats.values[0] > best) {
+            best = gamestate_data.digimon[id].record.stats.values[0];
+        }
+        if (records_state.enemies[i].digimon != 0 && records_state.enemies[i].level > worst) {
+            worst = records_state.enemies[i].level;
+        }
+    }
+    if (rush_test() == 0 && best - worst < DEF_OVERLEVEL_GAP) {
+        return 0;
+    }
+    if (log_on() || rush_test()) {
+        port_log("rush: offered (party level %d, enemies' %d)", best, worst);
+    }
+    return 1;
+}
+
+/* The results of the battle records_state holds, as won by the party's first member able to fight; no OVERFINISH. */
+void def_rush_results(void) {
+    FightstgEnemyRecord *recs = (FightstgEnemyRecord *)cdload_module.files.get_file(0x1CF);
+    int i, id, lead = 0;
+
+    for (i = 2; i >= 0; i--) {
+        id = gamestate_data.funcs.get_party_member(i);
+        if (id >= 0 && gamestate_data.digimon[id].record.stats.values[2] > 0) {
+            lead = i;
+        }
+    }
+    memset(&records_battle_results, 0, sizeof(records_battle_results));
+    records_battle_results.battle = records_state.battle;
+    records_battle_results.member = lead;
+    records_battle_results.members[lead].took_part = 1;
+    if (records_state.has_prize == 1) {
+        records_battle_results.item = records_state.prize_item;
+    } else if (recs != NULL) {
+        for (i = 0; i < DEF_BESTIARY_SPECIES && recs[i].id != 0; i++) { /* the first enemy's drop, at its own rate */
+            if (recs[i].id == records_state.enemies[0].digimon) {
+                if (recs[i].item > 0 && pad_random.next() % 1024 < recs[i].drop_rate + 1) {
+                    records_battle_results.item = recs[i].item;
+                }
+                break;
+            }
+        }
+    }
+    overfinish_damage = 0;
+    port_log("rush: battle %d skipped (member %d, item %d)", (int)records_state.battle, lead,
+             (int)records_battle_results.item);
 }

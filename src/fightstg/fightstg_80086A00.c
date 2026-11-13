@@ -412,6 +412,9 @@ void fightstg_main_update(Object *obj, Object **data) {
         break;
     case OBJECT_STATE_RUN:
         fightstg_battle.update_speed();
+#ifdef PC_PORT
+        def_callout_frame(); /* definitive combat: the WEAK! / RESIST! callout's frame */
+#endif
         break;
     case OBJECT_STATE_DONE:
     case OBJECT_STATE_END:

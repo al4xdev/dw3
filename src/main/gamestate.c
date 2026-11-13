@@ -733,6 +733,7 @@ void gamestate_init_records(void) {
 #ifdef PC_PORT
     def_mp_hook(); /* definitive combat, layer 8: a new game starts with the rookies' new MP */
     def_bestiary_reset(); /* layer 9: and with nothing learnt of the enemies */
+    def_new_game_apply(); /* Hard Mode, when New Game chose it */
 #endif
     font_init(&funcs);
     strcpy(gamestate_data.name, funcs.get_entry(cdload_module.files.get_file(records_language + 0x86), 11));
@@ -775,6 +776,9 @@ void gamestate_set_party(s32 arg0) {
         gamestate_data.party[i] = id;
         gamestate_data.digimon[id].joined = id + 3;
     }
+#ifdef PC_PORT
+    def_hard_party_fix(); /* Hard Mode: the pack's third Digimon is owned but stays in the lab */
+#endif
     gamestate_data.party_set = arg0;
 }
 

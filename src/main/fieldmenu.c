@@ -32,7 +32,9 @@ int def_bestiary_active(void);
 #define BS_TEXT_X 12   /* the species' name and the elements' pictures */
 #define BS_NAME_Y 0x2C
 #define BS_ROW_Y 0x40  /* the first element's line, 14 pixels each */
-#define BS_ELEM_X 30   /* the element's name */
+#define BS_FAMILIES 5  /* the lines: the seven elements by family (DEF_FAMILIES), Water+Ice and Thunder+Machine as one */
+#define BS_PAIR_DX 11  /* a pair's second picture, behind the first's right side */
+#define BS_ELEM_X 42   /* the family's name, clear of a pair's two pictures */
 #define BS_STATE_X 100 /* its state */
 #define BS_HINT_Y 0xA5
 #define BS_PAGE_X 0x112 /* the page, at the title bar's right end */
@@ -243,11 +245,22 @@ static void fieldmenu_bestiary_draw(Fieldmenu *obj, FieldmenuWindows *data) {
         }
     }
     fieldmenu_bestiary_name(data->bs_info[0], obj->bs_sel, 0);
+    /* A line per family; the two windows left over of the seven carry the pairs' second pictures, on their lines. */
     for (i = 0; i < 7; i++) {
-        data->bs_icons[i]->set_text(data->bs_icons[i], (u8 *)def_element_icon(i), -1);
-        data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)def_inspect_element(i), -1);
-        data->bs_states[i]->set_text(data->bs_states[i], (u8 *)def_bestiary_state(&recs[obj->bs_sel], obj->bs_sel, i, &palette), -1);
-        data->bs_states[i]->set_palette(data->bs_states[i], palette);
+        if (i < BS_FAMILIES) {
+            data->bs_icons[i]->set_text(data->bs_icons[i], (u8 *)def_family_icon(i, 0), -1);
+            data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)def_family_name(i), -1);
+            data->bs_states[i]->set_text(data->bs_states[i], (u8 *)def_bestiary_family_state(&recs[obj->bs_sel], obj->bs_sel, i, &palette), -1);
+            data->bs_states[i]->set_palette(data->bs_states[i], palette);
+        } else {
+            static const u8 none[1] = { 0 };
+            s32 f = i == BS_FAMILIES ? 1 : 3; /* Water+Ice, Thunder+Machine */
+
+            data->bs_icons[i]->set_text(data->bs_icons[i], (u8 *)def_family_icon(f, 1), -1);
+            data->bs_icons[i]->set_pos(data->bs_icons[i], BS_TEXT_X + BS_PAIR_DX, f * 14 + BS_ROW_Y);
+            data->bs_info[i + 1]->set_text(data->bs_info[i + 1], (u8 *)none, -1);
+            data->bs_states[i]->set_text(data->bs_states[i], (u8 *)none, -1);
+        }
     }
     /* "page/pages" in the font's digits (glyph 4 is 0) */
     i = first / BS_ROWS + 1;
@@ -287,7 +300,7 @@ static void fieldmenu_bestiary_rect(Fieldmenu *obj, s32 x, s32 y, s32 w, s32 h, 
 static void fieldmenu_bestiary_panel(Fieldmenu *obj) {
     s32 i;
 
-    for (i = 1; i < 7; i++) {
+    for (i = 1; i < BS_FAMILIES; i++) {
         fieldmenu_bestiary_rect(obj, BS_PANEL_X + 6, BS_ROW_Y + i * 14 - 1, BS_PANEL_W - 12, 1, 41, 41, 115);
     }
     fieldmenu_bestiary_rect(obj, BS_PANEL_X + 2, BS_PANEL_Y + 2, BS_PANEL_W - 4, BS_ROW_Y - 4 - BS_PANEL_Y, 0, 0, 74);

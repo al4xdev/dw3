@@ -319,6 +319,11 @@ void stgdglab_swap_run(StgdglabSwap *obj, StgdglabSwapData *data) {
                 sound_module.play(0x4001C);
             }
         } else if (PAD_PRESSED(0xD)) {
+#ifdef PC_PORT
+            if (def_hard_slot_closed(obj->main->member)) { /* Hard Mode: the third slot takes nobody */
+                sound_module.play(0x800450BD);
+            } else
+#endif
             if (gamestate_data.funcs.get_party_member(obj->main->member) >= 0 || obj->others[obj->shown] >= 0) {
                 obj->base.substep = 1;
                 obj->base.step++;
