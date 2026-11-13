@@ -30,6 +30,11 @@ typedef struct StgtrainSessionData {
     /* 0x18 */ StgtrainTrainee *trainee;
 } StgtrainSessionData; /* size 0x1C */
 
+#ifdef PC_PORT
+static s32 pity_active;
+static s32 pity_missed;
+#endif
+
 s32 stgtrain_session_raise_stat(StgtrainSession *obj, s32 type);
 s32 stgtrain_session_lower_stat(StgtrainSession *obj, s32 type);
 s32 stgtrain_session_raise_stat2(StgtrainSession *obj, s32 type);
@@ -360,7 +365,11 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
             obj->base.timer = 2;
             obj->base.step++;
             data->trainee->start_round(data->trainee);
+#ifdef PC_PORT
+            data->trainee->set_chance(data->trainee, pity_active ? 100 : stgtrain_session_get_bonus(obj) + 75);
+#else
             data->trainee->set_chance(data->trainee, stgtrain_session_get_bonus(obj) + 75);
+#endif
         }
         break;
     case 2:
@@ -369,6 +378,9 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
             if (obj->results[obj->base.substep] != 0) {
                 sound_module.play(0x840001);
             } else {
+#ifdef PC_PORT
+                pity_missed = 1;
+#endif
                 sound_module.play(0x840000);
             }
             stgtrain_session_apply_round(obj, obj->base.substep);
@@ -393,6 +405,11 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
         break;
     case 3:
         data->trainee->end(data->trainee);
+#ifdef PC_PORT
+        if (def_on()) {
+            def_train_pity_record(!pity_missed);
+        }
+#endif
         obj->base.step++;
         break;
     case 4:
@@ -519,6 +536,11 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
             obj->base.step = 20;
             obj->bonus_running = 1;
             data->trainee->start_round(data->trainee);
+#ifdef PC_PORT
+            if (pity_active && !def_train_pity_bonus_on()) {
+                data->trainee->set_chance(data->trainee, stgtrain_session_get_bonus(obj) + 75);
+            }
+#endif
             obj->sound = sound_module.play(0xA084603C);
             break;
         }
@@ -591,7 +613,11 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
                     data->trainee->set_chance(data->trainee, 0); /* not the same bonus training twice in a row */
                 } else {
                     digimon->last_bonus_training = 0;
+#ifdef PC_PORT
+                    data->trainee->set_chance(data->trainee, (pity_active && def_train_pity_bonus_on()) ? 100 : 50);
+#else
                     data->trainee->set_chance(data->trainee, 50);
+#endif
                 }
             } else {
                 data->trainee->start_round(data->trainee);
@@ -634,6 +660,10 @@ void stgtrain_session_update(StgtrainSession *obj, StgtrainSessionData *data) {
     case OBJECT_STATE_INIT:
     default:
         obj->base.next_state(obj);
+#ifdef PC_PORT
+        pity_missed = 0;
+        pity_active = def_on() && def_train_pity_guaranteed();
+#endif
         stgtrain_session_create_windows(obj, data);
         obj->anims[0].duration = 10;
         obj->anims[1].duration = 10;

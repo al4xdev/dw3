@@ -109,6 +109,17 @@ int def_tp_gain(int level);
 int def_tp_total(int level);
 int def_tp_add(int tp, int level, int *lost);
 
+#ifndef DEF_TRAIN_PITY_AFTER
+#define DEF_TRAIN_PITY_AFTER 3 /* non-perfect trainings before the next training hits everything (0 disables) */
+#endif
+#ifndef DEF_TRAIN_PITY_BONUS
+#define DEF_TRAIN_PITY_BONUS 1 /* when 1, the guaranteed training also hits its bonus round when eligible */
+#endif
+int def_train_pity_count(void);
+int def_train_pity_guaranteed(void);
+void def_train_pity_record(int perfect);
+void def_train_pity_reset(void);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

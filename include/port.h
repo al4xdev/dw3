@@ -346,6 +346,10 @@ int def_enemy_acts_twice(void);
 const unsigned char *def_twice_label(void);
 s32 def_get_damage(u8 side, s32 id);
 s32 def_get_special_damage(u8 side, s32 id);
+int def_train_pity_guaranteed(void);
+int def_train_pity_bonus_on(void);
+void def_train_pity_record(int perfect);
+const unsigned char *def_train_pity_label(int *palette);
 
 #endif /* PC_PORT */
 

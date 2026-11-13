@@ -334,6 +334,9 @@ typedef struct StgtrainMainData {
     /* 0x74 */ StgtrainLevel *level_menu;
     /* 0x78 */ StgtrainSession *session;
     /* 0x7C */ Fade *fade;
+#ifdef PC_PORT
+    MessageWindow *pity;
+#endif
 } StgtrainMainData; /* size 0x80 */
 
 void stgtrain_main_create_windows(StgtrainMain *obj, StgtrainMainData *data) {
@@ -360,6 +363,9 @@ void stgtrain_main_create_windows(StgtrainMain *obj, StgtrainMainData *data) {
     data->tp[1] = message_create_window(obj->layer, 1, 0x2C, 0xBB);
     data->back_hint = message_create_window(obj->layer, 1, 0xA1, 0x17);
     data->question = message_create_window(obj->layer, 1, 0xAE, 0x49);
+#ifdef PC_PORT
+    data->pity = def_on() ? message_create_window(obj->layer, 1, 0x10, 0xD4) : NULL;
+#endif
 }
 
 /* Shows (or hides) the member's name, level, HP and MP. */
@@ -454,10 +460,27 @@ void stgtrain_main_show_tp(StgtrainMain *obj, StgtrainMainData *data, s32 show) 
         data->tp[0]->set_text(data->tp[0], cdload_module.files.get_file(records_language + 0x10B), 4);
         data->tp[1]->set_line_number(data->tp[1], 0, stats.values[1]);
         data->tp[1]->measure(data->tp[1], 1);
+#ifdef PC_PORT
+        if (data->pity != NULL) {
+            s32 pal = 0;
+            const unsigned char *label = def_train_pity_label(&pal);
+            if (label != NULL) {
+                data->pity->set_text(data->pity, (u8 *)label, -1);
+                data->pity->set_palette(data->pity, pal);
+            } else {
+                data->pity->set_visible(data->pity, 0);
+            }
+        }
+#endif
     } else {
         for (i = 0; i < 2; i++) {
             data->tp[i]->set_visible(data->tp[i], 0);
         }
+#ifdef PC_PORT
+        if (data->pity != NULL) {
+            data->pity->set_visible(data->pity, 0);
+        }
+#endif
     }
 }
 
@@ -817,6 +840,11 @@ void stgtrain_main_run(StgtrainMain *obj, StgtrainMainData *data) {
     case 35:
         if (stgtrain_module.funcs.file_get() != NULL && data->session == NULL) {
             data->session = stgtrain_session_create(obj, gamestate_data.funcs.get_party_member(obj->member), obj->training);
+#ifdef PC_PORT
+            if (data->pity != NULL) {
+                data->pity->set_visible(data->pity, 0);
+            }
+#endif
             obj->base.step++;
         }
         break;
@@ -829,6 +857,9 @@ void stgtrain_main_run(StgtrainMain *obj, StgtrainMainData *data) {
     case 37:
         if (data->level_menu == NULL) {
             stgtrain_main_show_stats(obj, data, 1);
+#ifdef PC_PORT
+            stgtrain_main_show_tp(obj, data, 1);
+#endif
             obj->base.step = 25;
         }
         break;

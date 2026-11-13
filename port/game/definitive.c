@@ -747,3 +747,54 @@ const unsigned char *def_tp_full_text(void) {
     extern const unsigned char def_str_LevelTpFull[];
     return def_str_LevelTpFull;
 }
+
+/* ---- PRD 2, layer E: training pity label for STGTRAIN. */
+static void put_dec(unsigned char *out, int *p, int v, const unsigned char *digits) {
+    if (v >= 10) {
+        put_dec(out, p, v / 10, digits);
+    }
+    out[(*p)++] = digits[v % 10];
+}
+
+int def_train_pity_bonus_on(void) {
+    return DEF_TRAIN_PITY_BONUS != 0;
+}
+
+const unsigned char *def_train_pity_label(int *palette) {
+    extern const unsigned char def_str_TrainPityPrefix[], def_str_TrainPityMarks[], def_str_TrainPityDigits[],
+        def_str_TrainPityReady[];
+    static unsigned char buf[64];
+    int total = DEF_TRAIN_PITY_AFTER;
+    int count = def_train_pity_count();
+    int i, p = 0;
+
+    if (!def_on() || total <= 0) {
+        return NULL;
+    }
+    for (i = 0; def_str_TrainPityPrefix[i] != 0 && p < (int)sizeof(buf) - 24; i++) {
+        buf[p++] = def_str_TrainPityPrefix[i];
+    }
+    buf[p++] = def_str_TrainPityMarks[4];
+    buf[p++] = def_str_TrainPityMarks[5];
+    if (def_train_pity_guaranteed()) {
+        for (i = 0; def_str_TrainPityReady[i] != 0 && p < (int)sizeof(buf) - 1; i++) {
+            buf[p++] = def_str_TrainPityReady[i];
+        }
+        *palette = 4;
+    } else {
+        for (i = 0; i < total && i < 8; i++) {
+            int off = i < count ? 0 : 2;
+            buf[p++] = def_str_TrainPityMarks[off];
+            buf[p++] = def_str_TrainPityMarks[off + 1];
+        }
+        buf[p++] = def_str_TrainPityMarks[4];
+        buf[p++] = def_str_TrainPityMarks[5];
+        put_dec(buf, &p, count, def_str_TrainPityDigits);
+        buf[p++] = def_str_TrainPityMarks[6];
+        buf[p++] = def_str_TrainPityMarks[7];
+        put_dec(buf, &p, total, def_str_TrainPityDigits);
+        *palette = count > 0 ? 3 : 0;
+    }
+    buf[p] = 0;
+    return buf;
+}
