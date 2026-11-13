@@ -237,6 +237,12 @@ int def_bestiary_active(void);
 unsigned char *def_bestiary_buffer(void);
 void def_bestiary_record_write(unsigned char *out);
 void def_bestiary_record_read(const unsigned char *in);
+/* PRD 4's second record (the rare items): memcard.c's part 6 (same numbers as definitive.h's DEF_RECORD2_*). */
+#define DEF_RECORD2_SIZE 0x100
+#define DEF_RECORD2_PART 6
+unsigned char *def_record2_buffer(void);
+void def_record2_write(unsigned char *out);
+void def_record2_read(const unsigned char *in);
 #endif
 extern StgmcardContentsWindow stgmcard_contents_windows[19];
 extern s32 stgmcard_party_anims[8][7]; /* frames of the save files' sprite animations, ended by -1 */
@@ -1280,6 +1286,19 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                                           DEF_BESTIARY_PART | (stgmcard_module.slot << 8));
         if (ret != 0) {
             def_bestiary_record_read(ret == 1 ? def_bestiary_buffer() : NULL);
+            obj->base.step = 0x49; /* PRD 4's second record next */
+        }
+        break;
+    }
+    case 0x49: {
+        s32 ret;
+
+        /* The slot's second record (memcard.c part 6, PRD 4's rare items), after the first, whose read resets the slot's
+         * port state: any failure reads as empty, never an error screen */
+        ret = STGMCARD_MEMCARD_FUNCS.read(obj->port, def_record2_buffer(), DEF_RECORD2_SIZE,
+                                          DEF_RECORD2_PART | (stgmcard_module.slot << 8));
+        if (ret != 0) {
+            def_record2_read(ret == 1 ? def_record2_buffer() : NULL);
             data->frame->open(data->frame, 2, 0x14);
             obj->base.step = 0x1F4;
             data->slots->base.step = 0;
@@ -1367,6 +1386,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
 #ifdef PC_PORT
         if (def_bestiary_active()) {
             def_bestiary_record_write(def_bestiary_buffer()); /* step 0x36 writes it after the slot */
+            def_record2_write(def_record2_buffer());          /* and step 0x37 the second record */
         }
 #endif
         strcpy(card->name, stgmcard_module.save->name);
@@ -1428,6 +1448,22 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
 
         ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, def_bestiary_buffer(), DEF_BESTIARY_RECORD_SIZE,
                                            DEF_BESTIARY_PART | (stgmcard_module.slot << 8));
+        obj->status = ret;
+        if (ret != 0) {
+            if (ret == 1) {
+                obj->base.step = 0x37; /* PRD 4's second record next */
+            } else {
+                obj->status = ret - 1;
+                stgmcard_screen_report_after_slots(obj, data);
+            }
+        }
+        break;
+    }
+    case 0x37: {
+        s32 ret;
+
+        ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, def_record2_buffer(), DEF_RECORD2_SIZE,
+                                           DEF_RECORD2_PART | (stgmcard_module.slot << 8));
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {

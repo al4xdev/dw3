@@ -25,6 +25,13 @@ static unsigned char extra_flags;
 static unsigned int extra_network;
 static unsigned char extra_region, extra_chain;
 static unsigned char extra_materials[DEF_HUNT_MATERIALS];
+/* The second record (PRD 4 layer B): "HUNT", version, XOR checksum of the rest, a byte unused, the rare items' counts,
+ * then the bits of the ones ever held (the bestiary's collection); the rest of the 0x100 is the later layers'. */
+#define REC2_RARES 8
+#define REC2_SEEN (REC2_RARES + DEF_HUNT_RARES)
+static unsigned char rares[DEF_HUNT_RARES];
+static unsigned char rares_seen[DEF_HUNT_RARES / 8];
+static unsigned char buffer2[DEF_RECORD2_SIZE];
 
 static unsigned char table[DEF_BESTIARY_SPECIES];
 static unsigned char buffer[DEF_BESTIARY_RECORD_SIZE];
@@ -36,6 +43,8 @@ void def_bestiary_reset(void) {
     extra_region = 0;
     extra_chain = 0;
     memset(extra_materials, 0, sizeof(extra_materials));
+    memset(rares, 0, sizeof(rares));
+    memset(rares_seen, 0, sizeof(rares_seen));
 }
 
 unsigned int def_network_mask(void) {
@@ -115,6 +124,8 @@ void def_bestiary_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, extra_region);
     PORT_STATE_VAR(s, extra_chain);
     PORT_STATE_VAR(s, extra_materials);
+    PORT_STATE_VAR(s, rares);
+    PORT_STATE_VAR(s, rares_seen);
 }
 
 static unsigned char sum(const unsigned char *p, int n) {
@@ -182,6 +193,64 @@ void def_bestiary_record_read(const unsigned char *in) {
     }
     port_log("bestiary: the slot's record read: %d species known, flags %d, network 0x%X", known, extra_flags,
              extra_network);
+}
+
+int def_record_rare(int rare) {
+    return rare >= 0 && rare < DEF_HUNT_RARES ? rares[rare] : 0;
+}
+
+int def_record_rare_seen(int rare) {
+    return rare >= 0 && rare < DEF_HUNT_RARES && ((rares_seen[rare / 8] >> (rare % 8)) & 1);
+}
+
+void def_record_rare_add(int rare, int n) {
+    int v;
+
+    if (rare < 0 || rare >= DEF_HUNT_RARES) {
+        return;
+    }
+    v = rares[rare] + n;
+    rares[rare] = (unsigned char)(v < 0 ? 0 : v > DEF_HUNT_RARE_CAP ? DEF_HUNT_RARE_CAP : v);
+    if (n > 0) {
+        rares_seen[rare / 8] |= 1 << (rare % 8);
+    }
+}
+
+void def_record2_write(unsigned char *out) {
+    unsigned int i;
+
+    memset(out, 0, DEF_RECORD2_SIZE);
+    for (i = 0; i < sizeof(rares_seen) && rares_seen[i] == 0; i++) {
+    }
+    if (i == sizeof(rares_seen)) { /* no rare ever held (a count needs one): the card stays as it was */
+        return;
+    }
+    memcpy(out, "HUNT", 4);
+    out[4] = DEF_RECORD2_VERSION;
+    memcpy(out + REC2_RARES, rares, sizeof(rares));
+    memcpy(out + REC2_SEEN, rares_seen, sizeof(rares_seen));
+    out[5] = sum(out + REC2_RARES, DEF_RECORD2_SIZE - REC2_RARES);
+    port_log("hunt: the slot's second record written");
+}
+
+void def_record2_read(const unsigned char *in) {
+    int i;
+
+    memset(rares, 0, sizeof(rares));
+    memset(rares_seen, 0, sizeof(rares_seen));
+    if (in == NULL || memcmp(in, "HUNT", 4) != 0 || in[4] != DEF_RECORD2_VERSION ||
+        in[5] != sum(in + REC2_RARES, DEF_RECORD2_SIZE - REC2_RARES)) {
+        return;
+    }
+    for (i = 0; i < DEF_HUNT_RARES; i++) {
+        rares[i] = in[REC2_RARES + i] > DEF_HUNT_RARE_CAP ? DEF_HUNT_RARE_CAP : in[REC2_RARES + i];
+    }
+    memcpy(rares_seen, in + REC2_SEEN, sizeof(rares_seen));
+    port_log("hunt: the slot's second record read");
+}
+
+unsigned char *def_record2_buffer(void) {
+    return buffer2;
 }
 
 /* DW3_BESTIARY turns only this layer on in a script: a card test needs the record's extra steps without the combat

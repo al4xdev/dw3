@@ -13,6 +13,8 @@ MemcardState memcard_state = { 0 };
  * bytes (0x8000 file, the game uses up to 0x7800), 0x100 per slot. Same numbers as DEF_BESTIARY_PART/_RECORD_AT. */
 #define MEMCARD_PART_BESTIARY 5
 #define MEMCARD_PART_BESTIARY_AT 0x7800
+#define MEMCARD_PART_HUNT 6         /* PRD 4's second record (DEF_RECORD2_*): after the first three, 0x100 per slot */
+#define MEMCARD_PART_HUNT_AT 0x7B00
 #endif
 
 extern s32 memcard_sync_commands[]; /* MemCardSync command per memcard_run_command mode */
@@ -193,6 +195,8 @@ s32 memcard_read(s32 chan, void *buf, s32 size, s32 part) {
 #ifdef PC_PORT
             if ((part & 0xFF) == MEMCARD_PART_BESTIARY) {
                 memcard_state.offset = MEMCARD_PART_BESTIARY_AT + (part >> 8) * 0x100;
+            } else if ((part & 0xFF) == MEMCARD_PART_HUNT) {
+                memcard_state.offset = MEMCARD_PART_HUNT_AT + (part >> 8) * 0x100;
             } else
 #endif
             switch (part) {
@@ -278,6 +282,9 @@ s32 memcard_write(s32 chan, void *buf, s32 size, s32 part) {
 #ifdef PC_PORT
             case MEMCARD_PART_BESTIARY:
                 memcard_state.offset = MEMCARD_PART_BESTIARY_AT + (part >> 8) * 0x100;
+                break;
+            case MEMCARD_PART_HUNT:
+                memcard_state.offset = MEMCARD_PART_HUNT_AT + (part >> 8) * 0x100;
                 break;
 #endif
             case 0:

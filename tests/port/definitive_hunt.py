@@ -21,13 +21,17 @@ def table_ok():
     n = int(re.search(r"FieldstgBattle fieldstg_battles\[(\d+)\]",
                       (ROOT / "src/fieldstg/fieldstg_80083784.c").read_text()).group(1))
     regions = [r[0] for r in rows]
-    mats = {m for _, _, _, m in rows}
-    ok = (len(rows) == count and len(set(regions)) == len(regions) and all(0 < b < n for _, b, _, _ in rows)
-          and all(0 < lv <= 99 for _, _, lv, _ in rows) and mats == set(range(len(mats))) and len(mats) <= 16
-          and all(len({m for _, b2, _, m in rows if b2 == b}) == 1 for _, b, _, _ in rows))
-    print(f"{'ok' if ok else 'FAIL'} the generated table: {count} regions, each once, existing battles, levels 1..99, "
-          f"one material per battle, {len(mats)} materials from the first without a gap")
-    return ok
+    body = re.search(r"def_hunt_commons\[DEF_BESTIARY_SPECIES\] = \{(.*?)\};", gen, re.S).group(1)
+    com = [int(x, 0) for x in re.sub(r"/\*.*?\*/", "", body).split(",") if x.strip()]
+    ok = (len(rows) == count and count <= 128 and len(set(regions)) == len(regions) and all(0 < b < n for _, b, _, _ in rows)
+          and all(0 < lv <= 99 for _, _, lv, _ in rows) and all(1 <= v <= 39 for _, _, _, v in rows)
+          and len({(b, v) for _, b, _, v in rows}) == len(rows))
+    print(f"{'ok' if ok else 'FAIL'} the generated table: {count} regions (room for 128), each once, existing battles, "
+          f"levels 1..99, numerals I..{max(v for *_, v in rows)}, one per region of a battle")
+    ok2 = len(com) == 193 and all(c < 16 or c == 0xFF for c in com) and {c for c in com if c < 16} == set(range(16))
+    print(f"{'ok' if ok2 else 'FAIL'} the commons: 193 species, {sum(c < 16 for c in com)} with one, every material with "
+          f"its species")
+    return ok and ok2
 
 
 def main():

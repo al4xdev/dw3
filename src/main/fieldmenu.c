@@ -20,7 +20,7 @@
  * its own (fieldmenu_bestiary_panel) carries the chosen species: its name, then a line per element (picture, name,
  * Weak / Resist / - / ???). */
 extern const unsigned char def_str_Unknown[], def_str_Bestiary[], def_str_BestiaryMenu[], def_str_BestiaryHint[],
-    def_str_Slash[], def_str_Neutral[], def_str_HuntDrops[], def_str_HuntHeld[];
+    def_str_Slash[], def_str_Neutral[], def_str_HuntDrops[], def_str_HuntHeld[], def_str_HuntRareLabel[];
 int def_bestiary_active(void);
 #define BS_SPECIES 193 /* species in the table (DEF_BESTIARY_SPECIES) */
 #define BS_ROWS 6      /* names per page (DEF_BESTIARY_ROWS): the options' panel holds at least six rows */
@@ -40,6 +40,7 @@ int def_bestiary_active(void);
 #define BS_PAGE_X 0x112 /* the page, at the title bar's right end */
 #define BS_DROPS_Y (BS_ROW_Y + BS_FAMILIES * 14) /* PRD 4 layer C: the Hunt Materials' two lines, under the families' */
 #define BS_HELD_X 136   /* a material's count, clear of the longest name */
+#define BS_RARE_X 122   /* the rare items' "13/13", clear of the frame */
 #define BS_MATERIALS 16 /* DEF_HUNT_MATERIALS */
 #endif
 
@@ -232,51 +233,67 @@ static void fieldmenu_bestiary_name(MessageWindow *win, s32 index, s32 chosen) {
     }
 }
 
-/* PRD 4 layer C: under the families, the Hunt Materials the chosen species drops (the Rare Target battles it fights in)
- * and how many of each the player holds, greyed at none; "???" while nothing of the species is known, "-" when it drops
- * none. Two lines: a species in more target battles shows its first two materials. */
+/* PRD 4 layers B and C (the owner's materials model of 2026-11-13): under the families, the species' Hunt line. The
+ * first line its common material and how many the player holds (grey at none; "-" for a species no random encounter
+ * has); the second, for a species that leads Rare Targets, its rare items as a collection: how many of its regions'
+ * ones were ever held, of how many ("4/13", orange when all). "???" while nothing of the species is known. */
 static void fieldmenu_bestiary_drops(Fieldmenu *obj, FieldmenuWindows *data, s32 species) {
-    static u8 held[2][8]; /* "x12": the windows keep the pointers */
+    static u8 held[8];   /* "x12": the windows keep the pointers */
+    static u8 rares[12]; /* "4/13" */
     static const u8 none[1] = { 0 };
     s32 known = def_bestiary_known(obj->bs_sel) != 0;
-    u32 mask = known ? def_hunt_species_materials(species) : 0;
-    s32 line = 0;
+    s32 m = known ? def_hunt_common_of(obj->bs_sel) : -1;
     s32 count;
-    s32 m;
+    int seen;
+    int total;
     s32 n;
     s32 i;
 
     data->bs_drops->set_text(data->bs_drops, (u8 *)def_str_HuntDrops, -1);
-    for (m = 0; m < BS_MATERIALS && line < 2; m++) {
-        if (!(mask & (1u << m))) {
-            continue;
-        }
+    if (m >= 0) {
         count = def_record_material(m);
         n = 0;
-        for (i = 0; def_str_HuntHeld[i] != 0 && n < (s32)sizeof(held[0]) - 3; i++) {
-            held[line][n++] = def_str_HuntHeld[i];
+        for (i = 0; def_str_HuntHeld[i] != 0 && n < (s32)sizeof(held) - 3; i++) {
+            held[n++] = def_str_HuntHeld[i];
         }
         if (count >= 10) {
-            held[line][n++] = 4 + count / 10; /* the font's digits (glyph 4 is 0) */
+            held[n++] = 4 + count / 10; /* the font's digits (glyph 4 is 0) */
         }
-        held[line][n++] = 4 + count % 10;
-        held[line][n] = 0;
-        data->bs_info[6 + line]->set_text(data->bs_info[6 + line], (u8 *)def_hunt_material_name(m), -1);
-        data->bs_info[6 + line]->set_palette(data->bs_info[6 + line], 0);
-        data->bs_states[5 + line]->set_text(data->bs_states[5 + line], held[line], -1);
-        data->bs_states[5 + line]->set_palette(data->bs_states[5 + line], count != 0 ? 0 : 7);
-        data->bs_states[5 + line]->set_pos(data->bs_states[5 + line], BS_HELD_X, BS_DROPS_Y + line * 14);
-        line++;
-    }
-    if (line == 0) {
+        held[n++] = 4 + count % 10;
+        held[n] = 0;
+        data->bs_info[6]->set_text(data->bs_info[6], (u8 *)def_hunt_material_name(m), -1);
+        data->bs_info[6]->set_palette(data->bs_info[6], 0);
+        data->bs_states[5]->set_text(data->bs_states[5], held, -1);
+        data->bs_states[5]->set_palette(data->bs_states[5], count != 0 ? 0 : 7);
+        data->bs_states[5]->set_pos(data->bs_states[5], BS_HELD_X, BS_DROPS_Y);
+    } else {
         data->bs_info[6]->set_text(data->bs_info[6], (u8 *)(known ? def_str_Neutral : def_str_Unknown), -1);
         data->bs_info[6]->set_palette(data->bs_info[6], 7);
         data->bs_states[5]->set_text(data->bs_states[5], (u8 *)none, -1);
-        line = 1;
     }
-    for (; line < 2; line++) {
-        data->bs_info[6 + line]->set_text(data->bs_info[6 + line], (u8 *)none, -1);
-        data->bs_states[5 + line]->set_text(data->bs_states[5 + line], (u8 *)none, -1);
+    def_hunt_species_rares(species, &seen, &total);
+    if (known && total > 0) {
+        n = 0;
+        if (seen >= 10) {
+            rares[n++] = 4 + seen / 10;
+        }
+        rares[n++] = 4 + seen % 10;
+        for (i = 0; def_str_Slash[i] != 0 && n < (s32)sizeof(rares) - 3; i++) {
+            rares[n++] = def_str_Slash[i];
+        }
+        if (total >= 10) {
+            rares[n++] = 4 + total / 10;
+        }
+        rares[n++] = 4 + total % 10;
+        rares[n] = 0;
+        data->bs_info[7]->set_text(data->bs_info[7], (u8 *)def_str_HuntRareLabel, -1);
+        data->bs_info[7]->set_palette(data->bs_info[7], 0);
+        data->bs_states[6]->set_text(data->bs_states[6], rares, -1);
+        data->bs_states[6]->set_palette(data->bs_states[6], seen == total ? 3 : seen != 0 ? 0 : 7);
+        data->bs_states[6]->set_pos(data->bs_states[6], BS_RARE_X, BS_DROPS_Y + 14);
+    } else {
+        data->bs_info[7]->set_text(data->bs_info[7], (u8 *)none, -1);
+        data->bs_states[6]->set_text(data->bs_states[6], (u8 *)none, -1);
     }
 }
 

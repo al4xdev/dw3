@@ -3215,6 +3215,13 @@ void fightstg_hud_update_names(FightstgHud *obj, FightstgHudData *data) {
             data->enemy_name = message_create_window(0x1005, 1, 0x11, 0x15);
         }
         if (digimon != NULL) {
+#ifdef PC_PORT
+            const unsigned char *rare = def_hunt_foe_name(digimon->id, 0); /* PRD 4 layer B: "Datamon IV" */
+
+            if (rare != NULL) {
+                data->enemy_name->set_text(data->enemy_name, (u8 *)rare, -1);
+            } else
+#endif
             data->enemy_name->set_text(data->enemy_name, cdload_module.files.get_file(records_language + 0x4E), digimon->name);
         }
     }
@@ -3779,6 +3786,13 @@ static void fightstg_battle_menu_inspect_set(FightstgBattleMenuData *data, s32 o
     enemy = fightstg_rules.get_stats(0x10, 0, fightstg_battle.state.current[1]);
     rec = fightstg_enemy_records.get(fightstg_battle.state.members[1][fightstg_battle.state.current[1]].digimon);
     if (rec != NULL) {
+#ifdef PC_PORT
+        const unsigned char *rare = def_hunt_foe_name(rec->id, 1); /* PRD 4 layer B: the HUD's numeral here too */
+
+        if (rare != NULL) {
+            data->inspect_title->set_text(data->inspect_title, (u8 *)rare, -1);
+        } else
+#endif
         data->inspect_title->set_text(data->inspect_title, cdload_module.files.get_file(records_language + 0x4E), rec->name);
     }
     for (e = 0; e < FIGHTSTG_INSPECT_FAMILIES; e++) {

@@ -79,7 +79,10 @@ def load_source():
         head, sep, text = line.partition(":")
         parts = head.split()
         if sep and len(parts) == 1 and parts[0].startswith("$"):
-            rows.append((parts[0], -1, text.strip()))
+            text = text.strip()
+            if len(text) >= 2 and text[0] == text[-1] == '"':  # a quoted text keeps its spaces (the port's separators)
+                text = text[1:-1]
+            rows.append((parts[0], -1, text))
             continue
         if not sep or len(parts) != 2 or not parts[1].isdigit():
             sys.exit(f"{SRC.name}:{n}: expected `FILE index: text`")

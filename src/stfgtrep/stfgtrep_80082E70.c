@@ -955,11 +955,12 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         }
         break;
 #ifdef PC_PORT
-    case 22: /* PRD 4 layer B: the Rare Target's Hunt Material, shown like an item ("Item gained:" in ESFGTRPT 11) */
+    case 22: /* PRD 4 layer B: the battle's material lines (commons, a Rare Target's rare item), shown like an item ("Item
+              * gained:" in ESFGTRPT 11), one press each */
         data->messages->set_text(data->messages, (u8 *)def_hunt_material_text(), -1);
         data->messages->set_speed(data->messages, 6);
         obj->base.step = 25;
-        obj->base.substep = 1;
+        obj->base.substep = def_hunt_material_pending() ? 2 : 1; /* the next line, or the screen's end */
         break;
 #endif
     case 25:

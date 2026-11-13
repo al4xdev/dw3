@@ -366,6 +366,48 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   "Item gained: R-Booster 01", "Hunt material: Bit Shard" (a batalha 323 é a
   mais fraca da tabela), e o contador do material 0 foi de 0 a 1. Frames em `.dumps/tasks/hunt/item_*.ppm`.
 
+### Emenda do dono (2026-11-13): materiais comuns e raros por região
+
+Substitui os bullets "Materiais" e "Linha na tela" acima (o resto do Feito vale):
+
+- **Comuns:** os 16 nomes aprovados são materiais comuns. Qualquer inimigo de
+  uma batalha aleatória vencida (ou que o Rush levou) deixa o material da sua
+  espécie com `DEF_HUNT_COMMON_PCT` (25%). A espécie → material vem da
+  ferramenta (`def_hunt_commons`): as espécies que aparecem em batalha
+  aleatória, na ordem do maior nível em que aparecem, em 16 grupos iguais, os
+  mais fracos primeiro (`.dumps/tasks/hunt/materiais.md`). Contador no registro
+  1, como antes (`REC_EXTRA + 10..25`, até 99). As receitas da forja podem
+  pedir quantidades bem altas: os raros trocados no Black Market repõem
+  comuns (pedido do dono).
+- **Raros:** um por região com Alvo Raro (66), variante numerada do item do
+  Digimon à frente da batalha: "Datamon Core I" … "XIII". As regiões cujo alvo
+  tem o mesmo Digimon à frente são numeradas pelo nível (campo `variant` da
+  tabela). Na batalha o Alvo Raro aparece com o número ("Datamon IV"), no HUD e
+  no Inspect, para não parecer o mesmo Digimon com nível maior. Os raros são
+  gastos: forja (camada E), Black Market (G, troca por comuns) e DRI (H, uma
+  seleção de raros destrava uma simulação). Contador até `DEF_HUNT_RARE_CAP`
+  (99) e um bit de "já tive" por raro, num **segundo registro** do cartão
+  (parte 6 de `memcard.c`, em `0x7B00 + slot * 0x100`, a área livre depois dos
+  três primeiros; "HUNT", versão, checksum), lido e gravado depois do primeiro
+  (passos `0x49` e `0x37` do STGMCARD). Sobra espaço nele para as camadas E–H.
+- **Tela de resultados:** uma linha por material, depois do item: "Hunt
+  material: Bit Shard x2" para cada comum, "Rare material: Datamon Core IV"
+  para o raro, uma por toque (passo 22 em laço).
+- **Nomes compostos em tempo de execução:** o nome da espécie vem do disco
+  (texto 0x4E) e o resto é nosso (`$HuntRareWord`, `$HuntRoman*`, `$HuntSpace`
+  entre aspas, que o carregador agora preserva), sem embutir texto do jogo.
+- **Teste (2026-11-13):** o driver da caçada cobre comuns (sorteio por
+  inimigo, erro, derrota, batalha de roteiro, Rush), raros (contagem, teto,
+  "já tive", o nome numerado só no Alvo Raro) e o segundo registro (grava,
+  relê, todo zero sem nada, checksum, ausente). A ferramenta confere a tabela
+  (66 regiões, numerais I..XIII) e os comuns (193 espécies, 131 com material,
+  os 16 com espécie). No jogo: o Alvo Raro da região 0x1D aparece como
+  "Bulbmon III" no HUD e a tela mostra "Item gained: R-Booster 01" e "Rare
+  material: Bulbmon Core III" (raro 20 de 0 a 1); um encontro comum vencido deu
+  "Hunt material: Bit Shard x1"; o Bestiário mostra "Hunt Bit Shard x7"
+  (Kunemon) e "Hunt -" / "Rare Cores 2/11" (Bulbmon). **Falta** gravar e
+  carregar um save no jogo para ver o segundo registro no cartão.
+
 ## Camada C — Bestiário mostra os materiais
 
 - Cada entrada do Bestiário mostra os materiais que o Digimon derruba, para o
@@ -379,6 +421,10 @@ Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
   `bs_info[6]`, `bs_info[7]` e `bs_states[5]`, `bs_states[6]` estão livres
   (recebem texto vazio hoje).
 - Teste: screenshot da tela para um alvo com material e para uma espécie sem.
+- **Emenda (2026-11-13), com o modelo do dono:** a primeira linha mostra o
+  comum da espécie e quantos o jogador tem; a segunda, só para espécie que é o
+  Digimon à frente de algum Alvo Raro, os raros dela como coleção ("Rare Cores
+  4/13": quantos das regiões dela já teve, de quantos; laranja quando completa).
 
 ### Feito (2026-11-13)
 

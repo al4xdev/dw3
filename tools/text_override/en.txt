@@ -278,3 +278,14 @@ $HuntMat15: Obsidian Digizoid
 # "Drops" ran into the names' column), then each material and the count held after this mark ("x12").
 $HuntDrops: Hunt
 $HuntHeld: x
+
+# PRD 4 layer B, the owner's materials model of 2026-11-13: "Hunt material:" is a common one's line (with its count
+# after $HuntHeld), "Rare material:" a region's rare item's, "<species> Core <numeral>"; the numerals' letters; a space
+# (quoted: the loader keeps a quoted text's spaces); and the bestiary's rare line, "Rare Cores 4/13".
+$HuntRarePrefix: Rare material:<1>
+$HuntRareWord: Core
+$HuntSpace: " "
+$HuntRomanI: I
+$HuntRomanV: V
+$HuntRomanX: X
+$HuntRareLabel: Rare Cores

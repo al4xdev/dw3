@@ -1025,6 +1025,23 @@ int def_rush_offer(void) {
     return 1;
 }
 
+const unsigned char *def_species_name(int species) {
+    extern void *font_get_entry(void *data, s32 i);
+    FightstgEnemyRecord *recs = (FightstgEnemyRecord *)cdload_module.files.get_file(0x1CF);
+    void *names = cdload_module.files.get_file(records_language + 0x4E);
+    int i;
+
+    if (recs == NULL || names == NULL || species == 0) {
+        return NULL;
+    }
+    for (i = 0; i < DEF_BESTIARY_SPECIES && recs[i].id != 0; i++) {
+        if (recs[i].id == species) {
+            return (const unsigned char *)font_get_entry(names, recs[i].name);
+        }
+    }
+    return NULL;
+}
+
 /* The results of the battle records_state holds, as won by the party's first member able to fight; no OVERFINISH. */
 void def_rush_results(void) {
     FightstgEnemyRecord *recs = (FightstgEnemyRecord *)cdload_module.files.get_file(0x1CF);

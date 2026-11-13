@@ -344,9 +344,11 @@ int def_hunt_encounter(int battle);
 void def_hunt_scale(void);
 int def_hunt_active(void);
 void def_hunt_skipped(void);
-/* PRD 4 layer C, the bestiary's drops: the Hunt Materials a species drops (a bit each), a material's name (glyph
- * bytes) and how many of it the player holds. */
-unsigned int def_hunt_species_materials(int species);
+/* PRD 4 layers B and C, the bestiary's Hunt line: bestiary species `index`'s common material (-1: none), how many of a
+ * species' rare items were ever held of how many (the targets it leads), a material's name (glyph bytes) and how many
+ * of it the player holds. */
+int def_hunt_common_of(int index);
+void def_hunt_species_rares(int species, int *seen, int *total);
 const unsigned char *def_hunt_material_name(int material);
 int def_record_material(int material);
 void def_new_game_difficulty(int hard);

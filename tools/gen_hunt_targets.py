@@ -17,9 +17,12 @@ Proposal rules:
     to T + LEVEL_OVER. The bosses a region's own scripts start are often optional super-bosses far above its
     encounters (a level-70 boss in a level-6 area), so the region's own boss alone is not the rule;
   - the target fights at T + LEVEL_OVER, never below the boss's own level; no boss in range, no target (listed);
-  - each target battle gives a Hunt Material of its own (layer B): the battles in the order of the lowest level they
-    fight at (then their number), the weakest one's the first material. More battles than MATERIALS share them in that
-    order. A band of levels instead left most materials without a source: the targets fight at a few levels.
+  - the rare items (layer B, the owner's model of 2026-11-13): one per region with a target, a numbered variant of its
+    lead species' (the battle's first enemy) item, "Datamon Core IV": the regions whose target has the same lead are
+    numbered I, II, ... in the order of their level, then the region; the Rare Target shows the numeral in battle;
+  - the common Hunt Materials (the same model): every species met in a random encounter, in the order of the highest
+    level it has in one (then its index), in MATERIALS even groups, the weakest first. Even groups rather than bands of
+    levels, so every material has its species.
 """
 import argparse
 import re
@@ -96,24 +99,45 @@ def battle_info():
     return out
 
 
+def roman(n):
+    return "X" * (n // 10) + ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][n % 10]
+
+
 def material_names():
     """The Hunt Materials' names, $HuntMat0.. in the text overrides."""
     s = (ROOT / "tools/text_override/en.txt").read_text()
     return {int(i): n.strip() for i, n in re.findall(r"^\$HuntMat(\d+): (.*)$", s, re.M)}
 
 
-def assign_materials(rows):
+def assign_variants(rows, battles, names):
     targets = [r for r in rows if r["battle"] is not None]
-    low = {}
+    by_lead = defaultdict(list)
     for r in targets:
-        low[r["battle"]] = min(low.get(r["battle"], r["level"]), r["level"])
-    order = sorted(low, key=lambda b: (low[b], b))
-    n = len(order)
-    rank = {b: (i if n <= MATERIALS else i * MATERIALS // n) for i, b in enumerate(order)}
-    names = material_names()
-    for r in targets:
-        r["material"] = rank[r["battle"]]
-        r["material_name"] = names.get(r["material"], "?")
+        r["lead"] = battles[r["battle"]]["enemies"][0][0]
+        by_lead[r["lead"]].append(r)
+    for lead, rs in by_lead.items():
+        for i, r in enumerate(sorted(rs, key=lambda r: (r["level"], r["region"])), 1):
+            r["variant"] = i
+            r["rare_name"] = f"{names.get(lead, lead)} Core {roman(i)}"
+
+
+def commons(battles):
+    """The common Hunt Material of each bestiary species (its index in SDIGIEDT, the bestiary's), 0xFF for none, and the
+    highest random-encounter level of each species that has one."""
+    sp = gw.species()
+    idx = {x["id"]: i for i, x in enumerate(sp)}
+    level = {}
+    for f in stage_maps():
+        for enc, _scr in stage_lists(ROOT / f"src/wstag/wstag{f}.c"):
+            for b in enc:
+                for s, lv in battles[b]["enemies"]:
+                    if s in idx:
+                        level[idx[s]] = max(level.get(idx[s], 0), lv)
+    order = sorted(level, key=lambda i: (level[i], i))
+    out = [0xFF] * len(sp)
+    for rank, i in enumerate(order):
+        out[i] = rank * MATERIALS // len(order)
+    return out, level, sp
 
 
 def propose():
@@ -156,7 +180,7 @@ def propose():
             row.update(level=max(own[pick], want), own=own[pick], home=home.get(pick),
                        who=", ".join(f"{names.get(sp, sp)} Lv{lv}" for sp, lv in battles[pick]["enemies"]))
         rows.append(row)
-    assign_materials(rows)
+    assign_variants(rows, battles, names)
     rows.sort(key=lambda x: x["region"])
     return rows
 
@@ -166,9 +190,9 @@ def write_md(rows):
     lines = ["# Alvos Raros por região (proposta, PRD 4 camada A)", "",
              f"Regra: um chefe do jogo com nível próprio entre o maior encontro aleatório da região (T) e T + {LEVEL_SPAN}, "
              f"de preferência um que os próprios estágios da região iniciam, sem repetir chefe entre regiões; luta no nível "
-             f"T + {LEVEL_OVER}, nunca abaixo do nível do chefe. Aprove, risque ou troque. Material de Caça (camada B): um "
-             f"por batalha de alvo, na ordem do menor nível em que ela luta.", "",
-             "| região | área | servidor | mapas | maior encontro | batalha | da região? | inimigos (nível original) | nível proposto | material |",
+             f"T + {LEVEL_OVER}, nunca abaixo do nível do chefe. Aprove, risque ou troque. Raro (camada B): um por região, "
+             f"numerado entre as regiões cujo alvo tem o mesmo Digimon à frente, na ordem do nível.", "",
+             "| região | área | servidor | mapas | maior encontro | batalha | da região? | inimigos (nível original) | nível proposto | raro |",
              "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for r in rows:
         maps = " ".join(hex(m) for m in r["maps"][:4]) + (" …" if len(r["maps"]) > 4 else "")
@@ -177,21 +201,39 @@ def write_md(rows):
         else:
             same = "sim" if r["home"] == r["region"] else (f"0x{r['home']:02X}" if r["home"] is not None else "nenhuma")
             lines.append(f"| 0x{r['region']:02X} | {r['area']} | {r['server']} | {maps} | {r['top']} | {r['battle']} | {same} | "
-                         f"{r['who']} | {r['level']} | {r['material']} {r['material_name']} |")
+                         f"{r['who']} | {r['level']} | {r['rare_name']} |")
     (OUT / "alvos.md").write_text("\n".join(lines) + "\n")
 
 
-def write_c(rows):
+def write_commons_md(com, level, sp):
+    names = material_names()
+    lines = ["# Materiais de Caça comuns (PRD 4 camada B, modelo do dono de 2026-11-13)", "",
+             "Cada inimigo derrotado numa batalha aleatória vencida deixa o material da sua espécie com 25% de chance. "
+             "As espécies que aparecem em batalha aleatória, na ordem do maior nível em que aparecem, em 16 grupos iguais.", "",
+             "| material | níveis | espécies |", "| --- | --- | --- |"]
+    for m in range(MATERIALS):
+        group = [i for i, c in enumerate(com) if c == m]
+        lv = [level[i] for i in group]
+        lines.append(f"| {m} {names.get(m, '?')} | {min(lv)}–{max(lv)} | {', '.join(sp[i]['name'] for i in group)} |")
+    lines.append(f"\nSem material (nunca em batalha aleatória): {sum(c == 0xFF for c in com)} espécies.")
+    (OUT / "materiais.md").write_text("\n".join(lines) + "\n")
+
+
+def write_c(rows, com):
     targets = [r for r in rows if r["battle"] is not None]
     lines = ["/* Generated by tools/gen_hunt_targets.py --apply (PRD 4 layer A): the Rare Target of each region, an existing",
-             " * boss battle, the level it fights at and its Hunt Material (layer B). Regenerate instead of editing; the owner",
-             " * approves the table. */",
+             " * boss battle, the level it fights at and its rare item's numeral (layer B); then each bestiary species' common",
+             " * material. Regenerate instead of editing; the owner approves the table. */",
              '#include "definitive.h"', "",
              "const DefHuntTarget def_hunt_targets[] = {"]
     for r in targets:
-        lines.append(f"    {{ 0x{r['region']:02X}, {r['battle']}, {r['level']}, {r['material']} }}, /* {r['who']}: "
-                     f"{r['material_name']} */")
-    lines += ["};", f"const int def_hunt_target_count = {len(targets)};", ""]
+        lines.append(f"    {{ 0x{r['region']:02X}, {r['battle']}, {r['level']}, {r['variant']} }}, /* {r['who']}: "
+                     f"{r['rare_name']} */")
+    lines += ["};", f"const int def_hunt_target_count = {len(targets)};", "",
+              "const unsigned char def_hunt_commons[DEF_BESTIARY_SPECIES] = {"]
+    for i in range(0, len(com), 16):
+        lines.append(f"    /* {i:3d} */ " + ", ".join(f"0x{c:02X}" for c in com[i:i + 16]) + ",")
+    lines += ["};", ""]
     GEN.write_text("\n".join(lines))
 
 
@@ -200,11 +242,14 @@ def main():
     ap.add_argument("--apply", action="store_true", help="also write port/game/definitive_hunt_targets.c")
     args = ap.parse_args()
     rows = propose()
+    com, level, sp = commons(battle_info())
+    assert len(com) == 193, len(com)  # DEF_BESTIARY_SPECIES
     write_md(rows)
+    write_commons_md(com, level, sp)
     print(f"{len(rows)} regions with random encounters, {sum(r['battle'] is not None for r in rows)} with a target: "
           f"{OUT / 'alvos.md'}")
     if args.apply:
-        write_c(rows)
+        write_c(rows, com)
         print(f"written {GEN}")
     return 0
 

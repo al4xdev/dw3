@@ -171,29 +171,43 @@ void def_callout_frame(void);
 #define DEF_HUNT_HP_MAX 30000   /* a raised Rare Target's HP never passes this (RecordsEnemy.hp is an s16) */
 /* PRD 4 layer B: the Rare Target's rewards. */
 #define DEF_HUNT_XP_MULT 10           /* XP: this many times the random encounter the Rare Target replaced */
-#define DEF_HUNT_MATERIALS 16         /* Hunt Materials: one u8 counter each in the card record (REC_EXTRA + 10..25) */
+#define DEF_HUNT_MATERIALS 16         /* common Hunt Materials: one u8 counter each in the card record (REC_EXTRA + 10..25) */
 #define DEF_HUNT_MATERIAL_CAP 99      /* the most of one material the player can hold */
 #define DEF_HUNT_PACK_FIRST 0x186     /* the rare Booster (R-Booster 01..05, items 0x186..0x18A) a Rare Target drops... */
 #define DEF_HUNT_PACK_LEVELS 15       /* ...one more per this many levels from level 25 (01 below 25, 05 from 70) */
 #define DEF_HUNT_PACKS 1              /* how many of it (owner, 2026-11-13; a plain Booster drop gives DEF_CARD_BOOST_PACKS) */
+#define DEF_HUNT_COMMON_PCT 25        /* % chance each enemy of a won random encounter leaves its common material (owner) */
+#define DEF_HUNT_RARES 128            /* rare items the second card record has room for (one per region with a target) */
+#define DEF_HUNT_RARE_CAP 99          /* the most of one rare item the player can hold */
+#define DEF_HUNT_LINES 4              /* material lines one results screen lists: three commons and a rare at most */
+#define DEF_HUNT_LINE_SIZE 72         /* bytes of such a line, or of a Rare Target's name, in glyphs */
 typedef struct DefHuntTarget {
     unsigned char region; /* ststatus_map_areas's byte: the world map area, bit 7 the server */
     short battle;         /* an existing boss battle: an index into fieldstg_battles */
     short level;          /* the level its enemies fight at */
-    unsigned char material; /* its Hunt Material (layer B): one per target battle, the weakest battle's first */
+    unsigned char variant; /* its rare item's numeral (layer B): the region's rank, by level, among those whose target
+                            * has the same lead species (the battle's first enemy) */
 } DefHuntTarget;
 extern const DefHuntTarget def_hunt_targets[];
 extern const int def_hunt_target_count;
+extern const unsigned char def_hunt_commons[]; /* each bestiary species' common material (generated; 0xFF: none) */
 /* The % chance of the Rare Target for a region's chain (0 under the minimum). */
 int def_hunt_chance(int chain);
-/* A Hunt Material's name (glyph bytes, 0-ended). */
+/* A common Hunt Material's name (glyph bytes, 0-ended). */
 const unsigned char *def_hunt_material_name(int material);
-/* PRD 4 layer C: the Hunt Materials species `species` drops on the bestiary screen, those of the Rare Target battles
- * it fights in (a bit per material; 0 for none). */
-unsigned int def_hunt_species_materials(int species);
+/* The bestiary's Hunt line (layer C): bestiary species `index`'s common material (-1: none), and of the rare items of
+ * the targets species `species` leads, how many were ever held and how many there are. */
+int def_hunt_common_of(int index);
+void def_hunt_species_rares(int species, int *seen, int *total);
+/* In a Rare Target's battle, species `species`'s name with the region's numeral ("Datamon IV"), in buffer `slot` (0, 1:
+ * the windows keep the pointer); NULL outside one, or when the name is not loaded. */
+const unsigned char *def_hunt_foe_name(int species, int slot);
+/* A species' name in the game's glyphs (its record's line of text 0x4E: definitive.c), NULL when not loaded. */
+const unsigned char *def_species_name(int species);
 /* The results screen of a Rare Target won (PRD 4 layer B; STFGTREP): the battle whose XP it pays DEF_HUNT_XP_MULT times
- * (-1: none pending), the rare Booster it drops when the battle left no item (0: none), 1 while its material's line has
- * not been shown, that line (glyph bytes, marks it shown), and the end of the screen. */
+ * (-1: none pending), the rare Booster it drops when the battle left no item (0: none), 1 while a material line (the
+ * commons of any won encounter, a Rare Target's rare item) has not been shown, the next one (glyph bytes, marks it
+ * shown), and the end of the screen. */
 int def_hunt_reward_battle(void);
 int def_hunt_reward_pack(void);
 /* The screen gives that Booster (returns it, as def_hunt_reward_pack), and how many packs an item the screen shows is:
@@ -209,7 +223,8 @@ int def_hunt_encounter(int battle);
 void def_hunt_scale(void);
 int def_hunt_active(void);
 void def_hunt_skipped(void);
-/* The battle's end (def_log_end): a won random encounter adds to the chain; a Rare Target fought resets it. */
+/* The battle's end (def_log_end): a won random encounter adds to the chain and leaves its commons; a Rare Target fought
+ * resets it, and won gives its rare item. The Rush's skip (def_hunt_skipped) leaves the commons, not the chain. */
 void def_hunt_battle_end(int result);
 /* The Guardromon teleport resets the chain, whatever region it lands in. */
 void def_hunt_chain_reset(void);
@@ -243,6 +258,11 @@ void def_record_set_hunt(int region, int chain);
  * (clamped to 0..DEF_HUNT_MATERIAL_CAP). */
 int def_record_material(int material);
 void def_record_material_add(int material, int n);
+/* The rare items held (PRD 4 layer B), in the slot's second record: the count of one (its index in def_hunt_targets),
+ * adding to it (clamped to 0..DEF_HUNT_RARE_CAP; a gain also marks it as ever held), and whether it ever was. */
+int def_record_rare(int rare);
+void def_record_rare_add(int rare, int n);
+int def_record_rare_seen(int rare);
 void def_bestiary_discover(int index, int element_mask);
 int def_bestiary_known(int index);
 int def_bestiary_index(int species_id);
@@ -253,6 +273,16 @@ void def_bestiary_savestate(struct PortState *s);
  * badly summed record (or NULL) reads as an empty table. */
 void def_bestiary_record_write(unsigned char *out);
 void def_bestiary_record_read(const unsigned char *in);
+/* The slot's second record (PRD 4 layer B: memcard.c part DEF_RECORD2_PART at DEF_RECORD2_AT + slot * 0x100, the card
+ * file's free area after the first three): the rare items. The first record's rules: nothing to keep writes all
+ * zeros, a missing or damaged one reads as empty. Read after the first, whose read resets the slot's port state. */
+#define DEF_RECORD2_SIZE 0x100
+#define DEF_RECORD2_PART 6
+#define DEF_RECORD2_AT 0x7B00
+#define DEF_RECORD2_VERSION 1
+void def_record2_write(unsigned char *out);
+void def_record2_read(const unsigned char *in);
+unsigned char *def_record2_buffer(void);
 /* 1 when the screen and the card record are in use: never in a replay script (shared with the emulator), unless
  * DW3_DEFINITIVE is set, as the rest of the layers (DW3_BESTIARY: this layer alone). */
 int def_bestiary_active(void);
