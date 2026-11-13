@@ -344,6 +344,9 @@ int def_hunt_encounter(int battle);
 void def_hunt_scale(void);
 int def_hunt_active(void);
 void def_hunt_skipped(void);
+/* PRD 4 layer D: an item's buying and selling price in a shop, the definitive ones (port/game/definitive_economy.c). */
+int def_item_buy(int item);
+int def_item_sell(int item);
 /* PRD 4 layers B and C, the bestiary's Hunt line: bestiary species `index`'s common material (-1: none), how many of a
  * species' rare items were ever held of how many (the targets it leads), a material's name (glyph bytes) and how many
  * of it the player holds. */

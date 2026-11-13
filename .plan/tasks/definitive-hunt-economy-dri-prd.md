@@ -482,6 +482,33 @@ Substitui os bullets "Materiais" e "Linha na tela" acima (o resto do Feito vale)
   MP).
 - Jogo: loja de Asuka (`shop_open` é um checkpoint do script de replay).
 
+### Feito (2026-11-13, aplicado direto por decisão do dono)
+
+- **O que levantei:** os preços são do próprio jogo compilado (`records_items`
+  em `src/main/records.c`), não do disco. Toda revenda é metade da compra; nada
+  vende por mais do que custa. Os equipamentos de 60000 (Ronin Blade, Brave
+  Sword, Dramon Horn...) são da loja 18 e revendem por 30000; achados ou ganhos
+  barato (o exemplo do dono), viram 30000 Bits. Não há leilão no código; o
+  "2.000" do exemplo é a via barata, qualquer que seja.
+- **Regra** (`tools/gen_item_prices.py`, constantes em `definitive.h`): arma,
+  armadura ou acessório vendido em loja com preço a partir de
+  `DEF_PRICE_KNEE` (10000) custa `DEF_PRICE_DRAIN_PCT` (150%) e revende por
+  `DEF_SELL_BASE` (5000) + `DEF_SELL_ABOVE_PCT` (8%) do que o preço antigo
+  passava de 10000, nunca mais que metade do novo, arredondado a 100. Um 60000
+  passa a custar 90000 e revender 9000 (o exemplo do dono: 7000–10000); um
+  10000 custa 15000 e revende 5000. O resto fica como no jogo, inclusive os
+  equipamentos que nenhuma loja vende (revenda até 2000). Lista completa em
+  `.dumps/tasks/prices/precos.md`.
+- **Como entra:** a tabela gerada (`port/game/definitive_prices.c`) e
+  `def_item_buy` / `def_item_sell` (`port/game/definitive_economy.c`); as duas
+  unidades da loja leem todo preço por elas sob `PC_PORT` (macros
+  `STITSHOP_BUY`/`STITSHOP_SELL`, e o `u16 price` local vira `s32`, porque um
+  preço novo passa de 65535). `records_items` não é alterado; num script de
+  replay os preços são os do jogo.
+- **Teste:** `tests/port/definitive_economy.py` (o driver: tabela, preço
+  acima do u16, item fora da tabela, replay; e `gen_item_prices.py --check`: a
+  tabela é a da regra e um item mais caro nunca revende por menos).
+
 ## Camada E — Forja nas lojas tradicionais
 
 ### Regras

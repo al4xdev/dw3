@@ -10,6 +10,15 @@
 #include "psyq/libgpu.h"
 #include "stitshop.h"
 
+#ifdef PC_PORT
+/* PRD 4 layer D: the prices through the definitive table (port/game/definitive_economy.c); a price may pass 65535 */
+#define STITSHOP_BUY(item) def_item_buy(item)
+#define STITSHOP_SELL(item) def_item_sell(item)
+#else
+#define STITSHOP_BUY(item) records_funcs.get_item(item)->price
+#define STITSHOP_SELL(item) records_funcs.get_item(item)->sell_price
+#endif
+
 /* STITSHOP.PRO: the item shop. This file holds the overlay's entry point, the fade and buying (the second
  * file, stitshop_800859C0.c, selling, the item list, the item's information and the main object). */
 
@@ -161,7 +170,7 @@ void stitshop_buy_show_number(StitshopBuy *obj, StitshopBuyData *data, s32 show)
 void stitshop_buy_show_confirm(StitshopBuy *obj, StitshopBuyData *data, s32 show) {
     if (show) {
         data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x71), 0x12);
-        data->messages->set_line_number(data->messages, 1, records_funcs.get_item(obj->item)->price * obj->count);
+        data->messages->set_line_number(data->messages, 1, STITSHOP_BUY(obj->item) * obj->count);
         data->yes->set_text(data->yes, cdload_module.files.get_file(records_language + 0x71), 0x13);
         data->no->set_text(data->no, cdload_module.files.get_file(records_language + 0x71), 0x14);
     } else {
@@ -256,7 +265,11 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
     s32 n;
     s32 i;
     s32 digimon;
+#ifdef PC_PORT
+    s32 price; /* PRD 4 layer D: past 65535 */
+#else
     u16 price;
+#endif
 
     switch (obj->base.step) {
     case 0:
@@ -288,7 +301,7 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
                 data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x71), 0x1C);
                 data->messages->set_visible(data->messages, 0);
                 obj->base.step = 45;
-            } else if (gamestate_data.money < records_funcs.get_item(obj->item)->price) {
+            } else if (gamestate_data.money < STITSHOP_BUY(obj->item)) {
                 data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x71), 0x1B);
                 data->messages->set_visible(data->messages, 0);
                 obj->base.step = 45;
@@ -315,7 +328,7 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
         break;
     case 5:
         data->list->close(data->list);
-        price = records_funcs.get_item(obj->item)->price;
+        price = STITSHOP_BUY(obj->item);
         if (price == 0) {
             price = 1;
         }
@@ -359,7 +372,7 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
             }
         }
         if (old != obj->count) {
-            price = records_funcs.get_item(obj->item)->price;
+            price = STITSHOP_BUY(obj->item);
             if (gamestate_data.money < price * obj->count) {
                 obj->count = gamestate_data.money / price;
             }
@@ -443,7 +456,7 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
                     gamestate_data.items[obj->item] += obj->count;
                 }
                 data->info->set_item(data->info, obj->item, obj->count);
-                gamestate_data.money -= records_funcs.get_item(obj->item)->price * obj->count;
+                gamestate_data.money -= STITSHOP_BUY(obj->item) * obj->count;
                 obj->main->show_money(obj->main);
             }
         } else if (PAD_PRESSED(0xE)) {

@@ -9,6 +9,15 @@
 #include "message.h"
 #include "stitshop.h"
 
+#ifdef PC_PORT
+/* PRD 4 layer D: the prices through the definitive table (port/game/definitive_economy.c); a price may pass 65535 */
+#define STITSHOP_BUY(item) def_item_buy(item)
+#define STITSHOP_SELL(item) def_item_sell(item)
+#else
+#define STITSHOP_BUY(item) records_funcs.get_item(item)->price
+#define STITSHOP_SELL(item) records_funcs.get_item(item)->sell_price
+#endif
+
 /* Selling, the item list, the item's information (what it does to each party member), the main object and
  * the helpers of stitshop_funcs. */
 
@@ -396,7 +405,7 @@ void stitshop_sell_run(StitshopSell *obj, StitshopSellData *data) {
     case 31:
         if (stitshop_funcs.anim_update(&obj->question_anim)) {
             data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x71), 0x12);
-            data->messages->set_line_number(data->messages, 1, records_funcs.get_item(obj->item)->sell_price * obj->count);
+            data->messages->set_line_number(data->messages, 1, STITSHOP_SELL(obj->item) * obj->count);
             data->yes->set_text(data->yes, cdload_module.files.get_file(records_language + 0x71), 0x22);
             data->no->set_text(data->no, cdload_module.files.get_file(records_language + 0x71), 0x14);
             obj->cursor = 0;
@@ -418,7 +427,7 @@ void stitshop_sell_run(StitshopSell *obj, StitshopSellData *data) {
         } else if (PAD_PRESSED(0xD)) {
             sound_module.play(0x8004503C);
             if (obj->cursor == 0) {
-                money = gamestate_data.money + records_funcs.get_item(obj->item)->sell_price * obj->count;
+                money = gamestate_data.money + STITSHOP_SELL(obj->item) * obj->count;
                 gamestate_data.money = money;
                 if (money > 9999999) {
                     gamestate_data.money = 9999999;
@@ -893,7 +902,7 @@ void stitshop_list_collect(StitshopList *obj) {
     obj->count = 0;
     n = records_funcs.list_items(obj->shop, (u16 *)obj->kind_items);
     for (i = 0; i < n; i++) {
-        if (records_funcs.get_item(obj->kind_items[i])->sell_price != 0) {
+        if (STITSHOP_SELL(obj->kind_items[i]) != 0) {
             obj->owned_items[obj->count++] = obj->kind_items[i];
         }
     }
@@ -1304,7 +1313,11 @@ void stitshop_info_create_windows(StitshopInfo *obj, StitshopInfoData *data) {
 
 /* Shows (`show`) or hides the item's name, how many are equipped and owned, and the price. */
 void stitshop_info_show_item(StitshopInfo *obj, StitshopInfoData *data, s32 show) {
+#ifdef PC_PORT
+    s32 price; /* PRD 4 layer D: past 65535 */
+#else
     u16 price;
+#endif
 
     if (show) {
         data->item_name->set_text(data->item_name, cdload_module.files.get_file(records_language + 0x6A), obj->item);
@@ -1316,9 +1329,9 @@ void stitshop_info_show_item(StitshopInfo *obj, StitshopInfoData *data, s32 show
         data->owned->measure(data->owned, 1);
         data->price_label->set_text(data->price_label, cdload_module.files.get_file(records_language + 0x71), 2);
         if (obj->selling == 0) {
-            price = records_funcs.get_item(obj->item)->price;
+            price = STITSHOP_BUY(obj->item);
         } else {
-            price = records_funcs.get_item(obj->item)->sell_price;
+            price = STITSHOP_SELL(obj->item);
         }
         data->price->set_line_number(data->price, 0, price * obj->count);
         data->price->measure(data->price, 1);
