@@ -543,6 +543,29 @@ Substitui os bullets "Materiais" e "Linha na tela" acima (o resto do Feito vale)
 - Jogo: comprar com e sem material, e a quantidade máxima limitada pelos
   materiais.
 
+### Feito (2026-11-13, aplicado direto por decisão do dono)
+
+- **Receitas** (`tools/gen_recipes.py`, constantes `DEF_RECIPE_*`): pelo preço
+  antigo de arma, armadura ou acessório vendido em loja. Abaixo de 5000, só
+  Bits. De 5000 a 20000 (intermediário), um comum (do 3º ao 9º, pela ordem de
+  preço), 10 a 25 dele. De 20000 em diante (topo), um dos sete comuns de cima,
+  30 a 50 dele, e um raro de região: os raros pela ordem do nível do alvo,
+  espalhados pelos itens de topo pela ordem de preço, um (dois a partir de
+  50000). É o modelo do dono: comuns em grande quantidade, raros para o
+  melhor equipamento. Lista em `.dumps/tasks/forge/receitas.md`.
+- **Na loja** (`stitshop_8008321C.c`, sob `PC_PORT`): na seleção, sem os
+  materiais, a recusa é a mesma da falta de dinheiro com o texto "You don't
+  have enough materials."; o máximo comprável fica limitado pelo que os
+  materiais fazem; a compra tira os materiais com os Bits. No painel do item,
+  a linha do slot mostra os requisitos ("Data Chip 12/30, Datamon IV 0/1": o
+  raro pelo nome do Alvo Raro que o deixa, que cabe na linha), laranja
+  enquanto falta.
+- `definitive_glyph.c`: os textos montados (string, contagem, algarismo
+  romano) saíram de `definitive_hunt.c` para servir a loja também.
+- **Teste:** o driver da economia (limite pelos materiais, o mais escasso de
+  dois, pagamento de várias unidades, item sem receita, rótulo e cor, replay)
+  e `gen_recipes.py --check`.
+
 ## Camada F — Novos equipamentos (build crafting)
 
 ### Regras

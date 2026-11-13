@@ -1354,6 +1354,19 @@ void stitshop_info_show_description(StitshopInfo *obj, StitshopInfoData *data, s
     if (show) {
         data->description->set_text(data->description, cdload_module.files.get_file(records_language + 0x63), obj->item);
         entry = records_funcs.get_item(obj->item);
+#ifdef PC_PORT
+        data->slot->set_palette(data->slot, 0);
+        if (obj->selling == 0) { /* PRD 4 layer E: the forge's requirements in the slot's line, orange while short */
+            int palette;
+            const unsigned char *needs = def_recipe_label(obj->item, &palette);
+
+            if (needs != NULL) {
+                data->slot->set_text(data->slot, (u8 *)needs, -1);
+                data->slot->set_palette(data->slot, palette);
+                return;
+            }
+        }
+#endif
         if (entry->type >= 2 && entry->type <= 13) {
             equip = entry->data;
             data->slot->set_text(data->slot, cdload_module.files.get_file(records_language + 0x71),

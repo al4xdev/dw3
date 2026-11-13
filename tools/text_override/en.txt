@@ -289,3 +289,8 @@ $HuntRomanI: I
 $HuntRomanV: V
 $HuntRomanX: X
 $HuntRareLabel: Rare Cores
+
+# PRD 4 layer E, the forge: the shop's refusal when the materials are short (as its "not enough money"), and the
+# separator of the requirements' line (quoted: its space is kept).
+$RecipeMissing: You don't have enough materials.
+$RecipeSep: ", "

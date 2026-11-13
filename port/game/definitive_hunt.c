@@ -33,7 +33,7 @@ extern unsigned char ststatus_map_areas[];
 extern int def_on(void); /* port.h declares it under PC_PORT only; the host test builds without it */
 extern void port_log(const char *fmt, ...);
 extern const unsigned char def_str_HuntGotPrefix[], def_str_HuntGotSuffix[], def_str_HuntRarePrefix[], def_str_HuntRareWord[],
-    def_str_HuntSpace[], def_str_HuntHeld[], def_str_HuntRomanI[], def_str_HuntRomanV[], def_str_HuntRomanX[];
+    def_str_HuntSpace[], def_str_HuntHeld[];
 
 static struct {
     signed char from_encounter; /* the battle being set up came from a random encounter */
@@ -73,47 +73,29 @@ static int lead_of(int t) {
     return fieldstg_battles[def_hunt_targets[t].battle].enemies[0]->digimon;
 }
 
-/* ---- Glyph strings: the windows keep the pointer, so every text built here lives in a static buffer. */
-static void put(unsigned char *buf, int *p, int size, const unsigned char *s) {
-    while (s != NULL && *s != 0 && *p < size - 1) {
-        buf[(*p)++] = *s++;
-    }
-    buf[*p] = 0;
-}
-
-static void put_roman(unsigned char *buf, int *p, int size, int n) {
-    static const char *const units[10] = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX" };
-    const char *u;
-
-    for (; n >= 10; n -= 10) {
-        put(buf, p, size, def_str_HuntRomanX);
-    }
-    for (u = units[n < 0 ? 0 : n]; *u != 0; u++) {
-        put(buf, p, size, *u == 'I' ? def_str_HuntRomanI : def_str_HuntRomanV);
-    }
-}
-
-static void put_count(unsigned char *buf, int *p, int size, int n) {
-    if (n >= 10 && *p < size - 2) {
-        buf[(*p)++] = (unsigned char)(4 + n / 10 % 10); /* the font's digits: glyph 4 is 0 */
-    }
-    if (*p < size - 1) {
-        buf[(*p)++] = (unsigned char)(4 + n % 10);
-    }
-    buf[*p] = 0;
-}
-
 /* "<lead species> Core <numeral>", rare item `t`'s name. */
 static void put_rare_name(unsigned char *buf, int *p, int size, int t) {
     const unsigned char *name = def_species_name(lead_of(t));
 
     if (name != NULL) {
-        put(buf, p, size, name);
-        put(buf, p, size, def_str_HuntSpace);
+        def_glyph_put(buf, p, size, name);
+        def_glyph_put(buf, p, size, def_str_HuntSpace);
     }
-    put(buf, p, size, def_str_HuntRareWord);
-    put(buf, p, size, def_str_HuntSpace);
-    put_roman(buf, p, size, def_hunt_targets[t].variant);
+    def_glyph_put(buf, p, size, def_str_HuntRareWord);
+    def_glyph_put(buf, p, size, def_str_HuntSpace);
+    def_glyph_roman(buf, p, size, def_hunt_targets[t].variant);
+}
+
+void def_hunt_target_name(unsigned char *buf, int *p, int size, int t) {
+    const unsigned char *name;
+
+    if (t < 0 || t >= def_hunt_target_count) {
+        return;
+    }
+    name = def_species_name(lead_of(t));
+    def_glyph_put(buf, p, size, name != NULL ? name : def_str_HuntRareWord);
+    def_glyph_put(buf, p, size, def_str_HuntSpace);
+    def_glyph_roman(buf, p, size, def_hunt_targets[t].variant);
 }
 
 /* A new results line, or NULL when the screen's lines are full. */
@@ -223,9 +205,9 @@ const unsigned char *def_hunt_foe_name(int species, int slot) {
         return NULL;
     }
     slot = slot != 0;
-    put(buf[slot], &p, DEF_HUNT_LINE_SIZE, name);
-    put(buf[slot], &p, DEF_HUNT_LINE_SIZE, def_str_HuntSpace);
-    put_roman(buf[slot], &p, DEF_HUNT_LINE_SIZE, def_hunt_targets[hunt.target].variant);
+    def_glyph_put(buf[slot], &p, DEF_HUNT_LINE_SIZE, name);
+    def_glyph_put(buf[slot], &p, DEF_HUNT_LINE_SIZE, def_str_HuntSpace);
+    def_glyph_roman(buf[slot], &p, DEF_HUNT_LINE_SIZE, def_hunt_targets[hunt.target].variant);
     return buf[slot];
 }
 
@@ -260,12 +242,12 @@ static void common_drops(void) {
         port_log("hunt: material %d x%d (now %d)", m, tally[m], def_record_material(m));
         if ((line = line_new()) != NULL) {
             p = 0;
-            put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntGotPrefix);
-            put(line, &p, DEF_HUNT_LINE_SIZE, def_hunt_material_name(m));
-            put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntSpace);
-            put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntHeld);
-            put_count(line, &p, DEF_HUNT_LINE_SIZE, tally[m]);
-            put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntGotSuffix);
+            def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntGotPrefix);
+            def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_hunt_material_name(m));
+            def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntSpace);
+            def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntHeld);
+            def_glyph_count(line, &p, DEF_HUNT_LINE_SIZE, tally[m]);
+            def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntGotSuffix);
         }
     }
 }
@@ -281,9 +263,9 @@ static void rare_won(int t) {
     def_record_rare_add(t, 1);
     port_log("hunt: rare %d (now %d)", t, def_record_rare(t));
     if ((line = line_new()) != NULL) {
-        put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntRarePrefix);
+        def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntRarePrefix);
         put_rare_name(line, &p, DEF_HUNT_LINE_SIZE, t);
-        put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntGotSuffix);
+        def_glyph_put(line, &p, DEF_HUNT_LINE_SIZE, def_str_HuntGotSuffix);
     }
 }
 

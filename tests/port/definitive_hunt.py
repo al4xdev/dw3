@@ -41,6 +41,7 @@ def main():
           "-I", str(ROOT / "tests/host"),
           "-I", str(ROOT / "psxstack/include"), "-I", str(ROOT / "port/game"),
           str(ROOT / "port/game/definitive_hunt.c"), str(ROOT / "port/game/definitive_bestiary.c"),
+          str(ROOT / "port/game/definitive_glyph.c"),
           str(ROOT / "port/game/definitive_text.c"),
           str(ROOT / "tests/port/definitive_hunt_driver.c"), "-o", str(exe)]
     if subprocess.run(cc).returncode != 0:

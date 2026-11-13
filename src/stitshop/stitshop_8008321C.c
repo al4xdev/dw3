@@ -305,6 +305,12 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
                 data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x71), 0x1B);
                 data->messages->set_visible(data->messages, 0);
                 obj->base.step = 45;
+#ifdef PC_PORT
+            } else if (!def_recipe_can_buy(obj->item)) { /* PRD 4 layer E: the forge's materials, refused as the money */
+                data->messages->set_text(data->messages, (u8 *)def_recipe_missing_text(), -1);
+                data->messages->set_visible(data->messages, 0);
+                obj->base.step = 45;
+#endif
             } else {
                 data->list->set_input(data->list, 0);
                 obj->base.step = 5;
@@ -336,6 +342,11 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
         if (obj->max + gamestate_data.items[obj->item] >= 100) {
             obj->max = 99 - gamestate_data.items[obj->item];
         }
+#ifdef PC_PORT
+        if (obj->max > def_recipe_max(obj->item)) {
+            obj->max = def_recipe_max(obj->item); /* PRD 4 layer E: as many as the materials make */
+        }
+#endif
         obj->base.step++;
         break;
     case 6:
@@ -457,6 +468,9 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
                 }
                 data->info->set_item(data->info, obj->item, obj->count);
                 gamestate_data.money -= STITSHOP_BUY(obj->item) * obj->count;
+#ifdef PC_PORT
+                def_recipe_pay(obj->item, obj->count); /* PRD 4 layer E: the forge's materials with the Bits */
+#endif
                 obj->main->show_money(obj->main);
             }
         } else if (PAD_PRESSED(0xE)) {
