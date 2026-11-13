@@ -135,6 +135,11 @@ int def_evo_seen_get(const unsigned int bits[DEF_EVO_SEEN_WORDS], int form_id);
 void def_evo_seen_set(unsigned int bits[DEF_EVO_SEEN_WORDS], int form_id);
 int def_evo_skip_update(int *hold_frames, int skip_pressed);
 
+#ifndef DEF_TRAIN_NO_STAT_LOSS
+#define DEF_TRAIN_NO_STAT_LOSS 1 /* resistance trainings (8..14) do not lower secondary stats 1..5 */
+#endif
+int def_train_no_stat_loss_on(void);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

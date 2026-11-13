@@ -124,3 +124,7 @@ int def_evo_skip_update(int *hold_frames, int skip_pressed) {
     }
     return *hold_frames >= DEF_EVO_SKIP_HOLD_FRAMES;
 }
+
+int def_train_no_stat_loss_on(void) {
+    return DEF_TRAIN_NO_STAT_LOSS != 0;
+}

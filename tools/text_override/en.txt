@@ -49,12 +49,12 @@ TRAINI 103: Results:<1>Thunder Affinity is up by <5,1>!<2,2>
 TRAINI 104: Results:<1>Machine Affinity is up by <5,1>!<2,2>
 TRAINI 105: Results:<1>Dark Affinity is up by <5,1>!<2,2>
 TRAINI 106: Results:<2,2><3>Fire Affinity is up by <5,1>!<1>Maximum MP is up by <5,2>!<2,2>
-TRAINI 107: Results:<2,2><3>Water Affinity is up by <5,1>!<1>Defense is down by <5,2>...<2,2>
-TRAINI 108: Results:<2,2><3>Ice Affinity is up by <5,1>!<1>Speed is down by <5,2>...<2,2>
-TRAINI 109: Results:<2,2><3>Wind Affinity is up by <5,1>!<1>Strength is down by <5,2>...<2,2>
-TRAINI 110: Results:<2,2><3>Thunder Affinity is up by <5,1>!<1>Wisdom is down by <5,2>...<2,2>
+TRAINI 107: Results:<1>Water Affinity is up by <5,1>!<2,2>
+TRAINI 108: Results:<1>Ice Affinity is up by <5,1>!<2,2>
+TRAINI 109: Results:<1>Wind Affinity is up by <5,1>!<2,2>
+TRAINI 110: Results:<1>Thunder Affinity is up by <5,1>!<2,2>
 TRAINI 111: Results:<2,2><3>Machine Affinity is up by <5,1>!<1>Max HP is up by <5,2>!<2,2>
-TRAINI 112: Results:<2,2><3>Dark Affinity is up by <5,1>!<1>Spirit is down by <5,2>...<2,2>
+TRAINI 112: Results:<1>Dark Affinity is up by <5,1>!<2,2>
 
 # Layer 6: the remade techniques' names and battle messages (shown by message type 23, fightstg_message_show).
 SKLNAM 202: Libra

@@ -829,3 +829,8 @@ void def_evo_form_mark(int form_id) {
     }
     def_evo_seen_set(def_evo_seen_bits, form_id);
 }
+
+/* ---- PRD 2, layer I: resistance training without secondary stat loss. */
+int def_train_no_stat_loss(void) {
+    return def_on() && def_train_no_stat_loss_on();
+}

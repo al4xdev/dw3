@@ -75,6 +75,11 @@ s32 stgtrain_session_lower_stat(StgtrainSession *obj, s32 type) {
     s32 row;
     s32 n;
 
+#ifdef PC_PORT
+    if (def_train_no_stat_loss()) {
+        return 0;
+    }
+#endif
     if ((u32)(type - 1) >= 5 || (pad_random.next() & 1)) {
         return 0;
     }

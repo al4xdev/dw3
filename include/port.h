@@ -355,6 +355,7 @@ void def_gauges_slot_read(const void *slot_save);
 int def_evo_form_seen(int form_id);
 void def_evo_form_mark(int form_id);
 int def_evo_skip_update(int *hold_frames, int skip_pressed);
+int def_train_no_stat_loss(void);
 
 #endif /* PC_PORT */
 
