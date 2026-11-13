@@ -144,8 +144,9 @@ stats the way you want. TP still caps at 99 in hand, so you train along the way 
 
 - A rookie levels at the original pace; **digivolution forms level 14 times faster**, so trying a new form is fun
   instead of a chore.
-- **The whole roster grows together**: rookies that stayed out of the fight still earn experience, and so do the forms
-  that did not fight.
+- **The party grows together**: a party member that stayed out of the fight earns the same experience as one that
+  fought, and each Digimon's three chosen forms earn form experience whether they fought or not.
+- **Card boosters drop 15 at a time**, so building a deck for the card game does not take a second playthrough.
 
 ### Digivolution
 

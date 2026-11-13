@@ -389,7 +389,7 @@ a big exp award gives several levels in one call and returns 1; cap level 99; wi
   `digimon[0].record.stats.values[2]` (HP, `gamestate_data` + 0x788: 150 -> 93);
   the report (STFGTREP) then adds the prize money (`money`, + 0x6C) and `digimon[0].record.exp` (+ 0x780), no level-up. The outcome and the stable hashes are the same on both CPU cores although
   the battle takes a different number of frames.
-- **Who gets a battle's experience** [C] (`stfgtrep_main_update`, step 1 of its init; the party mod of issue #28 hooks here, and the XP boost mod multiplies the three rewards):
+- **Who gets a battle's experience** [C] (`stfgtrep_main_update`, step 1 of its init; the original's rules first, then what the Definitive Edition changes, at the end of this list):
   - The amount is per battle, not per enemy: `stfgtrep_rewards[records_battle_results.battle]` = `{tech_exp, exp, money}`
     (335 rows, STFGTREP `.data`), `battle` copied from `records_state.battle` (set by `fieldstg_start_battle`) when the battle is
     won (`wfightmn` result step). Enemy levels and the party's levels play no part.
@@ -398,14 +398,25 @@ a big exp award gives several levels in one call and returns 1; cap level 99; wi
     at the end for a member at 0 HP (which is left at 1 HP). The battle has one acting member per side; the others wait to be switched in.
   - It is split, not copied: n = 1 (or 0) -> `exp` each, 2 -> `exp * 6 / 10` each (120% in all), 3 -> `exp / 3` each.
     A member that did not take part is created with 0; the report skips its panel's experience step (`member_exp == 0`), so it gets no
-    experience, no form experience and no new-form check (`learn_technique`) this battle. With `xp_boost`'s `all_forms` on, the report
-    credits the three chosen forms of every party member before the panels open (the game's own form number for that Digimon, once per chosen form); a form left in the lab is not chosen. The
-    Digimon's experience and the new-form check stay skipped.
+    experience, no form experience and no new-form check (`learn_technique`) this battle.
   - Item 0x141 (equipment slot 4 or 5) then adds a fifth to the member's share (`stfgtrep_member_get_exp`, through `get_exp`).
   - Base Digimon versus forms: the share goes to the party Digimon's own record (`digimon[id].record.exp` and its level, through
     `stfgtrep_add_exp` in the panel's step 40) whichever form it fought as. A form keeps its own level and experience
     (`GamestateForm`, section 7) and gains only `tech_exp`, for the chosen forms marked in `forms[]`; the Digimon's own form gains none.
   - Only the three party members have panels; the five other Digimon (`gamestate_data.digimon[8]`, not in `party[3]`) get nothing.
+  - **The Definitive Edition** (`def_on`: always in the port, never under a replay script; PRD 3, the party_xp and xp_boost mods
+    made the game's own; `port/game/definitive.h` holds the numbers):
+    - a member that did not take part gets `DEF_XP_PARTY_SHARE` (100) percent of one fighter's share, at least 1
+      (`port_party_xp_share`, `port/game/game_mods.c`), and its panel adds it as a fighter's (level-ups, new form, item 0x141's
+      fifth); a member at 0 HP when the battle ends (WFIGHTMN tells `port_party_xp_knocked_out`) gets none;
+    - **form experience** is multiplied by `DEF_XP_FORM_MULT` (14) and the per-battle ceiling (10 / 50, below) is skipped, so a
+      battle can raise several form levels;
+    - **the three chosen forms** of every party member earn the battle's form experience, whether that form fought or not, before
+      the panels open (`stfgtrep_grant_party_forms`; the forms the game marked are left to the panel, not counted twice). A form
+      left in the lab is not chosen and earns nothing: it could otherwise reach 99 without a skill, because `learn_skill` only
+      runs for a chosen slot;
+    - a Booster Pack drop gives `DEF_CARD_BOOST_PACKS` (15);
+    - the Digimon's own experience, the bits and the item are the original's; TP comes by level band (PRD 2, layer D).
 
 ## 7. Digivolution (forms)
 
@@ -435,12 +446,9 @@ forms that fought, then skills, then the Digimon's experience, then a new form):
   `records_battle_results.members[slot].forms[i]` was set in battle (`wfightmn_mark_took_part`: `took_part` for the acting member, and
   the form it was fighting as when it acted, digivolved or switched, by its place `i` in `get_chosen_forms`' packed list: chosen
   {386, -1, 367} fighting as 367 marks `forms[1]`; its own form or an unchosen one marks none [T] (`fightstg_rules`, appended by sweep2)).
-  **That 10/50 ceiling is the pacing behind "one form level a battle"** (99 battles for a form at 99). `xp_boost`'s `form_exp`
-  (`port/game/game_mods.c`) multiplies this number, and with the mod on the ceiling is skipped, so a battle can raise several form
-  levels - `add_technique_exp` already loops. `all_forms`, the same mod's other option, credits the three chosen forms of every party
-  member once, whether that form fought or not, before the report's panels open. A form left in the lab is not chosen.
-  The specific forms the game marked are left to the panel, so they are not counted twice. The Digimon's own experience (`stfgtrep_add_exp`) and the TP (`values[1]`, +5 per
-  Digimon level-up, spent by training) are untouched by that mod.
+  **That 10/50 ceiling is the pacing behind "one form level a battle"** (99 battles for a form at 99). The Definitive Edition
+  multiplies this number by 14 and skips the ceiling (section 6), so a battle can raise several form levels - `add_technique_exp`
+  already loops.
 - **Skills** (`stfgtrep_learn_skill(d, form)`): the first empty slot i (0..5) whose `RecordsDigimon.techniques[i + 1]` exists and whose
   `technique_levels[i] <= form level` is filled (slot 5 with flag 0x8000); one per call; a later slot can fill first when the levels are out
   of order (form 375 learns slot 2 at level 10 before slot 1 at 25), and a missing technique leaves its slot empty for good.

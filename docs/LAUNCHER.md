@@ -163,29 +163,6 @@ play-tested to the memory card screen).
 `tests/port/mods.py` boots each language (the opening's map and `records_language`, and the mod off still at the
 screen) and runs `new_game`'s route from the opening in French, whose new game has the French deck names.
 
-### Party experience
-
-`party_xp`. Options: `share` (int 0-100, step 5, default 50), `knocked_out` (bool, default false), `catch_up` (bool,
-default false). No hotkey: it acts whenever enabled (`port_mod_party_xp`).
-
-The game splits a won battle's experience among the party members that took part (one fighter: all of it, two: 60%
-each, three: a third each) and gives the others nothing, knocked-out members included (`docs/MECHANICS.md` section 6,
-"Who gets a battle's experience"). With the mod on, STFGTREP's report (`stfgtrep_main_update`, after it creates the
-members' panels) asks `port_party_xp_share` (`port/game/game_mods.c`) for each member's experience:
-
-- **A member that took part** keeps the game's share.
-- **A member that did not** gets `share` percent of one fighter's share (at least 1 when both are above 0). A member at
-  0 HP when the battle ends (WFIGHTMN tells `port_party_xp_knocked_out` before it clears the member's `took_part`)
-  gets it only with `knocked_out`.
-- **`catch_up`:** a member below the party's highest level gets 10% more per level below it, at most twice as much;
-  fighters included.
-
-The report then shows, counts and adds that experience as it does a fighter's: its panel, the level-ups and their stat
-draws, a new form, and item 0x141's fifth more. Form experience is xp_boost's `all_forms` option, not this one, and only
-the three party members gain the Digimon's experience (the Digimon at the lab have no panel). The money, the item and
-the battle are unchanged. `tests/port/mods.py` runs the first story battle (one fighter of three) with the mod on and
-off; catch-up and knocked-out members are not reached by a scripted run.
-
 ### Logs (the DEBUG group)
 
 The game's commentary is one switch, `debug.logs` in `settings.json`: `off` (the default) prints nothing, `soft` prints
@@ -198,43 +175,6 @@ are not the same thing: they write their own files and some cost real frames.
 
 `SAVE LOGS`, in the same group, writes `dw3-logs-<date>.zip` beside the port: `logs/*`, `crash-*.txt`, `settings.json`,
 `pad.map`, `tui.state` and a `system.txt` with the renderer, `uname` and the date. The cards and the disc are left out.
-
-### XP boost
-
-`xp_boost`. Options: `exp`, `form_exp`, `bits` (float 1-20, step 0.1, default 2; sliders up to 5, `slider_max` with
-`input_toggle: manual`), `manual` (bool, default false: values above 5x count as 5x). Presets (launcher only): Boost
-(all 2x, the defaults), Turbo (all 3x), Ultra (all 5x). No hotkey: it acts whenever enabled (`port_mod_xp_boost`).
-
-The handheld menu's XP screen exposes `exp` and `bits` together on its `XP / BITS BOOST` row (off, then 2x-20x), and
-`form_exp` alone on the `FORM XP` row below it (1x-20x): the Digimon's experience and the forms' experience are
-different rewards, so the forms can be calibrated without moving the other two. `manual` is written on as soon as
-either row passes 5x.
-
-A won battle's rewards come from one row of `stfgtrep_rewards` (`docs/MECHANICS.md` section 6, "Who gets a battle's
-experience"). With the mod on, STFGTREP's report passes each through `port_xp_boost` (`port/game/game_mods.c`), which
-multiplies it by the option's value (in tenths, rounded down, at most 9,999,999):
-
-- **`exp`**: one fighter's split share, in `stfgtrep_main_update` before the members' panels are created; party_xp's
-  shares for the members that did not fight come from the boosted share, and item 0x141's fifth comes on top.
-- **`form_exp`**: a chosen form's (digivolution's) experience, at the end of `stfgtrep_get_technique_exp`. The game caps
-  that number per battle - 10 points below the form's threshold level, 50 past it - and the cap is what paces a form to
-  one level a battle (99 battles to 99). **With the mod on the cap is skipped**, so the setting means what it says: at 6x
-  a battle can raise several form levels at once (`add_technique_exp` already loops; measured on the XF35H: form 4 -> 11
-  in one won battle). It does not touch the Digimon's own experience or the TP. A very low-level Digimon in a rich battle
-  can therefore jump a long way - the game's ceiling was the only limiter, and it is off while the mod is on.
-- **`all_forms`** (bool, on by default): the three **chosen** forms of each party member earn the battle's form
-  experience, whether that form fought or not. Nine at most. A form left in the lab is not chosen and earns nothing:
-  it could otherwise reach 99 without a skill, because `learn_skill` only runs for a chosen slot. The number is the
-  game's own for that Digimon. A member whose panel does not open still has its chosen forms credited here, and they
-  learn one skill, the call the panel would have made.
-- **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
-  stops at 9,999,999.
-
-The report shows, counts and adds the boosted amounts as the game's own (the panels, the level-ups, the message).
-The item won and the battle are unchanged. `tests/port/mods.py` runs the first story battle (4 experience, 50 bits)
-with the mod on, with `manual` and party_xp, and capped without `manual`; that battle gives no form experience, so
-`form_exp` is not reached by a scripted run.
-
 
 ### Widescreen battles
 

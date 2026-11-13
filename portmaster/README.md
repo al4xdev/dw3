@@ -54,11 +54,11 @@ the Definitive Edition's own, with nothing to set.
 | `RESET SETTINGS` | after asking, puts everything back: the tuned settings, the pad map (modern layout) and the LED bar switched on. The memory cards are never touched |
 | `PLAY` | start the game |
 
-The XP boost removes a brake the game has: form experience is capped at 10 points a battle before the fifth form-level
-threshold and 50 after it, which is why a digivolution gains one level per battle, and the cap is applied before any
-multiplier. With the boost on the cap is skipped, so a won battle can raise several form levels. `ALL FORMS' XP` credits
-the three chosen forms of each party member, not a form left in the lab. Each form keeps its own requirement table. The
-mod's full behaviour is in [the mod reference](https://github.com/al4xdev/dw3/blob/main/docs/LAUNCHER.md).
+Form experience is 14x and the game's own brake on it (10 points a battle before the fifth form-level threshold, 50
+after, which is why a digivolution gains one level per battle) is skipped, so a won battle can raise several form
+levels. The three chosen forms of each party member earn it, not a form left in the lab. These are the Definitive
+Edition's rules, with nothing to set ([`docs/MECHANICS.md`](https://github.com/al4xdev/dw3/blob/main/docs/MECHANICS.md)
+section 6).
 
 ## Controls (default PS1 layout)
 
