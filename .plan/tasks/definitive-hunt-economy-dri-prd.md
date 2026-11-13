@@ -2,7 +2,8 @@
 
 Dono: Alex. Data: 2026-11-13. Estado: desenho completo; as decisões do dono estão
 marcadas `[dono]`, cada uma com uma proposta padrão (fim do arquivo);
-implementação por camadas, cada camada só depois do ok da anterior.
+implementação por camadas, cada camada só depois do ok da anterior. **Camada A
+implementada em 2026-11-13** com a tabela de alvos provisória (abaixo).
 
 Continuação de `definitive-combat-prd.md`, `definitive-progression-prd.md` e
 `definitive-rebalance-prd.md`. Mesmas regras de trabalho: camadas pequenas,
@@ -253,11 +254,25 @@ não podem mudar, e uma falha nova é bloqueio.
 
 ### Tabela de alvos
 
-Gere com uma ferramenta (`tools/gen_hunt_targets.py`), como
-`gen_enemy_weaknesses.py`: liste os chefes/sub-chefes de `fieldstg_battles[]`
-com espécie e nível, cruze com as regiões que têm encontro aleatório
-(`encounters[]` não nulo) e proponha um por região. **Mostre ao dono antes de
-aplicar.**
+`tools/gen_hunt_targets.py` (proposta em `.dumps/tasks/hunt/alvos.md`; `--apply`
+escreve `port/game/definitive_hunt_targets.c`). O mapa de cada estágio vem do
+comentário do próprio `src/wstag/wstagN.c` ("WSTAG321: stage 0x28A"): o segundo
+campo de `fieldstg_stages` **não** é o número do arquivo. Chefe é a regra de
+`gen_enemy_weaknesses.py` (`kind` 2 com 9 ou mais `blocked[]`).
+
+A regra do desenho original ("o chefe que a própria região inicia") não serve:
+só 13 das 67 regiões com encontro têm chefe próprio, e muitos são superchefes
+opcionais muito acima dos encontros (um nível 70 numa área de nível 6). A regra
+aplicada: para uma região cujo maior encontro aleatório é T, um chefe do jogo
+com nível próprio entre T e T + 15, de preferência um que a própria região
+inicia, sem repetir chefe entre regiões enquanto houver outro; luta em T + 3,
+nunca abaixo do próprio nível. As batalhas do chefe final (Galacticmon, que em
+qualquer mapa rodam as fases finais: `state.type` 4) nunca entram. Resultado:
+66 das 67 regiões com alvo. **A tabela aplicada é provisória até o ok do
+dono**; regenerar com outra regra é rodar a ferramenta de novo.
+
+Até a camada B, o Alvo Raro dá a recompensa da própria batalha de chefe
+(`stfgtrep_rewards[battle]`).
 
 ### Teste
 
@@ -645,12 +660,11 @@ D (preços) ──────────────────────�
 Cada item traz a proposta que o implementador leva ao dono. Nada é aplicado
 sem o ok.
 
-1. **Alvos Raros por região e escala de nível (camada A).** Proposta: um alvo
-   por região com encontro aleatório, escolhido pela ferramenta entre os
-   chefes/sub-chefes já vencidos naquela parte da história, com o nível
-   ajustado ao Cardmon de tier mais alto da região. Saída: uma tabela (área,
-   servidor, batalha, espécie, nível original, nível proposto) para o dono
-   riscar e trocar.
+1. **Alvos Raros por região e escala de nível (camada A).** Aplicada como
+   provisória: a regra por nível da camada A (66 regiões), em
+   `.dumps/tasks/hunt/alvos.md` para o dono riscar e trocar. Em aberto: repetir
+   o mesmo chefe em várias regiões (há poucas batalhas de chefe: o Datamon
+   cobre 13), e se a escala deve seguir o Cardmon da região em vez de T + 3.
 2. **Materiais de Caça (camada B).** Proposta: no máximo 16, por tier de
    região (começo, meio, fim, pós-game) e tipo; a quantidade exata e os nomes
    são do dono. Com 16 ou menos regiões com Alvo Raro, pode ser um por alvo.

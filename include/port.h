@@ -335,6 +335,15 @@ s32 def_overfinish_take_bits(void);
 int def_rush_offer(void);
 void def_rush_results(void);
 int def_rush_auto(void);
+/* PRD 4 layer A, the regional hunt (port/game/definitive_hunt.c): a map loaded (a new region resets the chain); a random
+ * encounter starting (returns the battle to fight: the region's Rare Target in place of `battle` once the chain allows);
+ * after fieldstg_start_battle, the Rare Target's enemies raised to its level; 1 while a Rare Target is being fought (the
+ * party can always flee); the Rush took the encounter (it does not count). */
+void def_hunt_map(int map);
+int def_hunt_encounter(int battle);
+void def_hunt_scale(void);
+int def_hunt_active(void);
+void def_hunt_skipped(void);
 void def_new_game_difficulty(int hard);
 void def_new_game_apply(void);
 void def_hard_party_fix(void);

@@ -15,12 +15,14 @@ extern int fightstg_enemy_find_record(int id);
 
 #define REC_TABLE 8 /* offset of the table in the record (magic 4, version 1, checksum 1, 2 unused) */
 /* The record's spare bytes after the table carry the slot's other port state (the slot's own tail is full): at
- * REC_EXTRA "X1", the flags (DEF_SAVE_HARD), a byte unused, then the Guardromon network's mask (4 bytes, low first).
- * A record without the "X1" (an older save) reads as none of it. */
+ * REC_EXTRA "X1", the flags (DEF_SAVE_HARD), a byte unused, the Guardromon network's mask (4 bytes, low first), then the
+ * hunt's region and chain (PRD 4 layer A; the PRD's budget gives the rest of the 48 bytes to the later layers). A record
+ * without the "X1" (an older save) reads as none of it, and one written before the hunt existed reads its bytes as 0. */
 #define REC_EXTRA 0xD0
 
 static unsigned char extra_flags;
 static unsigned int extra_network;
+static unsigned char extra_region, extra_chain;
 
 static unsigned char table[DEF_BESTIARY_SPECIES];
 static unsigned char buffer[DEF_BESTIARY_RECORD_SIZE];
@@ -29,6 +31,8 @@ void def_bestiary_reset(void) {
     memset(table, 0, sizeof(table));
     extra_flags = 0;
     extra_network = 0;
+    extra_region = 0;
+    extra_chain = 0;
 }
 
 unsigned int def_network_mask(void) {
@@ -43,6 +47,16 @@ void def_network_unlock(int node) {
 
 int def_save_flag(int flag) {
     return (extra_flags & flag) != 0;
+}
+
+void def_record_hunt(int *region, int *chain) {
+    *region = extra_region;
+    *chain = extra_chain;
+}
+
+void def_record_set_hunt(int region, int chain) {
+    extra_region = (unsigned char)region;
+    extra_chain = (unsigned char)(chain < 0 ? 0 : chain > 255 ? 255 : chain);
 }
 
 void def_save_flag_set(int flag, int on) {
@@ -69,6 +83,8 @@ void def_bestiary_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, table);
     PORT_STATE_VAR(s, extra_flags);
     PORT_STATE_VAR(s, extra_network);
+    PORT_STATE_VAR(s, extra_region);
+    PORT_STATE_VAR(s, extra_chain);
 }
 
 static unsigned char sum(const unsigned char *p, int n) {
@@ -89,7 +105,7 @@ void def_bestiary_record_write(unsigned char *out) {
             break;
         }
     }
-    if (i == DEF_BESTIARY_SPECIES && extra_flags == 0 && extra_network == 0) {
+    if (i == DEF_BESTIARY_SPECIES && extra_flags == 0 && extra_network == 0 && extra_region == 0 && extra_chain == 0) {
         return;
     }
     port_log("bestiary: the slot's record written");
@@ -97,13 +113,16 @@ void def_bestiary_record_write(unsigned char *out) {
     out[4] = DEF_BESTIARY_VERSION;
     memcpy(out + REC_TABLE, table, DEF_BESTIARY_SPECIES);
     out[5] = sum(out + REC_TABLE, DEF_BESTIARY_SPECIES);
-    if (extra_flags != 0 || extra_network != 0) { /* none of it: the record stays as it always was */
+    if (extra_flags != 0 || extra_network != 0 || extra_region != 0 || extra_chain != 0) { /* none of it: the record
+                                                                                            * stays as it was */
         out[REC_EXTRA] = 'X';
         out[REC_EXTRA + 1] = '1';
         out[REC_EXTRA + 2] = extra_flags;
         for (i = 0; i < 4; i++) {
             out[REC_EXTRA + 4 + i] = (unsigned char)(extra_network >> (8 * i));
         }
+        out[REC_EXTRA + 8] = extra_region;
+        out[REC_EXTRA + 9] = extra_chain;
     }
 }
 
@@ -124,6 +143,8 @@ void def_bestiary_record_read(const unsigned char *in) {
         for (i = 0; i < 4; i++) {
             extra_network |= (unsigned int)in[REC_EXTRA + 4 + i] << (8 * i);
         }
+        extra_region = in[REC_EXTRA + 8];
+        extra_chain = in[REC_EXTRA + 9];
     }
     port_log("bestiary: the slot's record read: %d species known, flags %d, network 0x%X", known, extra_flags,
              extra_network);

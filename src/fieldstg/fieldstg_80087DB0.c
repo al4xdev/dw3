@@ -1698,6 +1698,7 @@ static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerD
     gamestate_flags.update_map_flags();
     gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
 #ifdef PC_PORT
+    def_hunt_map(gamestate_data.funcs.get_map()); /* PRD 4 layer A: another region resets the hunt's chain */
     def_hard_party_fix(); /* Hard Mode: a party of two, whatever set it */
 #endif
     map = gamestate_data.funcs.get_prev_map();
@@ -5085,6 +5086,17 @@ void fieldstg_encounter_start(void) {
     records_state.stage = event->stage;
     records_state.music = event->music;
 #ifdef PC_PORT
+    {
+        /* PRD 4 layer A: the region's Rare Target in place of the encounter, on the encounter's stage and music; asked
+         * before the Rush, which never offers to skip it. */
+        s32 battle = def_hunt_encounter(event->battle);
+
+        if (battle != event->battle) {
+            fieldstg_start_battle(battle);
+            def_hunt_scale();
+            return;
+        }
+    }
     {
         s32 i;
 

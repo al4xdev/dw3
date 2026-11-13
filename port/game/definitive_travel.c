@@ -413,6 +413,7 @@ static void nt_finish(void) {
         nt.replay = 0;
     } else if (action == NT_TRAVEL) {
         port_log("network: frame %ld: travel to map 0x%X", port_frames, nodes[sel].map);
+        def_hunt_chain_reset(); /* PRD 4 layer A: a teleport ends the hunt's chain, even within one region */
         fieldstg_goto_map(nodes[sel].map, -1, nodes[sel].x << 8, nodes[sel].y << 8, nodes[sel].dir);
     }
 }

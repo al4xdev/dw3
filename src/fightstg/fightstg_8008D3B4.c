@@ -9057,6 +9057,11 @@ s32 fightstg_rules_roll_escape(u8 side) {
     stats = &fightstg_rules.stats[0];
     target = &fightstg_rules.stats[1];
     if (side == 0) {
+#ifdef PC_PORT
+        if (def_hunt_active()) { /* PRD 4 layer A: a Rare Target can always be fled, whatever its boss battle blocks */
+            return 1;
+        }
+#endif
         if (records_state.blocked[11] != 0) {
             return 0;
         }

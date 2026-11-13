@@ -68,6 +68,9 @@ void def_log_begin(void) {
     def_mp_hook();
     def_chain_reset(&chain);
     def_callout_show(DEF_CALLOUT_NONE, 0);
+    if (def_hunt_active()) {
+        def_callout_show(DEF_CALLOUT_RARE, 1); /* PRD 4 layer A */
+    }
     overfinish_hit = 0;
     overfinish_damage = 0;
     memset(resist_mod, 0, sizeof(resist_mod));
@@ -254,6 +257,7 @@ s32 def_get_special_damage(u8 side, s32 id) {
 void def_log_end(int result) {
     int i;
 
+    def_hunt_battle_end(result); /* PRD 4 layer A: counted whether or not the log is on */
     if (!log_on()) {
         return;
     }
@@ -495,6 +499,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, resist_mod);
     PORT_STATE_VAR(s, resist_turns);
     def_bestiary_savestate(s);
+    def_hunt_savestate(s);
     PORT_STATE_VAR(s, hit_class);
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
@@ -1039,6 +1044,7 @@ void def_rush_results(void) {
         }
     }
     overfinish_damage = 0;
+    def_hunt_skipped(); /* PRD 4 layer A: a skipped battle does not count in the hunt's chain */
     port_log("rush: battle %d skipped (member %d, item %d)", (int)records_state.battle, lead,
              (int)records_battle_results.item);
 }

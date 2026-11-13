@@ -91,6 +91,9 @@ static const Style styles[DEF_CALLOUT_COUNT] = {
                              256, 7, 28, 8 },
     [DEF_CALLOUT_OVERFINISH] = { "OVERFINISH!", { 255, 255, 255 }, { 255, 216, 200 }, { 248, 24, 40 }, { 56, 0, 8 }, 0,
                                  256, 330, 12, 44, 9 },
+    /* PRD 4 layer A: the Rare Target, shown as its battle starts. */
+    [DEF_CALLOUT_RARE] = { "RARE!", { 255, 255, 240 }, { 255, 236, 140 }, { 232, 160, 0 }, { 56, 32, 0 }, 0, 256, 300, 10, 60,
+                           10 },
 };
 
 static struct {
