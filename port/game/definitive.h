@@ -120,6 +120,13 @@ int def_train_pity_guaranteed(void);
 void def_train_pity_record(int perfect);
 void def_train_pity_reset(void);
 
+#define DEF_GAUGE_SLOTS 8            /* Digimon slots in records_state.gauges */
+#define DEF_GAUGE_MAX 1000           /* maximum valid Blast Gauge value (0..1000) */
+#define DEF_GAUGE_SLOT_OFFSET 0x26F0 /* tail offset inside a 0x2700 save slot (after GsRecord + DFV2 marker) */
+int def_gauge_clamp(int val);
+void def_gauges_encode(const short gauges[DEF_GAUGE_SLOTS], unsigned char out[DEF_GAUGE_SLOTS * 2]);
+void def_gauges_decode(const unsigned char in[DEF_GAUGE_SLOTS * 2], short out[DEF_GAUGE_SLOTS]);
+
 #endif /* PORT_DEFINITIVE_H */
 
 /* Layer 9: battle memory and the bestiary (port/game/definitive_bestiary.c). One byte per species, bit = element index. */

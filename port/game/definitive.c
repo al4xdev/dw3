@@ -373,6 +373,7 @@ void def_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, hit_class);
     PORT_STATE_VAR(s, hit_elem);
     PORT_STATE_VAR(s, hit_id);
+    PORT_STATE_VAR(s, records_state.gauges);
 }
 
 static int target_slot(void) {
@@ -797,4 +798,19 @@ const unsigned char *def_train_pity_label(int *palette) {
     }
     buf[p] = 0;
     return buf;
+}
+
+/* ---- PRD 2, layer F: persist Blast Gauges in the unused tail of each save slot. */
+void def_gauges_slot_write(void *slot_save) {
+    if (!def_on() || slot_save == NULL) {
+        return;
+    }
+    def_gauges_encode(records_state.gauges, (unsigned char *)slot_save + DEF_GAUGE_SLOT_OFFSET);
+}
+
+void def_gauges_slot_read(const void *slot_save) {
+    if (!def_on() || slot_save == NULL) {
+        return;
+    }
+    def_gauges_decode((const unsigned char *)slot_save + DEF_GAUGE_SLOT_OFFSET, records_state.gauges);
 }

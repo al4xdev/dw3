@@ -1255,6 +1255,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                 if (port_mod_global_save != 0) {
                     port_global_save_restore(stgmcard_module.save); /* the map's state from the slot's tail, if any */
                 }
+                def_gauges_slot_read(stgmcard_module.save);
 #endif
 #ifdef PC_PORT
                 if (def_bestiary_active()) {
@@ -1361,6 +1362,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         if (port_mod_global_save != 0) {
             port_global_save_record(stgmcard_module.save); /* the map's state into the slot's unused tail */
         }
+        def_gauges_slot_write(stgmcard_module.save);
 #endif
 #ifdef PC_PORT
         if (def_bestiary_active()) {

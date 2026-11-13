@@ -350,6 +350,8 @@ int def_train_pity_guaranteed(void);
 int def_train_pity_bonus_on(void);
 void def_train_pity_record(int perfect);
 const unsigned char *def_train_pity_label(int *palette);
+void def_gauges_slot_write(void *slot_save);
+void def_gauges_slot_read(const void *slot_save);
 
 #endif /* PC_PORT */
 

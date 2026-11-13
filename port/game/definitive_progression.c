@@ -67,3 +67,27 @@ void def_train_pity_record(int perfect) {
 void def_train_pity_reset(void) {
     train_pity = 0;
 }
+
+/* ---- Layer F: Blast Gauge slot serialization (0..DEF_GAUGE_MAX). ---- */
+int def_gauge_clamp(int val) {
+    return (val < 0 || val > DEF_GAUGE_MAX) ? 0 : val;
+}
+
+void def_gauges_encode(const short gauges[DEF_GAUGE_SLOTS], unsigned char out[DEF_GAUGE_SLOTS * 2]) {
+    int i;
+
+    for (i = 0; i < DEF_GAUGE_SLOTS; i++) {
+        int v = def_gauge_clamp(gauges[i]);
+        out[i * 2] = (unsigned char)(v & 0xFF);
+        out[i * 2 + 1] = (unsigned char)((v >> 8) & 0xFF);
+    }
+}
+
+void def_gauges_decode(const unsigned char in[DEF_GAUGE_SLOTS * 2], short out[DEF_GAUGE_SLOTS]) {
+    int i;
+
+    for (i = 0; i < DEF_GAUGE_SLOTS; i++) {
+        short raw = (short)((unsigned short)in[i * 2] | ((unsigned short)in[i * 2 + 1] << 8));
+        out[i] = (short)def_gauge_clamp(raw);
+    }
+}
