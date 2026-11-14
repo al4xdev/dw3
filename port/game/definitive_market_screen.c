@@ -345,7 +345,7 @@ static void bm_open(void) {
     /* the talk that was skipped would have stopped the player: a press while walking leaves its walking step on, so it
      * is set to stand as the field menu does when it opens (fieldstg_manager_open_menu) */
     if (player != NULL) {
-        player->base.set_step(player, 1);
+        ((void (*)(void *, s32))player->base.set_step)(player, 1);
     }
     bm_ui.layer = BM_LAYER;
     bm_ui.title = bm_window(1, 8, 5);

@@ -104,6 +104,8 @@ void port_framecsv_note(int kind) {
     (void)kind;
 }
 
+long port_frames;
+
 static u8 *arena = port_arena;
 
 static int unhex(const char *s, u8 *out, int max) {
