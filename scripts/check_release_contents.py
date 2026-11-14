@@ -11,7 +11,8 @@ allowed name.
 
 Usage: scripts/check_release_contents.py appimage DIR        an AppDir, or an extracted AppImage (squashfs-root)
        scripts/check_release_contents.py windows ZIP [SYMBOLS_ZIP]
-       scripts/check_release_contents.py dist DIR            the release's assets: their names and both zips' contents
+       scripts/check_release_contents.py portmaster ZIP    the PortMaster ARM zip (dw3.zip)
+       scripts/check_release_contents.py dist DIR            the release's assets: their names and all zips' contents
 Exit 0 when every file is allowed, 1 otherwise (each offending path printed).
 """
 import re
@@ -28,10 +29,13 @@ APPIMAGE = [r"AppRun", r"\.DirIcon", r"dw2003recomp\.desktop", r"dw2003recomp\.s
             r"usr/share/icons/hicolor/scalable/apps/dw2003recomp\.svg", LICENCE]
 WINDOWS = [r"dw2003\.exe", r"dw2003-launcher\.exe", r"README\.txt", MOD, LICENCE]
 SYMBOLS = [r"dw2003\.pdb", r"dw2003-launcher\.pdb", r"README\.txt"]
+PORTMASTER = [r"Digimon World 3\.sh", r"port\.json", r"README\.md", r"gameinfo\.xml", r"screenshot\.png",
+              r"cover\.png", r"dw3/dw2003", r"dw3/dw3-menu\.py", r"dw3/ledd\.py", r"dw3/probe\.sh",
+              r"dw3/README\.txt", r"dw3/" + MOD, r"dw3/licenses/[A-Za-z0-9._-]+"]
 VERSION = r"[A-Za-z0-9._+-]+"
 ASSETS = [rf"dw2003-{VERSION}-x86_64\.AppImage", rf"dw2003-{VERSION}-x86_64\.debug", r"SHA256SUMS",
           rf"dw2003-{VERSION}-windows-x86_64\.zip", rf"dw2003-{VERSION}-windows-x86_64-symbols\.zip",
-          r"SHA256SUMS-windows"]
+          r"SHA256SUMS-windows", r"dw3\.zip", r"SHA256SUMS-portmaster"]
 
 
 def allowed(rel, patterns):
@@ -52,8 +56,8 @@ def check_tree(root, patterns, what):
     return bad, len(files)
 
 
-def check_zip(path, patterns, what, cap=True):
-    """Every entry under the zip's one top folder (named after the zip) must be allowed."""
+def check_zip(path, patterns, what, cap=True, top_dir=True):
+    """Every entry (under the zip's top folder when top_dir=True, or at root for PortMaster) must be allowed."""
     bad, n = [], 0
     top = Path(path).name[:-len(".zip")]
     with zipfile.ZipFile(path) as z:
@@ -62,9 +66,14 @@ def check_zip(path, patterns, what, cap=True):
                 continue
             n += 1
             name = info.filename
-            if not name.startswith(top + "/"):
-                bad.append(f"{what}: {name}: outside the zip's folder {top}/")
-            elif not allowed(name[len(top) + 1:], patterns):
+            if top_dir:
+                if not name.startswith(top + "/"):
+                    bad.append(f"{what}: {name}: outside the zip's folder {top}/")
+                    continue
+                rel = name[len(top) + 1:]
+            else:
+                rel = name
+            if not allowed(rel, patterns):
                 bad.append(f"{what}: {name}: not a file a release holds")
             elif cap and info.file_size > MAX_FILE:
                 bad.append(f"{what}: {name}: {info.file_size} bytes, over the {MAX_FILE} cap")
@@ -74,7 +83,7 @@ def check_zip(path, patterns, what, cap=True):
 
 
 def main(argv):
-    if len(argv) < 3 or argv[1] not in ("appimage", "windows", "dist"):
+    if len(argv) < 3 or argv[1] not in ("appimage", "windows", "portmaster", "dist"):
         print(__doc__.strip(), file=sys.stderr)
         return 2
     kind, bad, said = argv[1], [], []
@@ -90,6 +99,10 @@ def main(argv):
             b, n = check_zip(argv[3], SYMBOLS, "symbols zip", cap=False)   # the PDBs: debug info, not played
             bad += b
             said.append(f"{Path(argv[3]).name}: {n} files")
+    elif kind == "portmaster":
+        b, n = check_zip(argv[2], PORTMASTER, "PortMaster zip", top_dir=False)
+        bad += b
+        said.append(f"{Path(argv[2]).name}: {n} files")
     else:
         dist = Path(argv[2])
         names = sorted(p.name for p in dist.iterdir())
@@ -104,6 +117,8 @@ def main(argv):
                 b, n = check_zip(dist / name, WINDOWS, name)
             elif name.endswith("-windows-x86_64-symbols.zip"):
                 b, n = check_zip(dist / name, SYMBOLS, name, cap=False)
+            elif name == "dw3.zip":
+                b, n = check_zip(dist / name, PORTMASTER, name, top_dir=False)
             else:
                 continue
             bad += b

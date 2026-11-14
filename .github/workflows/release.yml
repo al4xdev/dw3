@@ -1,21 +1,19 @@
-# The release (docs/RELEASE.md): one Linux x86_64 AppImage and one Windows x86_64 zip, each the launcher, the game and
-# the mods' manifests (scripts/package_appimage.sh, scripts/package_windows.sh), both built on ubuntu-24.04: the
-# AppImage against glibc 2.39, the Windows programs cross-compiled with the pinned llvm-mingw and linked statically (no
-# DLL beside them; DECISIONS "Windows: cross-built from Linux"). Players bring their own disc and never compile
-# anything; nothing of the disc is ever packed (scripts/check_release_contents.py holds every package to the list of
-# files a release has, before it is kept and again before it is published).
+# The release (docs/RELEASE.md): one Linux x86_64 AppImage, one Windows x86_64 zip, and the PortMaster ARM (armhf)
+# zip (`dw3.zip`), built on ubuntu-24.04. Players bring their own disc and never compile anything; nothing of the disc
+# is ever packed (scripts/check_release_contents.py holds every package to the list of files a release has, before it
+# is kept and again before it is published).
 #
 # When it runs:
 #   - a pushed tag vX.Y.Z (v0.3.0, also v0.3.0-rc1; not the decomp's milestone tags such as v0.1-matching-closed):
-#     both packages, then a GitHub Release for the tag with every file and generated notes, published (a pre-release
-#     when the tag has a suffix; a draft instead when the repository variable RELEASE_DRAFT is "true");
-#   - by hand (Actions > Release > Run workflow; `gh workflow run release.yml --ref <branch> [-f tag=v0.3.0]`): both
-#     packages as the run's artifacts (kept 30 days); with `tag`, the release too, the tag created on the run's commit
-#     when the repository has none. A rerun for a tag whose release exists replaces its files.
+#     all three packages, then a GitHub Release for the tag with every file and generated notes, published (a
+#     pre-release when the tag has a suffix; a draft instead when the repository variable RELEASE_DRAFT is "true"),
+#     and (when PORTMASTER_REPO_TOKEN is set) synced to al4xdev/PortMaster-MV-New + its release workflow triggered;
+#   - by hand (Actions > Release > Run workflow; `gh workflow run release.yml --ref <branch> [-f tag=v0.3.0]`): all
+#     three packages as the run's artifacts (kept 30 days); with `tag`, the release too, the tag created on the run's
+#     commit when the repository has none. `sync_portmaster=true` also syncs PortMaster-MV-New on a manual run.
 # The disc is optional. With the maintainers' secret GAMEDATA_DEPLOY_KEY (a read-only deploy key of the private data
-# checkout <owner>/dw2003-gamedata) the game's Release build passes the port's M1 test and both smoke tests run the
-# bundled game on the disc; without it each package gets the disc-free smoke test (the launcher's --self-test finds the
-# bundled game and mods by its own lookup and the game accepts the launcher's settings file; Windows: under Wine).
+# checkout <owner>/dw2003-gamedata) the game's Release build passes the port's M1 test and both PC smoke tests run the
+# bundled game on the disc; without it each PC package gets the disc-free smoke test.
 # With the repository variable RELEASE_RUN_CI = "true" the whole of ci.yml runs first and a failure there stops the
 # release; otherwise tag a commit whose CI is green.
 # psxstack, the submodule, is fetched by actions/checkout at its pin: nothing to set while al4xdev/dw3-psxstack is
@@ -32,6 +30,10 @@ on:
         default: ""
       draft:
         description: "Create the release as a draft (published later by hand)"
+        type: boolean
+        default: false
+      sync_portmaster:
+        description: "Also sync ports/dw3/ and trigger PortMaster-MV-New release (requires PORTMASTER_REPO_TOKEN)"
         type: boolean
         default: false
 
@@ -258,11 +260,62 @@ jobs:
             build/release/windows/test/**/crash-*.txt
           if-no-files-found: ignore
 
+  portmaster:
+    name: PortMaster (armhf)
+    needs: tests
+    if: ${{ !cancelled() && needs.tests.result != 'failure' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PSXSTACK_TOKEN || github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ARM cross-compile image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: tools
+          file: tools/Dockerfile.armhf
+          load: true
+          tags: dw3-armhf-builder:latest
+          cache-from: type=gha,scope=armhf-builder
+          cache-to: type=gha,scope=armhf-builder,mode=max
+
+      - name: Cross-compile ARM binary (armhf)
+        env:
+          DW3_BUILD_ONLY: "1"
+          DW3_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+        run: |
+          tools/build_arm.sh
+          file build/armhf-sdl2/dw2003
+          readelf -d build/armhf-sdl2/dw2003 | grep NEEDED
+
+      - name: Assemble and check dw3.zip
+        run: |
+          (cd portmaster && ./make_release.sh)
+          python3 scripts/check_release_contents.py portmaster dist/dw3.zip
+          (cd dist && sha256sum -c SHA256SUMS-portmaster)
+
+      - name: Keep the PortMaster package (the run's artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dw2003-portmaster
+          path: |
+            dist/dw3.zip
+            dist/SHA256SUMS-portmaster
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     name: Publish the release
-    needs: [appimage, windows]
+    needs: [appimage, windows, portmaster]
     # Explicit results: the default success() would skip this job whenever `tests` was skipped.
-    if: ${{ !cancelled() && needs.appimage.result == 'success' && needs.windows.result == 'success' && (github.ref_type == 'tag' || inputs.tag != '') }}
+    if: ${{ !cancelled() && needs.appimage.result == 'success' && needs.windows.result == 'success' && needs.portmaster.result == 'success' && (github.ref_type == 'tag' || inputs.tag != '') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -284,10 +337,15 @@ jobs:
           name: dw2003-windows
           path: dist
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: dw2003-portmaster
+          path: dist
+
       - name: The release's files (names, checksums, the zips' contents)
         run: |
           python3 scripts/check_release_contents.py dist dist
-          cd dist && sha256sum -c SHA256SUMS && sha256sum -c SHA256SUMS-windows
+          cd dist && sha256sum -c SHA256SUMS && sha256sum -c SHA256SUMS-windows && sha256sum -c SHA256SUMS-portmaster
 
       - name: Create or update the release
         env:
@@ -297,9 +355,8 @@ jobs:
         run: |
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*$ ]] || { echo "::error::not a release tag: '$TAG' (vX.Y.Z...)"; exit 1; }
           cd dist
-          files=(./*.AppImage ./*.debug ./*-windows-x86_64.zip ./*-windows-x86_64-symbols.zip SHA256SUMS SHA256SUMS-windows)
+          files=(./*.AppImage ./*.debug ./*-windows-x86_64.zip ./*-windows-x86_64-symbols.zip ./dw3.zip SHA256SUMS SHA256SUMS-windows SHA256SUMS-portmaster)
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # A rerun, or a release made by hand first (e.g. with the handheld's dw3.zip): its other files are kept.
             gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
             echo "### Updated release $TAG" >> "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -309,12 +366,76 @@ jobs:
           [[ "$TAG" == *-* ]] && flags+=(--prerelease)
           # --target: a manual run's tag that does not exist yet is created on the commit the packages were built from.
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" "${flags[@]}" \
-            --title "Digimon World 3: Definitive Edition $TAG" --generate-notes --notes "The PC build: the launcher, the game and its mods, for Linux and Windows.
+            --title "Digimon World 3: Definitive Edition $TAG" --generate-notes --notes "The PC & handheld builds: the launcher, the game and its mods, for Linux x86_64, Windows x86_64 and RK3326 PortMaster (armhf).
           Bring your own disc image of Digimon World 2003 (PS1, Europe, raw .bin + .cue; the launcher checks its SHA-1). These files hold no game data.
 
           **Linux x86_64**: \`dw2003-*-x86_64.AppImage\`: \`chmod +x\` it, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later).
           **Windows x86_64**: \`dw2003-*-windows-x86_64.zip\`: unzip, run \`dw2003-launcher.exe\` (unsigned: SmartScreen's \"More info\", \"Run anyway\"). Windows 10 or newer. Tested on Linux under Wine; reports from real Windows are welcome in the issues.
+          **PortMaster (RK3326 armhf)**: \`dw3.zip\`: unpack into \`ports/\` and put your \`.bin\` + \`.cue\` in \`ports/dw3/game/\`.
           **Widescreen battles**: the launcher's Mods screen; it needs Video > Renderer \"gpu\".
           The .debug file and the -symbols.zip are the programs' debug info for crash reports (not needed to play)." \
             "${files[@]}"
           echo "### Release $TAG ($([[ $DRAFT == true ]] && echo draft || echo published))" >> "$GITHUB_STEP_SUMMARY"
+
+  sync-portmaster:
+    name: Sync to PortMaster-MV-New
+    needs: [portmaster, release]
+    if: ${{ !cancelled() && needs.portmaster.result == 'success' && needs.release.result != 'failure' && (github.ref_type == 'tag' || inputs.tag != '' || inputs.sync_portmaster) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PM_REPO: al4xdev/PortMaster-MV-New
+      HAS_PM_TOKEN: ${{ secrets.PORTMASTER_REPO_TOKEN != '' }}
+    steps:
+      - name: Check PortMaster sync token
+        if: env.HAS_PM_TOKEN != 'true'
+        run: |
+          echo "### PortMaster sync skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "Set the repository secret \`PORTMASTER_REPO_TOKEN\` (PAT with Contents: write + Actions: write on \`$PM_REPO\`) to automatically update \`ports/dw3/\` and trigger \`release.yaml\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/download-artifact@v4
+        if: env.HAS_PM_TOKEN == 'true'
+        with:
+          name: dw2003-portmaster
+          path: dist
+
+      - uses: actions/checkout@v4
+        if: env.HAS_PM_TOKEN == 'true'
+        with:
+          repository: ${{ env.PM_REPO }}
+          token: ${{ secrets.PORTMASTER_REPO_TOKEN }}
+          path: pm-repo
+
+      - name: Update ports/dw3 and push to PortMaster-MV-New
+        if: env.HAS_PM_TOKEN == 'true'
+        id: sync
+        env:
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+        run: |
+          rm -rf pm-repo/ports/dw3
+          mkdir -p pm-repo/ports/dw3
+          unzip -oq dist/dw3.zip -d pm-repo/ports/dw3
+          chmod +x "pm-repo/ports/dw3/Digimon World 3.sh" pm-repo/ports/dw3/dw3/dw2003 pm-repo/ports/dw3/dw3/dw3-menu.py
+          [ -f pm-repo/ports/dw3/dw3/ledd.py ] && chmod +x pm-repo/ports/dw3/dw3/ledd.py
+          [ -f pm-repo/ports/dw3/dw3/probe.sh ] && chmod +x pm-repo/ports/dw3/dw3/probe.sh
+          cd pm-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A ports/dw3
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "ports/dw3 is already up to date in $PM_REPO."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          label="${TAG:-${GITHUB_SHA::7}}"
+          git commit -m "dw3: update Definitive Edition ($label)"
+          git push origin main
+
+      - name: Trigger PortMaster-MV-New release workflow
+        if: env.HAS_PM_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PORTMASTER_REPO_TOKEN }}
+        run: |
+          gh workflow run release.yaml -R "$PM_REPO" --ref main
+          echo "### Synced \`ports/dw3\` and triggered \`release.yaml\` on \`$PM_REPO\`" >> "$GITHUB_STEP_SUMMARY"

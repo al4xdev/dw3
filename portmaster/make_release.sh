@@ -54,8 +54,13 @@ done
 chmod -x "$OUT/$NAME/README.txt" 2>/dev/null || true
 chmod +x "$OUT/$NAME/dw3-menu.py"
 [ -f "$OUT/$NAME/ledd.py" ] && chmod +x "$OUT/$NAME/ledd.py"
+[ -f "$OUT/$NAME/probe.sh" ] && chmod +x "$OUT/$NAME/probe.sh"
 cp "$BINARY" "$OUT/$NAME/dw2003"
 chmod +x "$OUT/$NAME/dw2003"
+if [ -d "$REPO/build/armhf-sdl2/mods" ]; then
+    mkdir -p "$OUT/$NAME/mods"
+    cp -r "$REPO/build/armhf-sdl2/mods/"* "$OUT/$NAME/mods/"
+fi
 
 # The licences of what the port contains or links against, kept as files in portmaster/licenses/ (a text to maintain,
 # not a heredoc to keep in step): the project's own MIT, SDL2's zlib, and what the package borrows. The game's data is
@@ -106,6 +111,7 @@ if banned:
 print("zip ok: %d files, port.json %s, arch %s" % (len(names), port["name"], port["attr"]["arch"]))
 PY
 
+sha256sum "$NAME.zip" > SHA256SUMS-portmaster
 md5sum "$DIST/$NAME.zip"
 du -h "$DIST/$NAME.zip"
 echo "=== $NAME ready: publish it as ports/$NAME/ in PortMaster-MV-New (a decomp port) — see portmaster/PUBLISHING.md"

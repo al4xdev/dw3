@@ -2,8 +2,8 @@
 <gameList>
   <game>
     <path>./Digimon World 3.sh</path>
-    <name>Digimon World 2003</name>
-    <desc>A source port of Digimon World 2003 (PAL), built from a matching decompilation: the game's own C with the PlayStation's hardware reimplemented on the host. Needs your own copy of the PAL disc in ports/dw3/game/.</desc>
+    <name>Digimon World 3: Definitive Edition</name>
+    <desc>Digimon World 3: Definitive Edition — a native source port of Digimon World 2003 (PAL) with Persona-style elemental weakness combat, rebalanced progression, Hunt/Forge/Black Market/DRI systems, and an in-game Guide. Needs your own copy of the PAL disc in ports/dw3/game/.</desc>
     <releasedate>20020705T000000</releasedate>
     <developer>Bandai</developer>
     <publisher>Bandai</publisher>

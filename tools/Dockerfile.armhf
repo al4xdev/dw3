@@ -1,8 +1,26 @@
 # The ARM 32-bit cross toolchain for the RK3326 handhelds (XF35H, R36S and their clones). tools/build_arm.sh builds this
-# image on first use and runs CMake and Ninja inside it, so nothing is installed on the host.
+# image on first use (and CI builds it with Docker layer caching) and runs CMake and Ninja inside it, so nothing is
+# installed on the host.
 #
-# The base image is the one this project already used for the handheld builds; it carries the armhf gcc, the hard-float
-# sysroot and the SDL2/EGL headers the port links against. Whatever the base lacks for a build is installed below.
-FROM yfm-armhf-builder:latest
-RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build make qemu-user-static \
-    && rm -rf /var/lib/apt/lists/*
+# Debian 12 (bookworm) provides arm-linux-gnueabihf gcc-12 and armhf multiarch SDL2/EGL/GLES/GBM/DRM headers against
+# glibc 2.36, matching the handheld runtime libraries without depending on any private base image.
+FROM debian:bookworm-slim
+
+RUN dpkg --add-architecture armhf && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        cmake \
+        ninja-build \
+        make \
+        python3 \
+        pkg-config:armhf \
+        gcc-arm-linux-gnueabihf \
+        binutils-arm-linux-gnueabihf \
+        libc6-dev:armhf \
+        libsdl2-dev:armhf \
+        libegl-dev:armhf \
+        libgles-dev:armhf \
+        libgbm-dev:armhf \
+        libdrm-dev:armhf && \
+    rm -rf /var/lib/apt/lists/*

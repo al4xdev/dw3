@@ -20,17 +20,21 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! docker image inspect "$IMAGE" &> /dev/null; then
+if [ "${DW3_REBUILD_IMAGE:-0}" = "1" ] || ! docker image inspect "$IMAGE" &> /dev/null; then
     echo "Building the toolchain image $IMAGE from tools/Dockerfile.armhf..."
     docker build -t "$IMAGE" -f "$TOOLS_DIR/Dockerfile.armhf" "$TOOLS_DIR"
 fi
 
-# The image has no git. The development stamp is the host commit, not a release tag.
-stamp=$(git -C "$REPO" describe --always --dirty)
-case "$stamp" in
-    v[0-9]*) PSXSTACK_VERSION=${stamp#v} ;;
-    *) PSXSTACK_VERSION=dev-$stamp ;;
-esac
+# The image has no git. Prefer DW3_VERSION (for tagged releases) over git describe.
+if [ -n "${DW3_VERSION:-}" ]; then
+    PSXSTACK_VERSION=${DW3_VERSION#v}
+else
+    stamp=$(git -C "$REPO" describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --always --dirty)
+    case "$stamp" in
+        v[0-9]*) PSXSTACK_VERSION=${stamp#v} ;;
+        *) PSXSTACK_VERSION=dev-$stamp ;;
+    esac
+fi
 PSXSTACK_COMMIT=$(git -C "$REPO" rev-parse HEAD)
 export PSXSTACK_VERSION PSXSTACK_COMMIT
 echo "Version stamp: $PSXSTACK_VERSION ($PSXSTACK_COMMIT)"
@@ -50,6 +54,10 @@ docker run --rm -u "$(id -u):$(id -g)" \
     "
 
 echo "Build complete: $BUILD_DIR/dw2003"
+
+if [ "${DW3_BUILD_ONLY:-0}" = "1" ]; then
+    exit 0
+fi
 
 # The package is what the card holds: the binary plus everything in handheld/ (the launcher and the menu are versioned
 # there, so the package comes from the checkout and not from whatever is on the card). The player's own files -

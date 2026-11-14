@@ -7,11 +7,11 @@
     ],
     "items_opt": [],
     "attr": {
-        "title": "Digimon World 2003",
+        "title": "Digimon World 3: Definitive Edition",
         "porter": [
             "al4xdev"
         ],
-        "desc": "A source port of Digimon World 2003 (PAL, SLES-03936), built from a matching decompilation of the game's own C and the PlayStation hardware models reimplemented for the host. Runs the original disc's data at 50 Hz, with a GLES renderer for the 3D and a byte-for-byte match with the software rasteriser on the VRAM.",
+        "desc": "Digimon World 3: Definitive Edition — a native RK3326 source port of Digimon World 2003 (PAL, SLES-03936) with Persona-style elemental weakness combat, rebalanced progression, Hunt/Forge/Black Market/DRI systems, and an in-game Guide, with GLES 3D rendering and a byte-exact software rasteriser.",
         "desc_md": null,
         "inst": "Needs your own disc: Digimon World 2003 (Europe/PAL, SLES-03936). Copy the .cue AND the .bin into ports/dw3/game/ (on EmuELEC that is /storage/roms/ports/dw3/game/) - any .cue/.bin pair works, the launcher finds it. Do not rename the .bin without editing the .cue. Nothing of the game ships with the port.",
         "inst_md": null,

@@ -1,28 +1,31 @@
 # Releases
 
-**One Linux x86_64 AppImage** and **one Windows x86_64 zip** for players (each the launcher, the game and the mods'
-manifests; the player supplies the disc in the launcher and never compiles anything), both built on CI's
-`ubuntu-24.04` runner (the AppImage against glibc 2.39, the Windows programs cross-compiled with llvm-mingw and linked
-statically: DECISIONS "Windows: cross-built from Linux"), for a pushed tag `vX.Y.Z` or a manual run given a tag, and
-**published** as a GitHub Release. (Upstream's rule, DECISIONS "Releases: tagged drafts, published by hand", made a
-draft; the repository variable `RELEASE_DRAFT` = `true` brings that back.) No release file ever holds game data:
-`scripts/check_release_contents.py` holds every package to the list of files a release has (programs, the mods'
-`mod.json`, licences, READMEs), before it is kept and again before it is published. The Windows build is tested on Linux
-under Wine; real Windows comes from testers.
+**One Linux x86_64 AppImage**, **one Windows x86_64 zip** and **one RK3326 PortMaster zip (`dw3.zip`)** for
+players (each the launcher/menu, the game and the mods' manifests; the player supplies the disc and never compiles
+anything), all built on CI's `ubuntu-24.04` runner (the AppImage against glibc 2.39, the Windows programs
+cross-compiled with llvm-mingw and linked statically: DECISIONS "Windows: cross-built from Linux", and `dw3.zip`
+cross-compiled in Debian 12 `armhf` Docker via `tools/Dockerfile.armhf`), for a pushed tag `vX.Y.Z` or a manual run
+given a tag, and **published** as a GitHub Release. (Upstream's rule, DECISIONS "Releases: tagged drafts, published by
+hand", made a draft; the repository variable `RELEASE_DRAFT` = `true` brings that back.) No release file ever holds
+game data: `scripts/check_release_contents.py` holds every package to the list of files a release has (programs, the
+mods' `mod.json`, licences, READMEs), before it is kept and again before it is published. The Windows build is tested
+on Linux under Wine; real Windows comes from testers.
 
-The handheld (PortMaster) zip is not part of this flow; `portmaster/make_release.sh` builds it and
-[`portmaster/PUBLISHING.md`](../portmaster/PUBLISHING.md) is its publishing checklist.
+[`portmaster/PUBLISHING.md`](../portmaster/PUBLISHING.md) documents the PortMaster catalogue details; when the secret
+`PORTMASTER_REPO_TOKEN` is set, `release.yml` also updates `ports/dw3/` in `al4xdev/PortMaster-MV-New` and dispatches
+its `release.yaml` workflow automatically.
 
 ## What the repository needs
 
 - **psxstack** (`.gitmodules`: `al4xdev/dw3-psxstack`): the pinned commit pushed there. Public, nothing else; private, a
   repository secret `PSXSTACK_TOKEN` holding a token that can read it (a fine-grained token, Contents: read on that
   repository), which every checkout then uses.
-- Nothing else is required. Optional: the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of the private data
-  checkout `<owner>/dw2003-gamedata`): with it the game's Release build passes the port's M1 test and both smoke tests
-  run the bundled game on the disc; without it the smoke tests are disc-free. The repository variables (Settings >
-  Secrets and variables > Actions > Variables) `RELEASE_RUN_CI` = `true` (the whole of `ci.yml` before the packages, a
-  failure there stops the release) and `RELEASE_DRAFT` = `true` (drafts instead of published releases).
+- **Optional secrets and variables:**
+  - `GAMEDATA_DEPLOY_KEY`: read-only deploy key of `<owner>/dw2003-gamedata` for Release M1 + disc smoke tests.
+  - `PORTMASTER_REPO_TOKEN`: PAT with `Contents: write` + `Actions: write` on `al4xdev/PortMaster-MV-New` so tagged
+    releases (or `workflow_dispatch` with `sync_portmaster=true`) automatically update `ports/dw3/` there and trigger
+    its release workflow.
+  - Repository variables `RELEASE_RUN_CI` = `true` and `RELEASE_DRAFT` = `true`.
 
 ## Making a release
 

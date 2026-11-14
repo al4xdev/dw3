@@ -10,7 +10,14 @@ A decompilation of a commercial game is not accepted by the main PortMaster cata
 build when a required file is missing, when `port.json` does not describe the layout, when the binary is not a 32-bit ARM
 ELF, or when a disc image is inside.
 
-## Build
+## Automated CI & Sync
+
+`.github/workflows/release.yml` also builds `dw3.zip` in the `portmaster` job using `tools/Dockerfile.armhf`. When the
+repository secret `PORTMASTER_REPO_TOKEN` (`Contents: write` + `Actions: write` on `al4xdev/PortMaster-MV-New`) is
+configured, tagged releases (or manual `workflow_dispatch` runs with `sync_portmaster=true`) automatically unpack
+`dw3.zip` into `ports/dw3/` on `al4xdev/PortMaster-MV-New`, commit, push, and trigger its `release.yaml` workflow.
+
+## Build locally
 
 ```
 tools/build_arm.sh               # build/armhf-sdl2/dw2003
