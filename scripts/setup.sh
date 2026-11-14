@@ -476,10 +476,10 @@ step_cmake() {
         log "cmake: cmake and ninja on PATH ($(command -v cmake), $(command -v ninja))"
         return
     fi
-    [[ -x "$venv/bin/pip" ]] || step_venv
+    "$venv/bin/python" -m pip --version >/dev/null 2>&1 || step_venv
     if [[ ! -x "$venv/bin/cmake" || ! -x "$venv/bin/ninja" ]]; then
         log "cmake: installing $CMAKE_PIP $NINJA_PIP into tools/venv (missing from PATH)"
-        "$venv/bin/pip" install -q "$CMAKE_PIP" "$NINJA_PIP"
+        "$venv/bin/python" -m pip install -q "$CMAKE_PIP" "$NINJA_PIP"
     fi
     export PATH="$PATH:$venv/bin"   # after the system's: the venv's python stays out of the way
     log "cmake: using $(command -v cmake), $(command -v ninja) (tools/venv)"
@@ -487,13 +487,14 @@ step_cmake() {
 
 step_venv() {
     local venv="$INSTALL/venv"
-    if [[ ! -x "$venv/bin/python" ]]; then
+    if [[ ! -x "$venv/bin/python" ]] || ! "$venv/bin/python" -m pip --version >/dev/null 2>&1; then
         log "venv: creating with $(python3 --version)"
+        rm -rf "$venv"
         python3 -m venv "$venv"
     fi
     log "venv: installing tools/requirements.txt"
-    "$venv/bin/pip" install -q --upgrade pip
-    "$venv/bin/pip" install -q -r "$TOOLS/requirements.txt"
+    "$venv/bin/python" -m pip install -q --upgrade pip
+    "$venv/bin/python" -m pip install -q -r "$TOOLS/requirements.txt"
 }
 
 # old-gcc PSX builds into tools/gcc/<version>/ (cpp, cc1, gcc, ...).
