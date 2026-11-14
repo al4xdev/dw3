@@ -31,7 +31,7 @@ cd portmaster && ./make_release.sh   # dist/dw3.zip
 
 1. Fix the source here (`handheld/`, `portmaster/`), not the copy in the zip.
 2. Rebuild: the two commands above.
-3. Update the published release: `gh release upload dw3-port-1 dist/dw3.zip --clobber -R al4xdev/dw3`.
+3. Update the published release: `gh release upload dw3-port-1 dist/dw3.zip --clobber -R al4xdev/digimon-world-3-definitive-edition`.
 4. Copy the new zip's contents over `ports/dw3/` in the PortMaster-MV-New fork.
 
 The menu on a test device must be the committed one. To push it without a full install:

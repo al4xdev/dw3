@@ -1,7 +1,7 @@
 What this port ships, and what each licence here covers.
 
   dw2003                      the port binary: the game's own decompiled C with the PlayStation's hardware
-  Digimon World 3.sh,         reimplemented for the host, built from github.com/al4xdev/dw3 (a fork of the
+  Digimon World 3.sh,         reimplemented for the host, built from github.com/al4xdev/digimon-world-3-definitive-edition (a fork of the
   dw3-menu.py, ledd.py        dw2003recomp decompilation). LICENSE - MIT.
                               It contains no game data: it reads the player's own disc.
 

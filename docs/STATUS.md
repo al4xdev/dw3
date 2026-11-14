@@ -118,6 +118,6 @@ The design is in [`PORT.md`](PORT.md); the reasons are in [`DECISIONS.md`](DECIS
 - Handheld limitations are in the [`README`](../README.md) and `portmaster/README.md`.
 
 ## Where work is tracked
-- **Bugs and problems:** [GitHub Issues](https://github.com/al4xdev/dw3/issues).
+- **Bugs and problems:** [GitHub Issues](https://github.com/al4xdev/digimon-world-3-definitive-edition/issues).
 - **Planned work:** the upstream [project board](https://github.com/users/gascarcella/projects/1).
 - **Why things are the way they are:** [`DECISIONS.md`](DECISIONS.md).

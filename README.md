@@ -23,7 +23,7 @@ which are the upstream project's work; this fork adds the handheld path and the 
 
 ## Quick start
 
-1. Download `dw3.zip` from the [releases](https://github.com/al4xdev/dw3/releases) and unpack it into your PortMaster
+1. Download `dw3.zip` from the [releases](https://github.com/al4xdev/digimon-world-3-definitive-edition/releases) and unpack it into your PortMaster
    `ports` directory.
 2. Copy your disc image into `ports/dw3/game/`.
 3. Start *Digimon World 3* from the ports menu.
@@ -37,7 +37,7 @@ Install details, tested devices and known issues are on the player page, [`portm
 
 The work is focused on **RK3326 handhelds** for now: that is where everything is measured and tuned, on an XF35H. The
 PC build works too. Once the Definitive Edition is finished, the focus moves to opening it up to more devices. If you
-try it on another handheld, a report in the [issue tracker](https://github.com/al4xdev/dw3/issues) helps a lot.
+try it on another handheld, a report in the [issue tracker](https://github.com/al4xdev/digimon-world-3-definitive-edition/issues) helps a lot.
 
 ## Combat
 
@@ -400,7 +400,7 @@ full speed, the repository layout, the design documents and every other guide) i
 ## Contributing and support
 
 Read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) first. Report bugs and ask questions in the
-[issue tracker](https://github.com/al4xdev/dw3/issues).
+[issue tracker](https://github.com/al4xdev/digimon-world-3-definitive-edition/issues).
 
 ## Credits and license
 

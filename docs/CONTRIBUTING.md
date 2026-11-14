@@ -38,8 +38,8 @@ This page covers what you need before you open a pull request. Background on the
 
 ## What you can work on
 
-- **Open issues** labelled [`good first issue`](https://github.com/al4xdev/dw3/labels/good%20first%20issue)
-  or [`help wanted`](https://github.com/al4xdev/dw3/labels/help%20wanted).
+- **Open issues** labelled [`good first issue`](https://github.com/al4xdev/digimon-world-3-definitive-edition/labels/good%20first%20issue)
+  or [`help wanted`](https://github.com/al4xdev/digimon-world-3-definitive-edition/labels/help%20wanted).
 - **Planned work** on the [project board](https://github.com/users/gascarcella/projects/1).
 - **Names and types:** many overlay functions and fields are still `func_…`/`unk_…`.
 - **Matching workarounds:** every function matches ([`PROGRESS.md`](PROGRESS.md): 3606 of 3606), but some need
@@ -141,9 +141,9 @@ areas your change touches.
 
 ## Reporting issues
 
-Use the [issue templates](https://github.com/al4xdev/dw3/issues/new/choose): a **bug report** for
+Use the [issue templates](https://github.com/al4xdev/digimon-world-3-definitive-edition/issues/new/choose): a **bug report** for
 something that is wrong in the game, the port, the launcher or the build, a **feature request** for an idea. Search the
-[open issues](https://github.com/al4xdev/dw3/issues) first. A useful bug report has:
+[open issues](https://github.com/al4xdev/digimon-world-3-definitive-edition/issues) first. A useful bug report has:
 
 - the **version** (the AppImage's file name, or the commit you built) and your **system** (distribution, desktop, GPU,
   gamepad);

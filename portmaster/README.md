@@ -34,7 +34,7 @@ How the launcher chooses:
   `settings.json` yet. Everywhere else the default is software.
 - `DW3_FORCE_VIDEO` (`fbdev` or `sdl2`) and `DW3_FORCE_RENDERER` (`gles` or `software`) override both choices.
 
-More: [running, deploying and limits](https://github.com/al4xdev/dw3/blob/main/docs/HANDHELD.md).
+More: [running, deploying and limits](https://github.com/al4xdev/digimon-world-3-definitive-edition/blob/main/docs/HANDHELD.md).
 
 ## What the menu offers
 
@@ -57,7 +57,7 @@ the Definitive Edition's own, with nothing to set.
 Form experience is 14x and the game's own brake on it (10 points a battle before the fifth form-level threshold, 50
 after, which is why a digivolution gains one level per battle) is skipped, so a won battle can raise several form
 levels. The three chosen forms of each party member earn it, not a form left in the lab. These are the Definitive
-Edition's rules, with nothing to set ([`docs/MECHANICS.md`](https://github.com/al4xdev/dw3/blob/main/docs/MECHANICS.md)
+Edition's rules, with nothing to set ([`docs/MECHANICS.md`](https://github.com/al4xdev/digimon-world-3-definitive-edition/blob/main/docs/MECHANICS.md)
 section 6).
 
 ## Controls (default PS1 layout)
@@ -96,7 +96,7 @@ the device, the CFW and its version, and the resolution. Two facts make a report
 - the frame-rate line the game writes at exit: `port: window: N frames presented in X s (Y per second)` in
   `ports/dw3/logs/game.log` (this needs `LOGS` set to soft or heavy in the DEBUG group);
 - whether the **films** show a rectangle of wrong pixels in the top-right corner. That is the one known rendering defect
-  (see [the notes](https://github.com/al4xdev/dw3/blob/main/docs/gpu/17-movie-artefact.md)); knowing which devices and
+  (see [the notes](https://github.com/al4xdev/digimon-world-3-definitive-edition/blob/main/docs/gpu/17-movie-artefact.md)); knowing which devices and
   drivers show it is worth more than a fix nobody can test.
 
 ## Known issues
@@ -117,7 +117,7 @@ the device, the CFW and its version, and the resolution. Two facts make a report
 The port is built with the repository's ARM cross build (Docker with an armhf toolchain) and packed by a second script:
 
 ```
-git clone https://github.com/al4xdev/dw3 --recurse-submodules
+git clone https://github.com/al4xdev/digimon-world-3-definitive-edition --recurse-submodules
 cd dw3
 tools/build_arm.sh               # builds build/armhf-sdl2/dw2003 (-DPSXSTACK_SDL2=ON -DPSXSTACK_EGL=ON)
 portmaster/make_release.sh       # checks the binary and writes dist/dw3.zip
@@ -129,7 +129,7 @@ portmaster/make_release.sh       # checks the binary and writes dist/dw3.zip
 |---|---|
 | [gascarcella/dw2003recomp](https://github.com/gascarcella/dw2003recomp) | the decompilation of the game's own C and the PC port; the base this repository forks |
 | [gascarcella/psxstack](https://github.com/gascarcella/psxstack) (fork used here: [al4xdev/dw3-psxstack](https://github.com/al4xdev/dw3-psxstack)) | the host runtime: arena, overlays, video, SPU, audio, input, memory cards, settings, the mods engine, the GPU backend, the crash report and the measurement switches |
-| [stenzek/duckstation](https://github.com/stenzek/duckstation) | studied, not linked: the VRAM-as-a-texture design, the batch key that became per-vertex state here, and the framebuffer-fetch strategy for the mask bit and semi-transparency. The notes in [`docs/gpu`](https://github.com/al4xdev/dw3/tree/main/docs/gpu) record what was kept and what was rejected; the implementation is this project's own |
+| [stenzek/duckstation](https://github.com/stenzek/duckstation) | studied, not linked: the VRAM-as-a-texture design, the batch key that became per-vertex state here, and the framebuffer-fetch strategy for the mask bit and semi-transparency. The notes in [`docs/gpu`](https://github.com/al4xdev/digimon-world-3-definitive-edition/tree/main/docs/gpu) record what was kept and what was rejected; the implementation is this project's own |
 | [psx-spx](https://psx-spx.consoledev.net/) | the hardware reference: the SPU's voices, envelopes and reverb, the GPU's commands, the GTE's arithmetic |
 | PCSX-Redux | the oracle for the tests (SPU traces, replay runners), never a source of code |
 | [SDL2](https://github.com/libsdl-org/SDL) | the window, the gamepad, the audio device and the threads on the host |
