@@ -79,7 +79,7 @@ jobs:
         id: pins
         run: |
           echo "psxstack at $(git -C psxstack describe --tags --always)"
-          echo "hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; } | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+          echo "hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; echo "$GITHUB_WORKSPACE"; } | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
       - name: Data checkout (maintainers only)
         if: env.HAS_DATA == 'true'
@@ -207,7 +207,7 @@ jobs:
             tools/llvm-mingw
             tools/sdl3-windows
             tools/dxc
-          key: tools-windows-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
+          key: tools-windows-${{ runner.os }}-${{ github.event.repository.name }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
       - name: Windows toolchain
         run: scripts/setup.sh venv mkpsxiso imgui llvm-mingw sdl3-windows dxc

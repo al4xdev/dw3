@@ -71,7 +71,7 @@ runs:
       id: pins
       shell: bash
       run: |
-        hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; echo "${{ inputs.tools }}"; } | sha256sum | cut -c1-16)
+        hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; echo "${{ inputs.tools }}"; echo "$GITHUB_WORKSPACE"; } | sha256sum | cut -c1-16)
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     # Every tool directory setup.sh can install: the ones this job's steps install exist and get saved; the others are
