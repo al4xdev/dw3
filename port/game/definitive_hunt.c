@@ -289,16 +289,16 @@ void def_hunt_battle_end(int result) {
     if (hunt.from_encounter && def_on()) {
         def_record_hunt(&region, &chain);
         if (hunt.rare) {
-            port_log("hunt: Rare Target %s, chain %d reset", result != 0 ? "won" : "left", chain);
+            port_log("hunt: Rare Target %s, chain %d reset", result == 1 ? "won" : "left", chain);
             chain = 0;
-            if (result != 0) {
+            if (result == 1) {
                 reward.pending = 1;
                 reward.base = hunt.base;
                 reward.level = hunt.level;
                 reward.pack = 0;
                 rare_won(hunt.target);
             }
-        } else if (result != 0) {
+        } else if (result == 1) {
             if (chain < DEF_HUNT_CHAIN_CAP) {
                 chain++;
             }

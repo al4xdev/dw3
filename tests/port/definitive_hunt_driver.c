@@ -139,6 +139,7 @@ int main(void) {
      * draw keeps the cases below about the chain alone (a hit would make them Rare Targets, which reset it). */
     next_value = 99;
     encounter(7, 0);
+    encounter(7, 2); /* defeat (fightstg_events.result == 2) */
     check("a lost or fled encounter neither counts nor resets", chain_now() == DEF_HUNT_CHAIN_MIN);
 
     def_hunt_encounter(7);
@@ -226,8 +227,16 @@ int main(void) {
     check("a missed draw leaves nothing", def_record_material(5) == 2 && lines_pending() == 0);
     next_value = 0;
     encounter(7, 0);
+    encounter(7, 2); /* defeat must not drop commons or count */
     def_hunt_battle_end(1); /* a scripted battle */
-    check("a lost encounter and a scripted battle leave nothing", def_record_material(5) == 2 && lines_pending() == 0);
+    check("a lost or defeated encounter and a scripted battle leave nothing", def_record_material(5) == 2 && lines_pending() == 0);
+    def_record_set_hunt(0x05, DEF_HUNT_CHAIN_CAP);
+    next_value = 0;
+    fought = def_hunt_encounter(7);
+    def_hunt_battle_end(2); /* defeated by a Rare Target */
+    check("defeat on a Rare Target resets chain and grants no Rare reward",
+          fought == 40 && chain_now() == 0 && def_hunt_reward_battle() == -1 && lines_pending() == 0);
+    def_record_set_hunt(0x06, 2);
     def_hunt_encounter(7);
     def_hunt_skipped(); /* the Rush won it */
     check("an encounter the Rush took leaves its materials, and the chain is not counted",

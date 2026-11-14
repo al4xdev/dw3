@@ -131,7 +131,8 @@ def fallback(sdl, headless, env):
     check(rc == 0 and "renderer: gpu unavailable (" in out and "; software" in out and "renderer gpu (" not in out,
           f"--window --renderer gpu without a device: the fallback logged, the input self-test passes (exit {rc})")
     rc, out = run([sdl, "--renderer", "vulkan"], env)
-    check(rc == 64 and "--renderer: software or gpu" in out, f"--renderer vulkan: exit 64 (exit {rc})")
+    check(rc == 64 and ("--renderer: software or gpu" in out or "--renderer: software, gpu or gles" in out),
+          f"--renderer vulkan: exit 64 (exit {rc})")
     for spec in ("0:x.ppm", "5@640:x.ppm", "5@0x480:x.ppm", "5", "5:"):
         rc, out = run([sdl, "--gpu-screenshot", spec], env)
         check(rc == 64 and "--gpu-screenshot: FRAME[@WxH]:PATH" in out, f"--gpu-screenshot {spec}: exit 64 (exit {rc})")

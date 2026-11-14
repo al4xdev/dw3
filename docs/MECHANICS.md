@@ -99,7 +99,7 @@ Facts [C]:
      (`attack_element != 0`): `value += value * attack_element_power * 2 / target.resists[attack_element - 2]`.
      **Higher target resist = smaller bonus; the bonus is additive (never reduces below `value`).**
   5. Multi-hit crest (`multi_hit`, item 0x13C): if `rec.kind < 2` and script not 0xB/0xC, `value = value * 4 / 10`.
-  6. Critical (a roll, section 3): `value += value * ((next() & 0x3F) + 0x20) / 64` (adds +50 % to about +98 %).
+  6. Critical (a roll, section 3): `value += value * ((next() & 0x3F) + 0x20) / 64` (adds +50 % to +148 %).
   7. Guard crest: `value -= target.guard` (flat), clamped at 0. (Items 0x145/0x146.)
   8. Cap: `value <= base * 5`, then `value >= 10000` becomes 9999.
 - Note `get_damage` passes a 4th argument `target` to `scale_damage` that the old-style K&R definition ignores.
@@ -182,7 +182,7 @@ What a test should check:
 - Enemy floor: choose inputs giving chance 5 -> effective 32 (1024 of 4096 hit).
 - Boss: party hit probability is the rolls with residue >= 43: 85 of 128 residues, 2720 of 4096 (the 0x2B comparison is `>=`, so not 84).
 - Critical base: weaponless, no statuses: 4/128 = 128 crits per cycle. Strong-type match: 64/128. A paralysed target (`paralysis_power 80`): `4 + 10`.
-- Crit damage adds `value * (r & 0x3F + 0x20) / 64`: fixed `r` -> multiplier from 1.5 to 1.984. Ensure the crit draw happens only after a successful crit roll.
+- Crit damage adds `value * ((r & 0x3F) + 0x20) / 64`: fixed `r` -> multiplier from 1.5 to 2.484 (special: `+ (r % 65 + 0x20) / 64`, 1.5 to 2.5). Ensure the crit draw happens only after a successful crit roll.
 - Draw counts per action: hit roll 1 draw, crit roll 1, crit magnitude 1 more only if it crits.
 
 ## 4. Element and type effectiveness, resists

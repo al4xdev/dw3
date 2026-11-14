@@ -70,21 +70,3 @@ psxstack_add_game(dw2003
     CONFIGURE_DEPENDS "${DW3_ROOT}/tools/port_inputs.py" "${DW3_ROOT}/config/wstag.txt" "${DW3_ROOT}/config/wstag_c.txt"
                       "${DW3_ROOT}/src/main/overlay.c" "${DW3_ROOT}/src/fieldstg/fieldstg_80087DB0.c"
                       "${DW3_ROOT}/tests/replay/replay.py" ${DW3_CONFIG_DEPS})
-
-# ---- The pinned psxstack (dw3-handheld) does not build the PC targets as it is: runtime/video.c's `video_gles` is
-# unused outside the handheld's GLES build (the runtime has -Werror), and on Windows runtime/fbdev_present.c (the
-# handheld's presenter, which the runtime's glob puts in every build) and runtime/main.c's <sys/syscall.h> have no
-# headers. These lines let the headless, SDL3 and Windows builds through with the pin as it is; the handheld's build
-# (PSXSTACK_SDL2 and PSXSTACK_EGL on) is untouched. The fix belongs in the stack (the variable under PSXSTACK_EGL,
-# fbdev_present.c and render_gles.c out of the glob, <sys/syscall.h> on Linux only); once the pin has it this block
-# can go, and until then it changes nothing else.
-if(NOT PSXSTACK_EGL)
-    set_property(SOURCE "${PSXSTACK_ROOT}/runtime/video.c" APPEND PROPERTY COMPILE_OPTIONS -Wno-error=unused-variable)
-endif()
-if(NOT PSXSTACK_SDL2)
-    set_source_files_properties("${PSXSTACK_ROOT}/runtime/fbdev_present.c" PROPERTIES HEADER_FILE_ONLY ON)
-endif()
-if(WIN32)
-    file(WRITE "${CMAKE_BINARY_DIR}/gen/win32/sys/syscall.h" "/* Empty: runtime/main.c uses it on Linux only. */\n")
-    set_property(SOURCE "${PSXSTACK_ROOT}/runtime/main.c" APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/gen/win32")
-endif()

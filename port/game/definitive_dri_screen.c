@@ -64,8 +64,8 @@ extern const unsigned char def_str_DriTitle[], def_str_DriSep[], def_str_DriDash
 #define DRI_INFO_Y (DRI_TOP - 5 + DRI_LIST_H + 3)
 #define DRI_INFO_H 58
 #define DRI_HINT_Y 208
-#define DRI_DEB_Y 118    /* the debrief's panel, and the Tamer's page */
-#define DRI_DEB_H 116
+#define DRI_DEB_Y 114    /* the debrief's panel, and the Tamer's page */
+#define DRI_DEB_H 122
 #define DRI_TEXT 96      /* bytes of a composed line */
 #define DRI_WINDOWS 32
 #define DRI_PAL_TEXT 0
@@ -413,15 +413,21 @@ static void debrief_open(void) {
 
         def_glyph_put(deb_reward, &p, sizeof(deb_reward), def_str_DriNewReward);
         def_glyph_put(deb_reward, &p, sizeof(deb_reward), line_break);
-        put_items(deb_reward, &p, sizeof(deb_reward), dri_sim.items, dri_sim.count);
+        if (dri_sim.count > 2) {
+            put_items(deb_reward, &p, sizeof(deb_reward), dri_sim.items, 2);
+            def_glyph_put(deb_reward, &p, sizeof(deb_reward), line_break);
+            put_items(deb_reward, &p, sizeof(deb_reward), dri_sim.items + 2, dri_sim.count - 2);
+        } else {
+            put_items(deb_reward, &p, sizeof(deb_reward), dri_sim.items, dri_sim.count);
+        }
     } else {
         def_glyph_put(deb_reward, &p, sizeof(deb_reward), def_str_DriNoReward);
     }
-    w = dri_window(2, 18, DRI_DEB_Y + 70);
-    w->set_page_lines(w, 2);
+    w = dri_window(2, 18, DRI_DEB_Y + 67);
+    w->set_page_lines(w, 3);
     w->set_text(w, deb_reward, -1);
     w->set_palette(w, dri_sim.count > 0 ? DRI_PAL_HOT : DRI_PAL_TEXT);
-    w = dri_window(1, 18, DRI_DEB_Y + 96);
+    w = dri_window(1, 18, DRI_DEB_Y + 104);
     w->set_text(w, (u8 *)def_str_DriOk, -1);
 }
 

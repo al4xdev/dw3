@@ -13,7 +13,7 @@ The pictures the top-level README shows. A planned one is listed here and in the
 | `hunt.svg` | PRD 4 A to C: the regional chain and its chance curve, the Rare Target with its region's numeral, its rewards (the region's numbered rare item, one R-Booster, more experience), the bestiary's "Hunt" and "Rare Cores" lines | `DEF_HUNT_CHAIN_MIN`, `DEF_HUNT_CHAIN_SURE`; the example "Datamon IV", "Datamon Core IV", "Rare Cores 4/13" |
 | `economy.svg` | PRD 4 B and D to H: commons and rares, what the forge, the Black Market and the DRI Gauntlet take, the gear they give; the price rule | `DEF_RECIPE_FROM`, `DEF_RECIPE_TOP`, `DEF_BM_COMMONS`, `DEF_BM_REPLICA_RARES`, `DEF_BM_REPLICA_BITS`, `DEF_REPLICAS`, `DEF_PRICE_KNEE`, `DEF_PRICE_DRAIN_PCT`, `DEF_SELL_BASE`, `DEF_SELL_ABOVE_PCT`; the 107 recipes and 27 variants of the generated tables; Tenjinmaru's recipe ("Peta Prism 0/30, Bulbmon V 0/1") |
 | `hunt-materials.svg` | superseded by `economy.svg` and no longer shown by the README (it still calls the forge, the Black Market and the DRI planned): move it out of the folder | the example only |
-| `definitive_ui.png` | a capture: the bestiary, the weakness panel in battle and the technique menu's element. Taken before the five-family screens and the bestiary's Hunt line | |
+| `definitive_ui.png` | a capture: the bestiary (the five element families and the Hunt line), the five-family weakness panel in battle and the technique menu's element | |
 | `inspect.png` | planned capture: the weakness panel in battle, by family | |
 | `bestiary.png` | planned capture: the bestiary, with its Hunt line | |
 
